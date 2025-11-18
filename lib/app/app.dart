@@ -1,15 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'navigation/router.dart';
 
 class App extends StatelessWidget {
-  const App({super.key});
+  final GoRouter router;
+
+  const App({
+    required this.router,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
+    return MaterialApp.router(
       title: 'Flutter Starter',
-      home: Scaffold(
-        body: Center(child: Text('v0.1 Skeleton')),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        useMaterial3: true,
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
       ),
+      routerConfig: router,
+      debugShowCheckedModeBanner: false,
     );
   }
 }
