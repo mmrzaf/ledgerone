@@ -343,65 +343,140 @@ Each feature supplies a **Manifest** and follows the same contract pattern.
 
 ---
 
+Of course. Moving authentication later is an excellent strategic decision. It allows the team to build and validate the core application infrastructure (navigation, error handling, configuration) without the complexity of a stateful auth system.
+
+Here is the improved release plan, which defers authentication to **v0.7** and re-sequences the work for a more logical, de-risked flow.
+
+---
+
 ## Release Plan (v0.1 → v0.9)
 
-Each tag includes **Deliverables**, **Quality Gates**, and **Upgrade Notes**.
+*Each release builds a stable, tested foundation for the next.*
 
 ### v0.1 — Skeleton & Contracts
+*   **Theme:** Laying the foundation.
+*   **Deliverables:**
+    *   Project directory layout and build system.
+    *   Empty feature shells (UI components and state management placeholders).
+    *   Core interfaces (names and signatures only for `ConfigService`, `NavService`, `ErrorHandler`).
+    *   Error taxonomy (categorization of errors: `Recoverable`, `Fatal`, `Offline`).
+    *   ADR (Architecture Decision Record) template and initial ADRs.
+*   **Quality Gates:**
+    *   Linting and formatting pipelines pass.
+    *   Initial unit test harness executes successfully.
+    *   Build produces a runnable, empty application.
+*   **Upgrade Notes:** None.
 
-* **Deliverables**: Directory layout; empty feature shells; Core interfaces (names only); error taxonomy; ADR template.
-* **Gates**: Lints; initial test harness.
-* **Upgrade Notes**: None.
+### v0.2 — Navigation & Routing Foundation
+*   **Theme:** Defining how the user moves through the app.
+*   **Deliverables:**
+    *   Route registry dynamically assembled from feature manifests.
+    *   Guard system with order-of-execution and redirect policies.
+    *   Deep link routing rules (e.g., `/feature/:id`).
+    *   Launch state machine (using fake/static data stores).
+*   **Quality Gates:**
+    *   Navigation unit tests for guard paths & deep links achieve ≥70% coverage.
+    *   All guarded routes correctly block or allow access based on static flags.
+*   **Upgrade Notes:** Guard APIs are now stable.
 
-### v0.2 — Navigation & Guards
+### v0.3 — Configuration & Feature Flags
+*   **Theme:** Controlling app behavior without deployments.
+*   **Deliverables:**
+    *   `ConfigService` with precedence (defaults → cached → remote) and in-memory caching.
+    *   Application cold-starts using cache, with async refresh in the background.
+    *   Feature flag gating for critical flows (e.g., onboarding, home screen variants).
+*   **Quality Gates:**
+    *   App boots and is usable offline with cached config.
+    *   Startup sequence makes ≤2 remote calls.
+    *   Comprehensive tests for config precedence (cache wins over default, remote wins over cache).
+*   **Upgrade Notes:** Flag keys are frozen and should be treated as a public API.
 
-* **Deliverables**: Route registry assembly from feature manifests; guard order & redirect policy; deep link rules; launch state machine (with fake stores).
-* **Gates**: Nav tests for guard paths & deep links (coverage ≥60%).
-* **Upgrade Notes**: Guard APIs stable.
+### v0.4 — Error Policy & Resilience
+*   **Theme:** The app behaves predictably when things go wrong.
+*   **Deliverables:**
+    *   Error-to-user-facing-policy mapping (e.g., retry, show message, redirect).
+    *   Capped exponential backoff with jitter for all network operations.
+    *   Cancellation tokens wired end-to-end (abort on navigation, component unmount).
+    *   Specification for how and where errors are surfaced in the UI.
+*   **Quality Gates:**
+    *   Chaos tests (simulating network failures, slow responses) pass.
+    *   Cancellation is verified to work during navigation.
+*   **Upgrade Notes:** Error categories are frozen.
 
-### v0.3 — Config & Flags
+### v0.5 — Observability & Telemetry
+*   **Theme:** Understanding how the app performs in the wild.
+*   **Deliverables:**
+    *   Analytics facade with event allow-listing and consent management.
+    *   Performance marks/metrics for app startup and key user flows.
+    *   Crash reporting facade.
+    *   Event schema validation in CI.
+*   **Quality Gates:**
+    *   Only allow-listed events are emitted.
+    *   Performance marks are emitted for critical startup path.
+    *   Privacy lint (checking for PII in events) passes.
+*   **Upgrade Notes:** Event names are a public API. Changing them breaks dashboards.
 
-* **Deliverables**: Config service with precedence & caching; cold-start on cache + async refresh; flag gating for onboarding/auth/home.
-* **Gates**: Offline boot; ≤2 startup calls; precedence tests.
-* **Upgrade Notes**: Flag keys frozen.
+### v0.6 — Offline-First & Data Resilience
+*   **Theme:** The app remains functional without a perfect connection.
+*   **Deliverables:**
+    *   `NetworkStatus` abstraction and UI indicator (e.g., offline banner).
+    *   "Last-known-good" data strategy for the Home screen.
+    *   Foreground data refresh policy (e.g., refresh on app focus).
+    *   Simple read-through caching for non-user data.
+*   **Quality Gates:**
+    *   All critical paths pass in flight-mode (offline).
+    *   Backoff and retry ceilings are respected.
+*   **Upgrade Notes:** None.
 
-### v0.4 — Auth Lifecycle
+### v0.7 — Authentication Lifecycle
+*   **Theme:** Securely managing user identity and session.
+*   **Deliverables:**
+    *   Email/password login flow.
+    *   Secure session storage (e.g., encrypted storage, not plain text).
+    *   Silent token refresh mechanism with single-flight protection.
+    *   Auth guards integrated with navigation, enforcing redirects to login.
+*   **Quality Gates:**
+    *   End-to-end integration tests for flows: first-run, expired token → login, successful login → redirect to deep link.
+    *   Session is not lost on app restart.
+*   **Upgrade Notes:** Session data model is now locked.
 
-* **Deliverables**: Email/password login; secure session storage; silent refresh; single-flight refresh; guards enforce redirects.
-* **Gates**: Integration flows (first-run, expired token → login).
-* **Upgrade Notes**: Session model locked.
+### v0.8 — Accessibility, i18n & Theming
+*   **Theme:** Making the app usable for everyone.
+*   **Deliverables:**
+    *   A11y checklist and automated CI rules for WCAG compliance.
+    *   Internationalization (i18n) framework with string keys; RTL (Right-to-Left) layout audit.
+    *   Theme adapter contract with semantic roles (e.g., `colorPrimary`, `textHeadline`) and neutral fallback.
+*   **Quality Gates:**
+    *   A11y CI checks pass.
+    *   Pseudo-locale build works without layout breaks; snapshots for dark/light themes are verified.
+*   **Upgrade Notes:** Theme semantic role names are locked.
 
-### v0.5 — Error Policy, Retry, Cancellation
+### v0.9 — Hardening & Release Candidate
+*   **Theme:** Ensuring production readiness.
+*   **Deliverables:**
+    *   Threat model mini-review focused on new auth and data flows.
+    *   Logging redaction verified (no tokens, PII in logs).
+    *   Secrets scan in codebase.
+    *   Performance budget checks (bundle size, cold-start time).
+    *   Example "sample feature" proving the complete extension path for app developers.
+    *   Migration guide from v0.9 to a hypothetical app-specific 1.0.
+*   **Quality Gates:**
+    *   All E2E critical user flows are green.
+    *   Overall code coverage ≥80%.
+    *   Bundle size and cold-start time budgets are met.
+    *   CHANGELOG is comprehensive and ready for 1.0.
+*   **Upgrade Notes:** This is the stable base for forking to app-specific **1.0**.
 
-* **Deliverables**: Error→policy mapping; capped exponential backoff with jitter; cancellation tokens wired end-to-end; inline error surface spec.
-* **Gates**: Chaos tests; cancellation verified on navigation.
-* **Upgrade Notes**: Error categories frozen.
+---
 
-### v0.6 — Observability Foundation
+### How to Ship 1.0 for a New App
 
-* **Deliverables**: Analytics facade (allow-list + consent); performance marks; crash facade; schema validation in CI.
-* **Gates**: Events from allow-list only; perf marks emitted; privacy lint passes.
-* **Upgrade Notes**: Event names treated as API.
-
-### v0.7 — Offline & Resilience
-
-* **Deliverables**: NetworkStatus abstraction; offline banner; last-known data for Home; foreground refresh policy.
-* **Gates**: Flight-mode tests; backoff ceilings respected.
-* **Upgrade Notes**: None.
-
-### v0.8 — Accessibility, i18n, Theme Adapter
-
-* **Deliverables**: A11y checklist & CI rule; string keys & RTL audit; theme adapter contract with semantic roles + neutral fallback.
-* **Gates**: A11y CI; pseudo-locale and dark/light snapshots.
-* **Upgrade Notes**: Theme role names locked.
-
-### v0.9 — Hardening Release Candidate
-
-* **Deliverables**: Threat mini-review; logging redaction verified; secrets scan; performance budget checks; example “sample feature” proving extension path; migration guide to 1.0.
-* **Gates**: E2E flows green; coverage ≥75%; size & cold-start budgets met; CHANGELOG ready.
-* **Upgrade Notes**: Stable base for forking to app-specific **1.0**.
-
-> **How to ship 1.0 for a new app**: fork **v0.9**, add your theme adapter (optional), bind real networking/auth, implement your first domain feature, run the release checklist, tag **1.0.0**.
+1.  **Fork** the `v0.9` tag.
+2.  **Implement** your brand-specific theme adapter.
+3.  **Bind** real networking and auth backend services.
+4.  **Build** your first full-stack domain feature using the proven path from the "sample feature".
+5.  **Run** the v0.9 hardening checklist again with your app's specific requirements.
+6.  **Tag** your stable, production-ready `1.0.0`.
 
 ---
 
