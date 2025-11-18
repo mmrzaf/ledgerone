@@ -1,0 +1,21 @@
+name: CI
+on: [push,pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Format check
+        run: dart format --output=none .
+      - name: Analyze
+        run: flutter analyze
+      - name: Unit tests (stub)
+        run: echo 'No unit tests yet' 
+      - name: Analytics allowlist check
+        run: ./tool/check-analytics-allowlist || true
+
