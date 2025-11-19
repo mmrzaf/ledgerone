@@ -1,31 +1,28 @@
 import 'dart:convert';
+
+import 'package:app_flutter_starter/app/services/config_service_impl.dart';
+import 'package:app_flutter_starter/core/contracts/storage_contract.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:app_flutter_starter/core/contracts/storage_contract.dart';
-import 'package:app_flutter_starter/core/contracts/config_provider.dart';
-import 'package:app_flutter_starter/app/services/config_service_impl.dart';
+
+import '../../helpers/test_remote_config_provider.dart';
 
 class MockStorageService extends Mock implements StorageService {}
 
-class MockRemoteConfigProvider extends Mock implements RemoteConfigProvider {}
-
 void main() {
   late MockStorageService storage;
-  late MockRemoteConfigProvider remote;
+  late TestRemoteConfigProvider remote;
   late ConfigServiceImpl configService;
 
   setUp(() {
     storage = MockStorageService();
-    remote = MockRemoteConfigProvider();
+    remote = TestRemoteConfigProvider();
     configService = ConfigServiceImpl(storage: storage, remoteProvider: remote);
   });
 
   test('getFlag returns default when storage and remote are empty', () async {
     // Arrange
     when(() => storage.getString(any())).thenAnswer((_) async => null);
-    when(
-      () => remote.fetchConfig(),
-    ).thenAnswer((_) async => {}); // Empty remote
 
     // Act
     await configService.initialize();
@@ -42,9 +39,6 @@ void main() {
     // Arrange: Cache says auth.enabled = FALSE
     final cachedData = json.encode({'auth.enabled': false});
     when(() => storage.getString(any())).thenAnswer((_) async => cachedData);
-    when(() => remote.fetchConfig()).thenAnswer(
-      (_) async => Completer<Map<String, dynamic>>().future,
-    ); // Hang remote
 
     // Act
     await configService.initialize();
@@ -56,17 +50,13 @@ void main() {
   test('remote refresh updates values in background', () async {
     // Arrange
     when(() => storage.getString(any())).thenAnswer((_) async => null);
-    // Remote returns a value
-    when(
-      () => remote.fetchConfig(),
-    ).thenAnswer((_) async => {'home.promo_banner.enabled': true});
     when(() => storage.setString(any(), any())).thenAnswer((_) async {});
 
     // Act
     await configService.initialize();
 
-    // Wait for the unawaited async refresh to complete
-    await Future.delayed(Duration.zero);
+    // Wait for the async refresh to complete
+    await Future<void>.delayed(Duration.zero);
 
     // Assert
     expect(configService.getFlag('home.promo_banner.enabled'), isTrue);

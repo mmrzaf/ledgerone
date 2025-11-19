@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../../core/contracts/auth_contract.dart';
-import '../../../core/contracts/navigation_contract.dart';
-import '../../../core/contracts/config_contract.dart';
+
 import '../../../app/di.dart';
+import '../../../core/contracts/auth_contract.dart';
+import '../../../core/contracts/config_contract.dart';
+import '../../../core/contracts/navigation_contract.dart';
 
 class HomeScreen extends StatelessWidget {
   final AuthService authService;

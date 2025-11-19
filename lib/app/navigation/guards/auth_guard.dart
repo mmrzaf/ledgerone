@@ -1,5 +1,5 @@
-import '../../../core/contracts/guard_contract.dart';
 import '../../../core/contracts/auth_contract.dart';
+import '../../../core/contracts/guard_contract.dart';
 
 /// Guards routes that require authentication
 class AuthGuard implements NavigationGuard {

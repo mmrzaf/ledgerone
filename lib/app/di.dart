@@ -1,20 +1,21 @@
 import 'package:app_flutter_starter/core/config/environment.dart';
+import 'package:app_flutter_starter/core/contracts/config_provider.dart';
 
-import '../core/contracts/config_contract.dart';
-import '../core/contracts/storage_contract.dart';
-import '../core/contracts/auth_contract.dart';
 import '../core/contracts/analytics_contract.dart';
+import '../core/contracts/auth_contract.dart';
+import '../core/contracts/config_contract.dart';
 import '../core/contracts/crash_contract.dart';
 import '../core/contracts/navigation_contract.dart';
+import '../core/contracts/storage_contract.dart';
 import '../core/runtime/launch_state.dart';
-import 'services/mock_services.dart';
-import 'services/config_service_impl.dart';
-import 'services/simulated_remote_config.dart';
 import 'boot/launch_state_machine.dart';
-import 'navigation/router.dart';
-import 'navigation/guards/onboarding_guard.dart';
 import 'navigation/guards/auth_guard.dart';
 import 'navigation/guards/no_auth_guard.dart';
+import 'navigation/guards/onboarding_guard.dart';
+import 'navigation/router.dart';
+import 'services/config_service_impl.dart';
+import 'services/mock_services.dart';
+import 'services/simulated_remote_config.dart';
 
 class ServiceLocator {
   static final ServiceLocator _instance = ServiceLocator._internal();
@@ -45,7 +46,10 @@ class DISetupResult {
   DISetupResult({required this.launchStateResolver, required this.locator});
 }
 
-Future<DISetupResult> setupDependencies(AppConfig appConfig) async {
+Future<DISetupResult> setupDependencies(
+  AppConfig appConfig, {
+  RemoteConfigProvider? remoteConfigProvider,
+}) async {
   final locator = ServiceLocator();
   locator.register<AppConfig>(appConfig);
 
@@ -56,7 +60,7 @@ Future<DISetupResult> setupDependencies(AppConfig appConfig) async {
 
   final config = ConfigServiceImpl(
     storage: storage,
-    remoteProvider: SimulatedRemoteConfig(),
+    remoteProvider: remoteConfigProvider ?? SimulatedRemoteConfig(),
   );
 
   locator.register<StorageService>(storage);

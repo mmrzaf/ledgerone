@@ -1,8 +1,8 @@
-import '../../core/contracts/config_contract.dart';
-import '../../core/contracts/storage_contract.dart';
-import '../../core/contracts/auth_contract.dart';
 import '../../core/contracts/analytics_contract.dart';
+import '../../core/contracts/auth_contract.dart';
+import '../../core/contracts/config_contract.dart';
 import '../../core/contracts/crash_contract.dart';
+import '../../core/contracts/storage_contract.dart';
 
 class MockConfigService implements ConfigService {
   final Map<String, dynamic> _flags = {};
