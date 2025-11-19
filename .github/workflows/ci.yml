@@ -1,21 +1,49 @@
 name: CI
-on: [push,pull_request]
+
+on:
+  push: {}
+  pull_request: {}
+
 jobs:
-  build:
+  ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Cache Flutter SDK (subosito action handles SDK install but we cache pub)
+        uses: actions/cache@v4
         with:
-          flutter-version: 'stable'
-      - name: Install dependencies
+          path: ~/.pub-cache
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Flutter --version
+        run: flutter --version
+
+      - name: Pub get
         run: flutter pub get
+
       - name: Format check
-        run: dart format --output=none .
-      - name: Analyze
+        run: dart format --set-exit-if-changed .
+
+      - name: Static analyze
         run: flutter analyze
-      - name: Unit tests (stub)
-        run: echo 'No unit tests yet' 
-      - name: Analytics allowlist check
-        run: ./tool/check-analytics-allowlist || true
+
+      - name: Run tests
+        run: flutter test --no-cover
+
+      - name: Build Android debug (sanity)
+        run: flutter build apk --debug
+
+      - name: Build web debug (sanity)
+        run: flutter build web --web-renderer html --debug
 
