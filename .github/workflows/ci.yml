@@ -39,11 +39,11 @@ jobs:
         run: flutter analyze
 
       - name: Run tests
-        run: flutter test --no-cover
+        run: flutter test
 
       - name: Build Android debug (sanity)
         run: flutter build apk --debug
 
       - name: Build web debug (sanity)
-        run: flutter build web --web-renderer html --debug
+        run: flutter build web  --debug
 
