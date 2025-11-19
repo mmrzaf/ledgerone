@@ -32,18 +32,11 @@ class OnboardingScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(
-                Icons.rocket_launch,
-                size: 120,
-                color: Colors.blue,
-              ),
+              const Icon(Icons.rocket_launch, size: 120, color: Colors.blue),
               const SizedBox(height: 32),
               const Text(
                 'Welcome to Flutter Starter',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
@@ -58,10 +51,7 @@ class OnboardingScreen extends StatelessWidget {
                 child: const Text('Get Started'),
               ),
               const SizedBox(height: 12),
-              TextButton(
-                onPressed: _handleSkip,
-                child: const Text('Skip'),
-              ),
+              TextButton(onPressed: _handleSkip, child: const Text('Skip')),
             ],
           ),
         ),

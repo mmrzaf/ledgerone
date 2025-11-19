@@ -147,10 +147,7 @@ class RouterFactory {
         GoRoute(
           path: '/home',
           builder: (context, state) {
-            return HomeScreen(
-              authService: auth,
-              navigation: navigationService,
-            );
+            return HomeScreen(authService: auth, navigation: navigationService);
           },
         ),
       ],
@@ -169,8 +166,5 @@ class RouterFactoryResult {
   final GoRouter router;
   final NavigationService navigationService;
 
-  RouterFactoryResult({
-    required this.router,
-    required this.navigationService,
-  });
+  RouterFactoryResult({required this.router, required this.navigationService});
 }

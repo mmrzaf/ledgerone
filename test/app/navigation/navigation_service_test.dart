@@ -57,18 +57,9 @@ void main() {
 
     test('route IDs are correctly mapped to paths', () {
       // These should not throw
-      expect(
-        () => navigationService.goToRoute('onboarding'),
-        returnsNormally,
-      );
-      expect(
-        () => navigationService.goToRoute('login'),
-        returnsNormally,
-      );
-      expect(
-        () => navigationService.goToRoute('home'),
-        returnsNormally,
-      );
+      expect(() => navigationService.goToRoute('onboarding'), returnsNormally);
+      expect(() => navigationService.goToRoute('login'), returnsNormally);
+      expect(() => navigationService.goToRoute('home'), returnsNormally);
     });
   });
 
@@ -84,7 +75,6 @@ void main() {
         'currentRouteId',
         'clearAndGoTo',
       ];
-
 
       expect(methods.length, 6);
     });

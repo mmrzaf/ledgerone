@@ -8,6 +8,7 @@ import 'package:app_flutter_starter/app/navigation/guards/auth_guard.dart';
 import 'package:app_flutter_starter/app/navigation/guards/no_auth_guard.dart';
 
 class MockStorageService extends Mock implements StorageService {}
+
 class MockAuthService extends Mock implements AuthService {}
 
 void main() {
@@ -30,8 +31,9 @@ void main() {
     });
 
     test('redirects to onboarding when not seen', () async {
-      when(() => storage.getBool('onboarding_seen'))
-          .thenAnswer((_) async => false);
+      when(
+        () => storage.getBool('onboarding_seen'),
+      ).thenAnswer((_) async => false);
 
       final result = await guard.evaluate('home', null);
 
@@ -40,8 +42,9 @@ void main() {
     });
 
     test('allows navigation when onboarding is complete', () async {
-      when(() => storage.getBool('onboarding_seen'))
-          .thenAnswer((_) async => true);
+      when(
+        () => storage.getBool('onboarding_seen'),
+      ).thenAnswer((_) async => true);
 
       final result = await guard.evaluate('home', null);
 
@@ -49,8 +52,9 @@ void main() {
     });
 
     test('allows navigation when onboarding key missing (null)', () async {
-      when(() => storage.getBool('onboarding_seen'))
-          .thenAnswer((_) async => null);
+      when(
+        () => storage.getBool('onboarding_seen'),
+      ).thenAnswer((_) async => null);
 
       final result = await guard.evaluate('onboarding', null);
 
@@ -100,8 +104,7 @@ void main() {
     });
 
     test('attempts silent refresh before redirecting', () async {
-      when(() => auth.isAuthenticated)
-          .thenAnswer((_) async => false);
+      when(() => auth.isAuthenticated).thenAnswer((_) async => false);
       when(() => auth.refreshSession()).thenAnswer((_) async {});
 
       await guard.evaluate('home', null);

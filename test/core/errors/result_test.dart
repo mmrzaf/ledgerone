@@ -10,11 +10,9 @@ void main() {
     });
 
     test('should return correct error when Failure', () {
-      final result = Failure<int>(AppError(
-        category: ErrorCategory.unknown,
-        message: 'oops',
-		)
-	);
+      final result = Failure<int>(
+        AppError(category: ErrorCategory.unknown, message: 'oops'),
+      );
       expect(result.error, isA<Exception>());
     });
   });

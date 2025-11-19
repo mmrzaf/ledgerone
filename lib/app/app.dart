@@ -5,10 +5,7 @@ import 'navigation/router.dart';
 class App extends StatelessWidget {
   final GoRouter router;
 
-  const App({
-    required this.router,
-    super.key,
-  });
+  const App({required this.router, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -26,9 +23,7 @@ class App extends StatelessWidget {
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
       routerConfig: router,

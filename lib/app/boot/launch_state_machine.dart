@@ -12,9 +12,9 @@ class LaunchStateMachineImpl implements LaunchStateResolver {
     required ConfigService config,
     required StorageService storage,
     required AuthService auth,
-  })  : _config = config,
-        _storage = storage,
-        _auth = auth;
+  }) : _config = config,
+       _storage = storage,
+       _auth = auth;
 
   @override
   Future<LaunchState> resolve() async {

@@ -7,8 +7,9 @@ import 'package:app_flutter_starter/core/contracts/auth_contract.dart';
 
 void main() {
   group('Navigation Flow Integration Tests', () {
-    testWidgets('Fresh install: onboarding -> complete -> login (redirect)',
-        (tester) async {
+    testWidgets('Fresh install: onboarding -> complete -> login (redirect)', (
+      tester,
+    ) async {
       final diSetup = await setupDependencies();
       final launchState = await diSetup.launchStateResolver.resolve();
       final initialRoute = launchState.determineInitialRoute();
@@ -24,7 +25,7 @@ void main() {
       expect(find.text('Get Started'), findsOneWidget);
 
       await tester.tap(find.text('Get Started'));
-      
+
       await tester.pump();
       await tester.pumpAndSettle();
 
@@ -46,8 +47,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Skip'));
-      
-      await tester.pump(); 
+
+      await tester.pump();
       await tester.pumpAndSettle();
 
       // Fixed: Expect at least 1 "Sign In" text
@@ -83,27 +84,33 @@ void main() {
       );
       expect(button.onPressed, isNull);
 
-      await tester.enterText(find.byType(TextFormField).first, 'user@example.com');
+      await tester.enterText(
+        find.byType(TextFormField).first,
+        'user@example.com',
+      );
       await tester.enterText(find.byType(TextFormField).last, 'password123');
       await tester.pump();
 
       expect(
-        tester.widget<ElevatedButton>(
-          find.widgetWithText(ElevatedButton, 'Sign In'),
-        ).onPressed,
+        tester
+            .widget<ElevatedButton>(
+              find.widgetWithText(ElevatedButton, 'Sign In'),
+            )
+            .onPressed,
         isNotNull,
       );
 
       await tester.tap(find.widgetWithText(ElevatedButton, 'Sign In'));
-      
+
       await tester.pump();
       await tester.pumpAndSettle();
 
       expect(find.text('Welcome!'), findsOneWidget);
     });
 
-    testWidgets('Authenticated user redirects to home from login',
-        (tester) async {
+    testWidgets('Authenticated user redirects to home from login', (
+      tester,
+    ) async {
       final diSetup = await setupDependencies();
       final storage = diSetup.locator.get<StorageService>();
       final auth = diSetup.locator.get<AuthService>();

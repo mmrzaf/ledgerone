@@ -33,9 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool get _isValid {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
-    return email.isNotEmpty &&
-           email.contains('@') &&
-           password.length >= 6;
+    return email.isNotEmpty && email.contains('@') && password.length >= 6;
   }
 
   Future<void> _handleLogin() async {
@@ -78,18 +76,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(
-                    Icons.lock_outline,
-                    size: 80,
-                    color: Colors.blue,
-                  ),
+                  const Icon(Icons.lock_outline, size: 80, color: Colors.blue),
                   const SizedBox(height: 32),
                   const Text(
                     'Sign In',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
@@ -143,9 +134,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.error_outline,
-                               color: Colors.red.shade700,
-                               size: 20),
+                          Icon(
+                            Icons.error_outline,
+                            color: Colors.red.shade700,
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(

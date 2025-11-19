@@ -7,43 +7,33 @@ import 'package:app_flutter_starter/core/runtime/launch_state.dart';
 import 'package:app_flutter_starter/app/boot/launch_state_machine.dart';
 
 class MockConfigService extends Mock implements ConfigService {}
+
 class MockStorageService extends Mock implements StorageService {}
+
 class MockAuthService extends Mock implements AuthService {}
 
 void main() {
   group('LaunchState', () {
     test('determineInitialRoute returns onboarding when not seen', () {
-      const state = LaunchState(
-        onboardingSeen: false,
-        isAuthenticated: false,
-      );
+      const state = LaunchState(onboardingSeen: false, isAuthenticated: false);
 
       expect(state.determineInitialRoute(), 'onboarding');
     });
 
     test('determineInitialRoute returns home when authenticated', () {
-      const state = LaunchState(
-        onboardingSeen: true,
-        isAuthenticated: true,
-      );
+      const state = LaunchState(onboardingSeen: true, isAuthenticated: true);
 
       expect(state.determineInitialRoute(), 'home');
     });
 
     test('determineInitialRoute returns login when not authenticated', () {
-      const state = LaunchState(
-        onboardingSeen: true,
-        isAuthenticated: false,
-      );
+      const state = LaunchState(onboardingSeen: true, isAuthenticated: false);
 
       expect(state.determineInitialRoute(), 'login');
     });
 
     test('onboarding takes precedence over authentication', () {
-      const state = LaunchState(
-        onboardingSeen: false,
-        isAuthenticated: true,
-      );
+      const state = LaunchState(onboardingSeen: false, isAuthenticated: true);
 
       expect(state.determineInitialRoute(), 'onboarding');
     });
@@ -80,8 +70,9 @@ void main() {
 
       // Default setup
       when(() => config.initialize()).thenAnswer((_) async {});
-      when(() => storage.getBool('onboarding_seen'))
-          .thenAnswer((_) async => false);
+      when(
+        () => storage.getBool('onboarding_seen'),
+      ).thenAnswer((_) async => false);
       when(() => auth.isAuthenticated).thenAnswer((_) async => false);
     });
 
@@ -104,8 +95,9 @@ void main() {
     });
 
     test('returns correct state for first-time user', () async {
-      when(() => storage.getBool('onboarding_seen'))
-          .thenAnswer((_) async => false);
+      when(
+        () => storage.getBool('onboarding_seen'),
+      ).thenAnswer((_) async => false);
       when(() => auth.isAuthenticated).thenAnswer((_) async => false);
 
       final state = await stateMachine.resolve();
@@ -116,8 +108,9 @@ void main() {
     });
 
     test('returns correct state for returning authenticated user', () async {
-      when(() => storage.getBool('onboarding_seen'))
-          .thenAnswer((_) async => true);
+      when(
+        () => storage.getBool('onboarding_seen'),
+      ).thenAnswer((_) async => true);
       when(() => auth.isAuthenticated).thenAnswer((_) async => true);
       when(() => auth.refreshSession()).thenAnswer((_) async {});
 
@@ -129,8 +122,9 @@ void main() {
     });
 
     test('returns correct state for returning unauthenticated user', () async {
-      when(() => storage.getBool('onboarding_seen'))
-          .thenAnswer((_) async => true);
+      when(
+        () => storage.getBool('onboarding_seen'),
+      ).thenAnswer((_) async => true);
       when(() => auth.isAuthenticated).thenAnswer((_) async => false);
 
       final state = await stateMachine.resolve();
@@ -141,8 +135,9 @@ void main() {
     });
 
     test('attempts silent refresh for authenticated users', () async {
-      when(() => storage.getBool('onboarding_seen'))
-          .thenAnswer((_) async => true);
+      when(
+        () => storage.getBool('onboarding_seen'),
+      ).thenAnswer((_) async => true);
       when(() => auth.isAuthenticated).thenAnswer((_) async => true);
       when(() => auth.refreshSession()).thenAnswer((_) async {});
 
@@ -153,8 +148,9 @@ void main() {
 
     test('handles failed refresh gracefully', () async {
       var callCount = 0;
-      when(() => storage.getBool('onboarding_seen'))
-          .thenAnswer((_) async => true);
+      when(
+        () => storage.getBool('onboarding_seen'),
+      ).thenAnswer((_) async => true);
       when(() => auth.isAuthenticated).thenAnswer((_) async {
         callCount++;
         return callCount == 1;
@@ -168,8 +164,9 @@ void main() {
     });
 
     test('handles missing onboarding flag as false', () async {
-      when(() => storage.getBool('onboarding_seen'))
-          .thenAnswer((_) async => null);
+      when(
+        () => storage.getBool('onboarding_seen'),
+      ).thenAnswer((_) async => null);
       when(() => auth.isAuthenticated).thenAnswer((_) async => false);
 
       final state = await stateMachine.resolve();

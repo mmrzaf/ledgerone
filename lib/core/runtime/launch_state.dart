@@ -23,7 +23,8 @@ class LaunchState {
   }
 
   @override
-  String toString() => 'LaunchState(onboarded: $onboardingSeen, '
+  String toString() =>
+      'LaunchState(onboarded: $onboardingSeen, '
       'authenticated: $isAuthenticated, deepLink: $initialDeepLink)';
 }
 

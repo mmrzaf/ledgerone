@@ -25,7 +25,10 @@ void main() {
         category: ErrorCategory.server5xx,
         message: 'Server exploded',
       );
-      expect(error.toString(), 'AppError(ErrorCategory.server5xx): Server exploded');
+      expect(
+        error.toString(),
+        'AppError(ErrorCategory.server5xx): Server exploded',
+      );
     });
   });
 }

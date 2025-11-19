@@ -40,10 +40,7 @@ class DISetupResult {
   final LaunchStateResolver launchStateResolver;
   final ServiceLocator locator;
 
-  DISetupResult({
-    required this.launchStateResolver,
-    required this.locator,
-  });
+  DISetupResult({required this.launchStateResolver, required this.locator});
 }
 
 Future<DISetupResult> setupDependencies() async {
@@ -80,11 +77,7 @@ RouterFactoryResult createRouter({
   final storage = locator.get<StorageService>();
   final auth = locator.get<AuthService>();
 
-  final guards = [
-    OnboardingGuard(storage),
-    AuthGuard(auth),
-    NoAuthGuard(auth),
-  ];
+  final guards = [OnboardingGuard(storage), AuthGuard(auth), NoAuthGuard(auth)];
 
   final result = RouterFactory.create(
     initialRoute: initialRoute,
