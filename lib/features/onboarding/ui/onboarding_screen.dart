@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../core/contracts/storage_contract.dart';
+
 import '../../../core/contracts/navigation_contract.dart';
+import '../../../core/contracts/storage_contract.dart';
 
 class OnboardingScreen extends StatelessWidget {
   final StorageService storage;

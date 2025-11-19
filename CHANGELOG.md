@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - YYYY-MM-DD
+
+### Added
+#### Configuration & Feature Flags
+- **ConfigService**: Implements 3-layer precedence (Defaults → Cache → Remote).
+- **Background Refresh**: Config updates happen asynchronously without blocking boot.
+- **Caching Strategy**: Last-known flags persist across restarts.
+- **Simulated Remote Config**: Logic for fetching remote flags (ready for vendor integration).
+- **Feature Gating**: UI (Home Screen) adapts based on `home.promo_banner.enabled` flag.
+
+### Quality Gates ✅
+- ✅ App boots offline using cached configuration.
+- ✅ Startup sequence executes ≤2 remote calls.
+- ✅ Config precedence tests pass (Cache > Default).
 ## [0.2.0] - 2024-11-18
 
 ### Added

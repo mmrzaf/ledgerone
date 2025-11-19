@@ -1,6 +1,7 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:app_flutter_starter/app/di.dart';
+import 'package:app_flutter_starter/core/config/environment.dart';
 import 'package:app_flutter_starter/core/contracts/navigation_contract.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('NavigationService', () {
@@ -8,7 +9,7 @@ void main() {
     late NavigationService navigationService;
 
     setUp(() async {
-      final diSetup = await setupDependencies();
+      final diSetup = await setupDependencies(AppConfig.dev);
       locator = diSetup.locator;
 
       final routerResult = createRouter(
@@ -82,7 +83,7 @@ void main() {
 
   group('RouterFactory', () {
     test('creates router with correct initial route', () async {
-      final diSetup = await setupDependencies();
+      final diSetup = await setupDependencies(AppConfig.dev);
 
       final result1 = createRouter(
         initialRoute: 'onboarding',
@@ -105,7 +106,7 @@ void main() {
     });
 
     test('registers all guards with router', () async {
-      final diSetup = await setupDependencies();
+      final diSetup = await setupDependencies(AppConfig.dev);
 
       final result = createRouter(
         initialRoute: 'home',

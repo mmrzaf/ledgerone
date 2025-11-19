@@ -1,11 +1,11 @@
-import 'package:flutter_test/flutter_test.dart';
-import 'package:mocktail/mocktail.dart';
-import 'package:app_flutter_starter/core/contracts/storage_contract.dart';
-import 'package:app_flutter_starter/core/contracts/auth_contract.dart';
-import 'package:app_flutter_starter/core/contracts/guard_contract.dart';
-import 'package:app_flutter_starter/app/navigation/guards/onboarding_guard.dart';
 import 'package:app_flutter_starter/app/navigation/guards/auth_guard.dart';
 import 'package:app_flutter_starter/app/navigation/guards/no_auth_guard.dart';
+import 'package:app_flutter_starter/app/navigation/guards/onboarding_guard.dart';
+import 'package:app_flutter_starter/core/contracts/auth_contract.dart';
+import 'package:app_flutter_starter/core/contracts/guard_contract.dart';
+import 'package:app_flutter_starter/core/contracts/storage_contract.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 
 class MockStorageService extends Mock implements StorageService {}
 

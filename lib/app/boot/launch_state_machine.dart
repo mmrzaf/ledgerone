@@ -1,7 +1,7 @@
-import '../../core/runtime/launch_state.dart';
+import '../../core/contracts/auth_contract.dart';
 import '../../core/contracts/config_contract.dart';
 import '../../core/contracts/storage_contract.dart';
-import '../../core/contracts/auth_contract.dart';
+import '../../core/runtime/launch_state.dart';
 
 class LaunchStateMachineImpl implements LaunchStateResolver {
   final ConfigService _config;

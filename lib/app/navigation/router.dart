@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/contracts/navigation_contract.dart';
-import '../../core/contracts/guard_contract.dart';
-import '../../core/contracts/storage_contract.dart';
+
 import '../../core/contracts/auth_contract.dart';
-import '../../features/onboarding/ui/onboarding_screen.dart';
+import '../../core/contracts/guard_contract.dart';
+import '../../core/contracts/navigation_contract.dart';
+import '../../core/contracts/storage_contract.dart';
 import '../../features/auth/ui/login_screen.dart';
 import '../../features/home/ui/home_screen.dart';
+import '../../features/onboarding/ui/onboarding_screen.dart';
 
 class RouteMetadata {
   final String id;

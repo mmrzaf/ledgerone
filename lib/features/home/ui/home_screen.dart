@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
+
+import '../../../app/di.dart';
 import '../../../core/contracts/auth_contract.dart';
+import '../../../core/contracts/config_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
 
 class HomeScreen extends StatelessWidget {
   final AuthService authService;
   final NavigationService navigation;
 
-  const HomeScreen({
-    required this.authService,
-    required this.navigation,
-    super.key,
-  });
+  final ConfigService _config = ServiceLocator().get<ConfigService>();
+
+  HomeScreen({required this.authService, required this.navigation, super.key});
 
   Future<void> _handleLogout() async {
     await authService.logout();
@@ -19,6 +20,9 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final showPromo = _config.getFlag('home.promo_banner.enabled');
+    final variant = _config.getString('ui.theme_variant');
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
@@ -36,6 +40,28 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              if (showPromo) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 24,
+                  ),
+                  margin: const EdgeInsets.only(bottom: 32),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade100,
+                    borderRadius: BorderRadius.circular(50),
+                    border: Border.all(color: Colors.amber.shade400),
+                  ),
+                  child: const Text(
+                    '✨ New Feature Enabled!',
+                    style: TextStyle(
+                      color: Colors.brown,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+
               const Icon(
                 Icons.check_circle_outline,
                 size: 100,
@@ -47,10 +73,9 @@ class HomeScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 16),
-              const Text(
-                'Navigation, guards, and routing are working correctly.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
-                textAlign: TextAlign.center,
+              Text(
+                'Variant: $variant',
+                style: const TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 32),
               FutureBuilder<String?>(
