@@ -1,3 +1,5 @@
+import 'package:app_flutter_starter/core/config/environment.dart';
+
 import '../core/contracts/config_contract.dart';
 import '../core/contracts/storage_contract.dart';
 import '../core/contracts/auth_contract.dart';
@@ -43,11 +45,11 @@ class DISetupResult {
   DISetupResult({required this.launchStateResolver, required this.locator});
 }
 
-Future<DISetupResult> setupDependencies() async {
+Future<DISetupResult> setupDependencies(AppConfig appConfig) async {
   final locator = ServiceLocator();
+  locator.register<AppConfig>(appConfig);
 
-  final storage =
-      MockStorageService();
+  final storage = MockStorageService();
   final analytics = MockAnalyticsService();
   final crash = MockCrashService();
   final auth = MockAuthService();

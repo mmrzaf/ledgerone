@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'core/config/environment.dart';
 import 'app/app.dart';
 import 'app/di.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  const config = AppConfig.dev;
 
   // Phase 1: Setup dependencies
-  final diSetup = await setupDependencies();
+  final diSetup = await setupDependencies(config);
 
   // Phase 2: Resolve launch state
   final launchState = await diSetup.launchStateResolver.resolve();
