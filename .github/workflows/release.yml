@@ -217,9 +217,18 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: release-artifacts
-
-      - name: List downloaded artifacts
-        run: ls -la release-artifacts || true
+      
+      - name: Create ZIP Archives for Release
+        run: |
+          cd release-artifacts
+          zip -r android.zip android-artifacts
+          zip -r web.zip web-artifact
+          zip -r linux.zip linux-artifact
+          zip -r windows.zip windows-artifact
+          zip -r macos.zip macos-artifact
+          zip -r ios.zip ios-artifact
+          ls -l *.zip
+        shell: bash
 
       - name: Create GitHub Release
         id: gh_release
@@ -228,7 +237,6 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body: "Automated build artifacts for tag ${{ github.ref_name }}."
-          files: release-artifacts/**
+          files: release-artifacts/*.zip 
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
