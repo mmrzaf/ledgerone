@@ -10,9 +10,7 @@ class MockConfigService implements ConfigService {
 
   @override
   Future<void> initialize() async {
-    await Future.delayed(const Duration(milliseconds: 100));
     _initialized = true;
-
     _flags['auth.enabled'] = true;
     _flags['onboarding.enabled'] = true;
     _flags['telemetry.enabled'] = false;
@@ -77,8 +75,6 @@ class MockAuthService implements AuthService {
 
   @override
   Future<void> login(String email, String password) async {
-    await Future.delayed(const Duration(milliseconds: 500));
-
     if (email.isEmpty || password.length < 6) {
       throw Exception('Invalid credentials');
     }
@@ -94,9 +90,7 @@ class MockAuthService implements AuthService {
   }
 
   @override
-  Future<void> refreshSession() async {
-    await Future.delayed(const Duration(milliseconds: 100));
-  }
+  Future<void> refreshSession() async {}
 }
 
 class MockAnalyticsService implements AnalyticsService {
@@ -112,8 +106,7 @@ class MockAnalyticsService implements AnalyticsService {
   }
 
   @override
-  Future<void> setUserId(String? id) async {
-  }
+  Future<void> setUserId(String? id) async {}
 
   @override
   Future<void> logScreenView(String screenName) async {
@@ -141,8 +134,7 @@ class MockCrashService implements CrashService {
   }
 
   @override
-  Future<void> log(String message) async {
-  }
+  Future<void> log(String message) async {}
 
   List<Map<String, dynamic>> get errors => List.unmodifiable(_errors);
 }

@@ -7,7 +7,7 @@ import 'package:app_flutter_starter/core/contracts/auth_contract.dart';
 
 void main() {
   group('Navigation Flow Integration Tests', () {
-    testWidgets('Fresh install: onboarding -> complete -> home',
+    testWidgets('Fresh install: onboarding -> complete -> login (redirect)',
         (tester) async {
       final diSetup = await setupDependencies();
       final launchState = await diSetup.launchStateResolver.resolve();
@@ -24,9 +24,13 @@ void main() {
       expect(find.text('Get Started'), findsOneWidget);
 
       await tester.tap(find.text('Get Started'));
+      
+      await tester.pump();
       await tester.pumpAndSettle();
 
-      expect(find.text('Welcome!'), findsOneWidget);
+      // Fixed: "Sign In" appears in title AND button, so we expect at least 1
+      expect(find.text('Sign In'), findsAtLeastNWidgets(1));
+      expect(find.text('Welcome!'), findsNothing);
     });
 
     testWidgets('Onboarding skip -> login', (tester) async {
@@ -42,9 +46,12 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Skip'));
+      
+      await tester.pump(); 
       await tester.pumpAndSettle();
 
-      expect(find.text('Sign In'), findsOneWidget);
+      // Fixed: Expect at least 1 "Sign In" text
+      expect(find.text('Sign In'), findsAtLeastNWidgets(1));
       expect(find.byType(TextFormField), findsNWidgets(2));
     });
 
@@ -63,32 +70,22 @@ void main() {
       await tester.pumpWidget(App(router: routerResult.router));
       await tester.pumpAndSettle();
 
-      expect(find.text('Sign In'), findsOneWidget);
+      // Fixed: Expect at least 1 "Sign In" text
+      expect(find.text('Sign In'), findsAtLeastNWidgets(1));
 
-      await tester.enterText(
-        find.byType(TextFormField).first,
-        'invalid-email',
-      );
-      await tester.enterText(
-        find.byType(TextFormField).last,
-        'short',
-      );
-      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).first, 'invalid-email');
+      await tester.enterText(find.byType(TextFormField).last, 'short');
+      await tester.pump();
 
+      // We use widgetWithText for the button, which specifically finds the button
       final button = tester.widget<ElevatedButton>(
         find.widgetWithText(ElevatedButton, 'Sign In'),
       );
       expect(button.onPressed, isNull);
 
-      await tester.enterText(
-        find.byType(TextFormField).first,
-        'user@example.com',
-      );
-      await tester.enterText(
-        find.byType(TextFormField).last,
-        'password123',
-      );
-      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).first, 'user@example.com');
+      await tester.enterText(find.byType(TextFormField).last, 'password123');
+      await tester.pump();
 
       expect(
         tester.widget<ElevatedButton>(
@@ -98,8 +95,8 @@ void main() {
       );
 
       await tester.tap(find.widgetWithText(ElevatedButton, 'Sign In'));
+      
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
       await tester.pumpAndSettle();
 
       expect(find.text('Welcome!'), findsOneWidget);
@@ -154,13 +151,13 @@ void main() {
       await tester.tap(find.byIcon(Icons.logout));
       await tester.pumpAndSettle();
 
-      expect(find.text('Sign In'), findsOneWidget);
+      // Fixed: Expect at least 1 "Sign In" text
+      expect(find.text('Sign In'), findsAtLeastNWidgets(1));
       expect(find.text('Welcome!'), findsNothing);
     });
 
     testWidgets('Guard evaluation order is correct', (tester) async {
       final diSetup = await setupDependencies();
-
       final auth = diSetup.locator.get<AuthService>();
       await auth.login('test@test.com', 'password123');
 

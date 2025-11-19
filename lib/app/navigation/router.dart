@@ -11,7 +11,6 @@ import '../../features/home/ui/home_screen.dart';
 class RouteMetadata {
   final String id;
   final String path;
-
   const RouteMetadata(this.id, this.path);
 }
 
@@ -51,7 +50,7 @@ class NavigationServiceImpl implements NavigationService {
 
   @override
   String? get currentRouteId {
-    final location = _router.routerDelegate.currentConfiguration.uri.path;
+    final location = _router.routerDelegate.currentConfiguration.uri.toString();
     for (final entry in _routeIdToPath.entries) {
       if (entry.value == location) {
         return entry.key;
@@ -67,9 +66,6 @@ class NavigationServiceImpl implements NavigationService {
       throw ArgumentError('Unknown route ID: $routeId');
     }
 
-    while (_router.canPop()) {
-      _router.pop();
-    }
     _router.go(path, extra: params);
   }
 }
@@ -89,6 +85,8 @@ class RouterFactory {
 
     final sortedGuards = List<NavigationGuard>.from(guards)
       ..sort((a, b) => a.priority.compareTo(b.priority));
+
+    late final NavigationServiceImpl navigationService;
 
     final router = GoRouter(
       initialLocation: routeIdToPath[initialRoute] ?? '/onboarding',
@@ -131,37 +129,34 @@ class RouterFactory {
         GoRoute(
           path: '/onboarding',
           builder: (context, state) {
-            final navService = NavigationServiceImpl(router, routeIdToPath);
             return OnboardingScreen(
               storage: storage,
-              navigation: navService,
+              navigation: navigationService,
             );
           },
         ),
         GoRoute(
           path: '/login',
           builder: (context, state) {
-            final navService = NavigationServiceImpl(router, routeIdToPath);
             return LoginScreen(
               authService: auth,
-              navigation: navService,
+              navigation: navigationService,
             );
           },
         ),
         GoRoute(
           path: '/home',
           builder: (context, state) {
-            final navService = NavigationServiceImpl(router, routeIdToPath);
             return HomeScreen(
               authService: auth,
-              navigation: navService,
+              navigation: navigationService,
             );
           },
         ),
       ],
     );
 
-    final navigationService = NavigationServiceImpl(router, routeIdToPath);
+    navigationService = NavigationServiceImpl(router, routeIdToPath);
 
     return RouterFactoryResult(
       router: router,
