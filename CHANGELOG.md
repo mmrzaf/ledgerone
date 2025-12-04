@@ -5,7 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - YYYY-MM-DD
+## [0.4.0] - 2025-12-04
+
+### Theme
+Error policy & resilience: predictable failures, retries, and safe cancellation.
+
+### Added
+- Central `ErrorPolicyRegistry` that maps every `ErrorCategory` to a concrete policy:
+  - Presentation mode (inline, banner, toast, silent).
+  - Retry strategy (never, manual, automatic) and retry caps. 
+- `ErrorPresenter` + inline `ErrorCard` widget to render errors according to policy, including banner/toast flows. 
+- `RetryHelper` with:
+  - Policy-based retries (`executeWithPolicy`).
+  - Exponential backoff with jitter.
+  - Cancellation-aware delay. 
+- `CancellationToken`, `CancellationTokenSource`, and `OperationCancelledException` primitives, plus unit tests for all core cancellation behaviors. 
+- Comprehensive tests for the error taxonomy and error policies (all categories covered, policy invariants asserted). 
+- Integration tests for error flows:
+  - Login: failure, retry, navigation-away safety.
+  - Home: load, retry, and non-crash behavior under simulated failures. 
+
+### Changed
+- **Login screen**
+  - Uses `CancellationTokenSource` tied to the widget lifecycle; token is disposed in `dispose()`.   
+  - Throws on cancellation before navigation and gracefully ignores `OperationCancelledException` so navigation-away during an in-flight login doesn’t explode the UI.
+- **Home screen**
+  - Initial load and refresh now go through `RetryHelper.executeWithPolicy` with a cancellation token, so retries and delays respect cancellation and centralized error policy.   
+  - UI is explicit about `loading / empty / error / ready` states and uses `ErrorCard`, `LoadingIndicator`, and `EmptyState` building blocks. 
+
+### Fixed
+- Guard / navigation tests updated to assert deterministic guard order (`OnboardingGuard`, `AuthGuard`, `NoAuthGuard`) and correct redirects. 
+- Retry helper edge cases:
+  - Correct attempt counting.
+  - Respect for `never` retry strategy.
+  - Proper wrapping of non-`AppError` exceptions as `AppError(unknown)`. 
+
+### Notes
+- This is the “v0.4 – Error Policy & Resilience” milestone from the blueprint:
+  - Error→policy mapping is now the single source of truth.
+  - Cancellation is wired from UI to retry/cancellation primitives.
+  - Navigation-away scenarios are covered by tests (login + home). 
+
+## [0.3.0] - 2025-11-20
 
 ### Added
 #### Configuration & Feature Flags
