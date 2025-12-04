@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import '../../../app/presentation/error_presenter.dart';
 import '../../../core/contracts/auth_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
+import '../../../core/errors/app_error.dart';
+import '../../../core/runtime/cancellation_token.dart';
 
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
@@ -20,11 +23,14 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _cancellationSource = CancellationTokenSource();
+
   bool _isLoading = false;
-  String? _errorMessage;
+  AppError? _error;
 
   @override
   void dispose() {
+    _cancellationSource.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -41,25 +47,41 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null;
+      _error = null;
     });
 
     try {
+      _cancellationSource.token.throwIfCancelled();
+
       await widget.authService.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      if (mounted) {
-        widget.navigation.clearAndGoTo('home');
-      }
+      if (!mounted) return;
+
+      _cancellationSource.token.throwIfCancelled();
+      widget.navigation.clearAndGoTo('home');
+    } on OperationCancelledException {
+      // Navigation away during login - do nothing
+      debugPrint('Login cancelled by navigation');
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Invalid credentials. Please try again.';
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+
+      final appError = e is AppError
+          ? e
+          : AppError(
+              category: ErrorCategory.invalidCredentials,
+              message: 'Login failed',
+              originalError: e,
+            );
+
+      setState(() {
+        _error = appError;
+        _isLoading = false;
+      });
+
+      ErrorPresenter.showError(context, appError);
     }
   }
 
@@ -123,32 +145,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     },
                     onChanged: (_) => setState(() {}),
                   ),
-                  if (_errorMessage != null) ...[
+                  if (_error != null) ...[
                     const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.shade200),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.error_outline,
-                            color: Colors.red.shade700,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: TextStyle(color: Colors.red.shade700),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ErrorCard(error: _error!, onRetry: _handleLogin),
                   ],
                   const SizedBox(height: 24),
                   ElevatedButton(

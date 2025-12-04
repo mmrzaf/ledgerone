@@ -34,7 +34,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Sign In'), findsAtLeastNWidgets(1));
-      expect(find.text('Welcome!'), findsNothing);
+      expect(find.text('Welcome back!'), findsNothing);
     });
 
     testWidgets('Onboarding skip -> login', (tester) async {
@@ -107,7 +107,7 @@ void main() {
       await tester.tap(find.widgetWithText(ElevatedButton, 'Sign In'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Welcome!'), findsOneWidget);
+      expect(find.text('Welcome back!'), findsOneWidget);
     });
 
     testWidgets('Authenticated user redirects to home from login', (
@@ -136,7 +136,7 @@ void main() {
       await tester.pumpWidget(App(router: routerResult.router));
       await tester.pumpAndSettle();
 
-      expect(find.text('Welcome!'), findsOneWidget);
+      expect(find.text('Welcome back!'), findsOneWidget);
       expect(find.text('Sign In'), findsNothing);
     });
 
@@ -161,13 +161,13 @@ void main() {
       await tester.pumpWidget(App(router: routerResult.router));
       await tester.pumpAndSettle();
 
-      expect(find.text('Welcome!'), findsOneWidget);
+      expect(find.text('Welcome back!'), findsOneWidget);
 
       await tester.tap(find.byIcon(Icons.logout));
       await tester.pumpAndSettle();
 
       expect(find.text('Sign In'), findsAtLeastNWidgets(1));
-      expect(find.text('Welcome!'), findsNothing);
+      expect(find.text('Welcome back!'), findsNothing);
     });
 
     testWidgets('Guard evaluation order is correct', (tester) async {

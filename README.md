@@ -200,7 +200,7 @@ testWidgets('Login flow works end-to-end', (tester) async {
   await tester.pumpAndSettle();
   
   // Verify navigation to home
-  expect(find.text('Welcome!'), findsOneWidget);
+  expect(find.text('Welcome back!'), findsOneWidget);
 });
 ```
 

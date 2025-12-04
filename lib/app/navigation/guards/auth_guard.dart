@@ -1,3 +1,5 @@
+import 'package:app_flutter_starter/core/errors/app_error.dart';
+
 import '../../../core/contracts/auth_contract.dart';
 import '../../../core/contracts/guard_contract.dart';
 
@@ -25,6 +27,13 @@ class AuthGuard implements NavigationGuard {
 
         if (stillAuthenticated) {
           return const GuardAllow();
+        }
+      } on AppError catch (e) {
+        // If we are offline, do NOT kick the user out.
+        // Trust the local 'isAuthenticated' state or handle gracefully.
+        if (e.category == ErrorCategory.networkOffline ||
+            e.category == ErrorCategory.timeout) {
+          if (await _authService.isAuthenticated) return const GuardAllow();
         }
       } catch (_) {
         // Refresh failed, redirect to login
