@@ -1,3 +1,5 @@
+import 'package:app_flutter_starter/app/di.dart';
+import 'package:app_flutter_starter/core/contracts/config_contract.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/contracts/auth_contract.dart';
@@ -147,7 +149,11 @@ class RouterFactory {
         GoRoute(
           path: '/home',
           builder: (context, state) {
-            return HomeScreen(authService: auth, navigation: navigationService);
+            return HomeScreen(
+              authService: auth,
+              navigation: navigationService,
+              configService: ServiceLocator().get<ConfigService>(),
+            );
           },
         ),
       ],
