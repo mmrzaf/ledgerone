@@ -65,7 +65,6 @@ class CacheServiceImpl implements CacheService {
         cachedAt: cachedAt,
         ttl: ttl,
       );
-
       // Restore to memory cache
       _memoryCache[key] = cachedData;
 
@@ -81,7 +80,7 @@ class CacheServiceImpl implements CacheService {
 
   @override
   Future<bool> hasValid(String key) async {
-    final cached = await get(key);
+    final cached = await get<dynamic>(key);
     return cached != null && cached.isValid;
   }
 

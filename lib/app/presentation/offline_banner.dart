@@ -20,7 +20,7 @@ class OfflineBanner extends StatelessWidget {
         color: Colors.orange.shade800,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.white.withAlpha((255 * 0.1).round()),
             offset: const Offset(0, 2),
             blurRadius: 4,
           ),
@@ -51,7 +51,7 @@ class OfflineBanner extends StatelessWidget {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withAlpha((255 * 0.2).round()),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(

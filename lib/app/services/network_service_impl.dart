@@ -65,7 +65,7 @@ class SimulatedNetworkService implements NetworkService {
   final StreamController<NetworkStatus> _statusController =
       StreamController<NetworkStatus>.broadcast();
 
-  NetworkStatus _currentStatus = NetworkStatus.online;
+  NetworkStatus _currentStatus = NetworkStatus.offline;
 
   @override
   Future<void> initialize() async {

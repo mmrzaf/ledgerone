@@ -220,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Demo async operation that simulates network call
   Future<HomeData> _fetchDemoData() async {
     // Simulate network delay
-    await Future.delayed(const Duration(seconds: 1));
+    await Future<void>.delayed(const Duration(seconds: 1));
 
     // Simulate occasional failures for demo
     final now = DateTime.now();
@@ -417,7 +417,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return Center(
           child: ErrorCard(
             error: _error!,
-            screen: "home",
+            screen: 'home',
             onRetry: _handleManualRefresh,
           ),
         );

@@ -1,3 +1,4 @@
+import 'package:app_flutter_starter/core/contracts/i18n_contract.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/contracts/auth_contract.dart';
@@ -84,6 +85,7 @@ class RouterFactory {
     required NetworkService network,
     required CacheService cache,
     required AppLifecycleService lifecycle,
+    required LocalizationService localization,
   }) {
     final routeIdToPath = {
       'onboarding': '/onboarding',
