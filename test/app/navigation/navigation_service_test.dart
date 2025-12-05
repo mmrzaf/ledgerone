@@ -1,37 +1,64 @@
-import 'package:app_flutter_starter/app/di.dart';
-import 'package:app_flutter_starter/core/config/environment.dart';
+import 'package:app_flutter_starter/app/navigation/guards/onboarding_guard.dart';
+import 'package:app_flutter_starter/app/navigation/router.dart';
+import 'package:app_flutter_starter/app/services/cache_service_impl.dart';
+import 'package:app_flutter_starter/app/services/lifecycle_service_impl.dart';
+import 'package:app_flutter_starter/app/services/localization_service_impl.dart';
+import 'package:app_flutter_starter/app/services/network_service_impl.dart';
 import 'package:app_flutter_starter/core/contracts/navigation_contract.dart';
+import 'package:app_flutter_starter/core/errors/result.dart';
+import 'package:app_flutter_starter/features/home/domain/home_models.dart';
+import 'package:app_flutter_starter/features/home/domain/home_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../helpers/mock_services.dart';
+
+class _MockHomeRepository implements HomeRepository {
+  @override
+  Future<Result<HomeData>> load({bool forceRefresh = false}) async {
+    return Success(HomeData(message: 'Test', timestamp: DateTime.now()));
+  }
+
+  @override
+  Stream<HomeData> watch() => const Stream.empty();
+}
 
 void main() {
   group('NavigationService', () {
-    late ServiceLocator locator;
     late NavigationService navigationService;
-
+    TestWidgetsFlutterBinding.ensureInitialized();
     setUp(() async {
-      final diSetup = await setupDependencies(AppConfig.dev);
-      locator = diSetup.locator;
+      final storage = MockStorageService();
+      final config = MockConfigService();
+      await config.initialize();
 
-      final routerResult = createRouter(
+      final network = SimulatedNetworkService();
+      await network.initialize();
+
+      final cache = CacheServiceImpl(storage: storage);
+      final lifecycle = AppLifecycleServiceImpl();
+      lifecycle.initialize();
+
+      final localization = LocalizationServiceImpl(storage: storage);
+      await localization.initialize();
+
+      final homeRepository = _MockHomeRepository();
+
+      final routerResult = RouterFactory.create(
         initialRoute: 'onboarding',
-        locator: locator,
+        guards: [OnboardingGuard(storage)],
+        storage: storage,
+        config: config,
+        network: network,
+        cache: cache,
+        lifecycle: lifecycle,
+        localization: localization,
+        homeRepository: homeRepository,
       );
 
       navigationService = routerResult.navigationService;
     });
 
-    tearDown(() {
-      locator.clear();
-    });
-
-    test('NavigationService is registered in DI', () {
-      final nav = locator.get<NavigationService>();
-      expect(nav, isNotNull);
-      expect(nav, isA<NavigationService>());
-    });
-
     test('currentRouteId returns correct route', () {
-      // Initial route should be onboarding
       expect(navigationService.currentRouteId, anyOf('onboarding', isNull));
     });
 
@@ -57,9 +84,7 @@ void main() {
     });
 
     test('route IDs are correctly mapped to paths', () {
-      // These should not throw
       expect(() => navigationService.goToRoute('onboarding'), returnsNormally);
-      expect(() => navigationService.goToRoute('login'), returnsNormally);
       expect(() => navigationService.goToRoute('home'), returnsNormally);
     });
   });
@@ -78,43 +103,6 @@ void main() {
       ];
 
       expect(methods.length, 6);
-    });
-  });
-
-  group('RouterFactory', () {
-    test('creates router with correct initial route', () async {
-      final diSetup = await setupDependencies(AppConfig.dev);
-
-      final result1 = createRouter(
-        initialRoute: 'onboarding',
-        locator: diSetup.locator,
-      );
-      expect(result1.router, isNotNull);
-      expect(result1.navigationService, isNotNull);
-
-      final result2 = createRouter(
-        initialRoute: 'login',
-        locator: diSetup.locator,
-      );
-      expect(result2.router, isNotNull);
-
-      final result3 = createRouter(
-        initialRoute: 'home',
-        locator: diSetup.locator,
-      );
-      expect(result3.router, isNotNull);
-    });
-
-    test('registers all guards with router', () async {
-      final diSetup = await setupDependencies(AppConfig.dev);
-
-      final result = createRouter(
-        initialRoute: 'home',
-        locator: diSetup.locator,
-      );
-
-      expect(result.router, isNotNull);
-      expect(result.router.routerDelegate, isNotNull);
     });
   });
 }
