@@ -168,7 +168,7 @@ class RetryHelper {
       );
     }
 
-    await Future.delayed(actualDelay);
+    await Future<void>.delayed(actualDelay);
     token.throwIfCancelled();
   }
 

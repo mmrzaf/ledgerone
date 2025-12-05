@@ -63,8 +63,7 @@ class AnalyticsServiceImpl implements AnalyticsService {
 
     // Sanitize parameters (remove any PII that might have slipped in)
     final sanitized = _sanitizeParameters(parameters);
-
-    debugPrint('Analytics: $name ${sanitized != null ? sanitized : ''}');
+    debugPrint('Analytics: $name $sanitized');
 
     // Forward to vendor if available
     await _vendor?.logEvent(name, parameters: sanitized);

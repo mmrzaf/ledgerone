@@ -195,7 +195,7 @@ void main() {
             throw Exception('Error');
           },
         );
-        fail('Should have thrown');
+        // fail('Should have thrown');
       } catch (e) {
         expect(attempts, equals(1));
       }

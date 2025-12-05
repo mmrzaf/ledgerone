@@ -1,4 +1,6 @@
 import 'package:app_flutter_starter/core/contracts/analytics_contract.dart';
+import 'package:app_flutter_starter/core/contracts/i18n_contract.dart';
+import 'package:app_flutter_starter/core/contracts/theme_contract.dart';
 import 'package:flutter/material.dart';
 
 import 'app/app.dart';
@@ -9,14 +11,13 @@ import 'core/observability/performance_tracker.dart';
 
 void main() async {
   // Mark app start
-  final startTime = DateTime.now();
   PerformanceTracker().start(PerformanceMetrics.coldStart);
 
   WidgetsFlutterBinding.ensureInitialized();
 
   const config = AppConfig.dev;
 
-  // Phase 1: Setup dependencies
+  // Phase 1: Setup dependencies (includes i18n and theme initialization)
   PerformanceTracker().mark('di_start');
   final diSetup = await setupDependencies(config);
   PerformanceTracker().mark('di_complete');
@@ -46,8 +47,18 @@ void main() async {
     'launch_state_complete',
   );
 
-  // Phase 4: Run app
-  runApp(App(router: routerResult.router));
+  // Get services for app widget
+  final localization = diSetup.locator.get<LocalizationService>();
+  final themeService = diSetup.locator.get<ThemeService>();
+
+  // Phase 4: Run app with i18n and theme support
+  runApp(
+    App(
+      router: routerResult.router,
+      localization: localization,
+      themeService: themeService,
+    ),
+  );
 
   // Record cold start completion after first frame
   WidgetsBinding.instance.addPostFrameCallback((_) {

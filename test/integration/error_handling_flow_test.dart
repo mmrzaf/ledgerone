@@ -1,5 +1,8 @@
 import 'package:app_flutter_starter/app/presentation/error_presenter.dart';
+import 'package:app_flutter_starter/app/services/cache_service_impl.dart';
+import 'package:app_flutter_starter/app/services/lifecycle_service_impl.dart';
 import 'package:app_flutter_starter/app/services/mock_services.dart';
+import 'package:app_flutter_starter/app/services/network_service_impl.dart';
 import 'package:app_flutter_starter/core/contracts/navigation_contract.dart';
 import 'package:app_flutter_starter/core/errors/app_error.dart';
 import 'package:app_flutter_starter/features/auth/ui/login_screen.dart';
@@ -139,12 +142,23 @@ void main() {
       final config = MockConfigService();
       await config.initialize();
 
+      // New services
+      final storage = MockStorageService();
+      final cache = CacheServiceImpl(storage: storage);
+      final network = SimulatedNetworkService();
+      await network.initialize();
+      final lifecycle = AppLifecycleServiceImpl();
+      lifecycle.initialize();
+
       await tester.pumpWidget(
         MaterialApp(
           home: HomeScreen(
             authService: auth,
             navigation: nav,
             configService: config,
+            networkService: network,
+            cacheService: cache,
+            lifecycleService: lifecycle,
           ),
         ),
       );
@@ -164,12 +178,23 @@ void main() {
       final config = MockConfigService();
       await config.initialize();
 
+      // New services
+      final storage = MockStorageService();
+      final cache = CacheServiceImpl(storage: storage);
+      final network = SimulatedNetworkService();
+      await network.initialize();
+      final lifecycle = AppLifecycleServiceImpl();
+      lifecycle.initialize();
+
       await tester.pumpWidget(
         MaterialApp(
           home: HomeScreen(
             authService: auth,
             navigation: nav,
             configService: config,
+            networkService: network,
+            cacheService: cache,
+            lifecycleService: lifecycle,
           ),
         ),
       );
@@ -190,11 +215,18 @@ void main() {
   });
   testWidgets('home load is safe when navigated away', (tester) async {
     final auth = MockAuthService();
-    // Optional: simulate an authenticated user for realism
     await auth.login('test@example.com', 'password123');
     final nav = MockNavigationService();
     final config = MockConfigService();
     await config.initialize();
+
+    // New services
+    final storage = MockStorageService();
+    final cache = CacheServiceImpl(storage: storage);
+    final network = SimulatedNetworkService();
+    await network.initialize();
+    final lifecycle = AppLifecycleServiceImpl();
+    lifecycle.initialize();
 
     await tester.pumpWidget(
       MaterialApp(
@@ -202,6 +234,9 @@ void main() {
           authService: auth,
           navigation: nav,
           configService: config,
+          networkService: network,
+          cacheService: cache,
+          lifecycleService: lifecycle,
         ),
       ),
     );
@@ -228,7 +263,7 @@ void main() {
 class SlowAuthService extends MockAuthService {
   @override
   Future<void> login(String email, String password) async {
-    await Future.delayed(const Duration(seconds: 10));
+    await Future<void>.delayed(const Duration(seconds: 10));
     return super.login(email, password);
   }
 }

@@ -1,10 +1,13 @@
-import 'package:app_flutter_starter/app/di.dart';
-import 'package:app_flutter_starter/core/contracts/config_contract.dart';
+import 'package:app_flutter_starter/core/contracts/i18n_contract.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/contracts/auth_contract.dart';
+import '../../core/contracts/cache_contract.dart';
+import '../../core/contracts/config_contract.dart';
 import '../../core/contracts/guard_contract.dart';
+import '../../core/contracts/lifecycle_contract.dart';
 import '../../core/contracts/navigation_contract.dart';
+import '../../core/contracts/network_contract.dart';
 import '../../core/contracts/storage_contract.dart';
 import '../../features/auth/ui/login_screen.dart';
 import '../../features/home/ui/home_screen.dart';
@@ -78,6 +81,11 @@ class RouterFactory {
     required List<NavigationGuard> guards,
     required StorageService storage,
     required AuthService auth,
+    required ConfigService config,
+    required NetworkService network,
+    required CacheService cache,
+    required AppLifecycleService lifecycle,
+    required LocalizationService localization,
   }) {
     final routeIdToPath = {
       'onboarding': '/onboarding',
@@ -152,7 +160,10 @@ class RouterFactory {
             return HomeScreen(
               authService: auth,
               navigation: navigationService,
-              configService: ServiceLocator().get<ConfigService>(),
+              configService: config,
+              networkService: network,
+              cacheService: cache,
+              lifecycleService: lifecycle,
             );
           },
         ),

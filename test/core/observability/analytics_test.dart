@@ -147,7 +147,7 @@ void main() {
 
   group('EventDefinition', () {
     test('validates parameters correctly', () {
-      final event = EventDefinition(
+      const event = EventDefinition(
         name: 'test_event',
         description: 'Test',
         parameters: [

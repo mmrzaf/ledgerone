@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../app/di.dart';
 import '../../../app/presentation/error_presenter.dart';
+import '../../../app/services/crash_service_impl.dart';
 import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/auth_contract.dart';
 import '../../../core/contracts/crash_contract.dart';
@@ -9,7 +10,6 @@ import '../../../core/errors/app_error.dart';
 import '../../../core/observability/analytics_allowlist.dart';
 import '../../../core/observability/performance_tracker.dart';
 import '../../../core/runtime/cancellation_token.dart';
-import '../../../app/services/crash_service_impl.dart';
 
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
@@ -137,7 +137,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Record error to crash service
       await _crash.recordError(appError, appError.stackTrace);
-
+      if (!mounted) return;
       ErrorPresenter.showError(context, appError, onRetry: _handleLogin);
     }
   }
