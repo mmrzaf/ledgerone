@@ -1,7 +1,13 @@
 import 'package:app_flutter_starter/app/services/analytics_service_impl.dart';
+import 'package:app_flutter_starter/app/services/cache_service_impl.dart';
 import 'package:app_flutter_starter/app/services/crash_service_impl.dart';
+import 'package:app_flutter_starter/app/services/lifecycle_service_impl.dart';
+import 'package:app_flutter_starter/app/services/network_service_impl.dart';
 import 'package:app_flutter_starter/core/config/environment.dart';
+import 'package:app_flutter_starter/core/contracts/cache_contract.dart';
 import 'package:app_flutter_starter/core/contracts/config_provider.dart';
+import 'package:app_flutter_starter/core/contracts/lifecycle_contract.dart';
+import 'package:app_flutter_starter/core/contracts/network_contract.dart';
 import 'package:app_flutter_starter/core/observability/analytics_allowlist.dart';
 import 'package:app_flutter_starter/core/observability/performance_tracker.dart';
 
@@ -63,6 +69,20 @@ Future<DISetupResult> setupDependencies(
 
   locator.register<StorageService>(storage);
   locator.register<AuthService>(auth);
+
+  // Network monitoring
+  final network = SimulatedNetworkService();
+  await network.initialize();
+  locator.register<NetworkService>(network);
+
+  // Cache service
+  final cache = CacheServiceImpl(storage: storage);
+  locator.register<CacheService>(cache);
+
+  // Lifecycle monitoring
+  final lifecycle = AppLifecycleServiceImpl();
+  lifecycle.initialize();
+  locator.register<AppLifecycleService>(lifecycle);
 
   // Observability services - initialize with consent management
   final analyticsImpl = AnalyticsServiceImpl(
@@ -127,6 +147,10 @@ RouterFactoryResult createRouter({
     guards: guards,
     storage: storage,
     auth: auth,
+    config: locator.get<ConfigService>(),
+    network: locator.get<NetworkService>(),
+    cache: locator.get<CacheService>(),
+    lifecycle: locator.get<AppLifecycleService>(),
   );
 
   locator.register<NavigationService>(result.navigationService);
