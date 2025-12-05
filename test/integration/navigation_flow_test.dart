@@ -2,10 +2,11 @@ import 'package:app_flutter_starter/app/app.dart';
 import 'package:app_flutter_starter/app/di.dart';
 import 'package:app_flutter_starter/core/config/environment.dart';
 import 'package:app_flutter_starter/core/contracts/auth_contract.dart';
+import 'package:app_flutter_starter/core/contracts/i18n_contract.dart';
 import 'package:app_flutter_starter/core/contracts/storage_contract.dart';
+import 'package:app_flutter_starter/core/contracts/theme_contract.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import '../helpers/test_remote_config_provider.dart';
 
 void main() {
@@ -23,8 +24,17 @@ void main() {
         initialRoute: initialRoute,
         locator: diSetup.locator,
       );
+      final localization = diSetup.locator.get<LocalizationService>();
+      final themeService = diSetup.locator.get<ThemeService>();
 
-      await tester.pumpWidget(App(router: routerResult.router));
+      await tester.pumpWidget(
+        App(
+          router: routerResult.router,
+          localization: localization,
+          themeService: themeService,
+        ),
+      );
+
       await tester.pumpAndSettle();
 
       expect(find.text('Welcome to Flutter Starter'), findsOneWidget);
@@ -48,8 +58,17 @@ void main() {
         initialRoute: initialRoute,
         locator: diSetup.locator,
       );
+      final localization = diSetup.locator.get<LocalizationService>();
+      final themeService = diSetup.locator.get<ThemeService>();
 
-      await tester.pumpWidget(App(router: routerResult.router));
+      await tester.pumpWidget(
+        App(
+          router: routerResult.router,
+          localization: localization,
+          themeService: themeService,
+        ),
+      );
+
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Skip'));
@@ -73,8 +92,17 @@ void main() {
         initialRoute: initialRoute,
         locator: diSetup.locator,
       );
+      final localization = diSetup.locator.get<LocalizationService>();
+      final themeService = diSetup.locator.get<ThemeService>();
 
-      await tester.pumpWidget(App(router: routerResult.router));
+      await tester.pumpWidget(
+        App(
+          router: routerResult.router,
+          localization: localization,
+          themeService: themeService,
+        ),
+      );
+
       await tester.pumpAndSettle();
 
       expect(find.text('Sign In'), findsAtLeastNWidgets(1));
@@ -132,8 +160,17 @@ void main() {
         initialRoute: initialRoute,
         locator: diSetup.locator,
       );
+      final localization = diSetup.locator.get<LocalizationService>();
+      final themeService = diSetup.locator.get<ThemeService>();
 
-      await tester.pumpWidget(App(router: routerResult.router));
+      await tester.pumpWidget(
+        App(
+          router: routerResult.router,
+          localization: localization,
+          themeService: themeService,
+        ),
+      );
+
       await tester.pumpAndSettle();
 
       expect(find.text('Welcome back!'), findsOneWidget);
@@ -157,8 +194,17 @@ void main() {
         initialRoute: initialRoute,
         locator: diSetup.locator,
       );
+      final localization = diSetup.locator.get<LocalizationService>();
+      final themeService = diSetup.locator.get<ThemeService>();
 
-      await tester.pumpWidget(App(router: routerResult.router));
+      await tester.pumpWidget(
+        App(
+          router: routerResult.router,
+          localization: localization,
+          themeService: themeService,
+        ),
+      );
+
       await tester.pumpAndSettle();
 
       expect(find.text('Welcome back!'), findsOneWidget);

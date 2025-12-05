@@ -1,7 +1,6 @@
 import 'package:app_flutter_starter/app/services/cache_service_impl.dart';
 import 'package:app_flutter_starter/app/services/mock_services.dart';
 import 'package:app_flutter_starter/app/services/network_service_impl.dart';
-import 'package:app_flutter_starter/core/contracts/cache_contract.dart';
 import 'package:app_flutter_starter/core/contracts/network_contract.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -48,7 +47,7 @@ void main() {
       network.setStatus(NetworkStatus.offline);
       network.setStatus(NetworkStatus.online);
 
-      await Future.delayed(Duration.zero);
+      await Future<void>.delayed(Duration.zero);
 
       expect(statusChanges, [
         NetworkStatus.online,
@@ -89,7 +88,7 @@ void main() {
       expect(cached?.isValid, isTrue);
 
       // Wait for expiration
-      await Future.delayed(const Duration(milliseconds: 150));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
 
       // Now invalid
       cached = await cache.get<String>('short_ttl');
@@ -159,7 +158,7 @@ void main() {
       expect(cached?.isValid, isTrue);
 
       // Simulate time passing but still within TTL
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
 
       // Should still be valid
       cached = await cache.get<String>('data');
@@ -179,7 +178,7 @@ void main() {
       );
 
       // Wait for expiration
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
 
       // Cache is stale but data is still accessible
       final cached = await cache.get<String>('data');
@@ -234,7 +233,7 @@ void main() {
 
       await cache.set('test', 'value');
 
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future<void>.delayed(const Duration(milliseconds: 150));
 
       final cached = await cache.get<String>('test');
       expect(cached, isNotNull);

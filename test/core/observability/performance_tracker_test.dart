@@ -14,7 +14,7 @@ void main() {
       tracker.start('test_metric');
 
       // Simulate work
-      Future.delayed(Duration(milliseconds: 10));
+      Future<void>.delayed(const Duration(milliseconds: 10));
 
       final metric = tracker.stop('test_metric');
 
