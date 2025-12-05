@@ -1,334 +1,303 @@
+
+---
+
+### `CHANGELOG.md`
+
+```md
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to this project are documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
+and the project follows Semantic Versioning.
+
+---
+
+## [0.8.0] - 2025-12-06
+
+### Theme
+
+Baseline hardened, no-auth line: Onboarding → Home with real infra (config, offline, errors, observability, i18n, theming).
+
+### Added
+
+- **Launch & boot sequence**
+  - `main.dart` updated to:
+    - Start a cold-start performance metric.
+    - Initialize DI (`setupDependencies`) including localization and theme.
+    - Resolve `LaunchState` and compute initial route ID.
+    - Build router via `RouterFactory.create`.
+    - Stop cold-start metric after first frame and log an `app_launch` analytics event.   
+
+- **Navigation stack (baseline line)**
+  - `RouterFactory` now owns:
+    - Stable route IDs (`onboarding`, `home`).
+    - Route-ID → path mapping for go_router.
+  - `NavigationServiceImpl` wraps `GoRouter` for UI-agnostic navigation.   
+  - `OnboardingGuard` enforces onboarding completion before protected routes.   
+
+- **Onboarding & Home flows**
+  - Onboarding screen:
+    - Uses localization keys for all copy.
+    - Sets `onboarding_seen` on skip/complete and navigates to Home.   
+  - Home screen:
+    - Orchestrates loading, ready, empty, and error UI states.
+    - Uses `HomeRepository` abstraction (remote + local data sources).
+    - Supports pull-to-refresh + explicit refresh button.
+    - Shows cached data & timestamp when offline.   
+
+- **Offline-first data path**
+  - `HomeLocalDataSource` uses `CacheService` with TTL and a persistent index.
+  - `HomeRemoteDataSource` wraps `HttpClientService` and maps responses into `HomeData`. It:
+    - Handles plain and `{ data: ... }` response shapes.
+    - Transliterate parse failures into `AppError(parseError)`.
+    - Propagates upstream `AppError`s from the HTTP client.   
+  - `HomeRepositoryImpl`:
+    - Returns fresh data on success and caches it.
+    - Falls back to cached data on failure when available.
+    - Returns a timeout error when neither remote nor cache succeeds. :contentReference[oaicite:81]{index=81}  
+
+- **Error handling integration**
+  - `ErrorPresenter` + `ErrorCard` wired into Home to:
+    - Decide inline vs banner/toast using `ErrorPolicyRegistry`.
+    - Show localized messages from i18n keys.
+    - Emit `error_shown` and `error_retry` analytics events.   
+  - Integration tests covering:
+    - Inline error with manual retry.
+    - Safe behavior when screen is disposed mid-load.   
+
+- **Network & lifecycle**
+  - Network service integrated into Home and offline tests:
+    - Online/offline/unknown status with a stream.
+    - Simulated implementation for tests.   
+  - App lifecycle service used to coordinate resume behavior.   
+
+- **Docs**
+  - `BLUEPRINT.md` updated to clearly separate baseline line (v0.1–v0.8) from auth line (v0.9+), with acceptance criteria and risks.   
+  - README rewritten to describe v0.8 as a no-auth baseline and to point consumers at the correct tag line.   
+
+### Changed
+
+- Tightened separation between **Core** and **App**:
+  - Core holds contracts, policies, and primitives only.
+  - All concrete services moved/confirmed under `app/services` or feature data layers.   
+- `ConfigServiceImpl` now feeds launch state resolution and Home feature flags, not accessed directly from widgets.   
+- Observability:
+  - Cold start performance metric added around DI + launch + first frame.
+  - Home tests assert correct behavior under retries and offline scenarios.   
+
+### Removed
+
+- Authentication routing and guards are not wired into this line; any auth flow now belongs exclusively to v0.9+ tags as described in the blueprint.   
+
+### Quality
+
+- All unit, widget, and integration tests pass (core errors, retry, cancellation, config, i18n, themes, analytics, launch, network, cache, home flows).   
+- `flutter analyze` is clean.  
+- Home’s offline and error integration tests cover:
+  - Timeout → inline error → retry → success.
+  - Disposal while load in flight without `setState` after dispose.   
+
+---
 
 ## [0.7.0] - 2025-12-06
 
 ### Theme
-Accessibility, Internationalization & Theming: Usable for real humans in multiple locales.
+
+Accessibility, i18n, and theming: make the app usable for real humans in multiple locales.
 
 ### Added
-- **Internationalization (i18n) Framework**:
-  - `LocalizationService`: Manages locale selection and string translations
-  - Support for 3 locales: English (en), Spanish (es), Arabic (ar)
-  - Centralized string keys in `L10nKeys` class (type-safe references)
-  - Translation dictionaries with complete coverage for all UI strings
-  - Automatic locale persistence across sessions
-  - Simple `.tr()` extension for inline translation
-  
-- **RTL (Right-to-Left) Support**:
-  - Automatic text direction based on selected locale
-  - Arabic locale with full RTL layout support
-  - `RtlAwareLayout` helpers for directional positioning
-  - Directional edge insets and alignment helpers
-  
-- **Theme System**:
-  - `ThemeService`: Manages theme selection
-  - `AppTheme` contract with semantic color roles
-  - `AppColorScheme`: 25+ semantic color roles (primary, surface, error, success, etc.)
-  - `AppTypography`: Complete type scale (display → body → label)
-  - `AppSpacing`, `AppRadius`, `AppElevation`: Design token constants
-  - Default light and dark themes
-  - Theme persistence across sessions
-  
-- **Accessibility (a11y) Infrastructure**:
-  - `A11yGuidelines`: WCAG AA compliance helpers
-    - Minimum touch target validation (44x44dp)
-    - Contrast ratio calculator
-    - WCAG AA contrast requirement checker
-  - `AccessibleTouchTarget`: Widget enforcing minimum touch targets
-  - `AccessibleAnnouncement`: Screen reader announcements
-  - `A11yFocus`: Focus management helpers
-  - `A11yLabels`: Semantic label generators
-  - Widget extensions for semantic properties (`.withLabel()`, `.asHeader()`, etc.)
-  
-- **Text Scaling Support**:
-  - Automatic clamping to 1.0-2.0 scale range
-  - Tested typography at 1.0x, 1.3x, 1.6x scales
-  - All text styles use relative sizing
+
+- **Internationalization**
+  - `LocalizationServiceImpl` to manage the active locale, translations, and persistence.
+  - 3 fully translated locales:
+    - English (`en`)
+    - German (`de`)
+    - Persian/Farsi (`fa`, RTL)   
+  - Central `L10nKeys` enum-like class for string keys.
+  - Translation coverage for onboarding, login, home, errors, a11y labels, and network state strings.
+  - Fallback behavior when keys are missing.
+
+- **RTL support**
+  - Automatic text direction based on locale.
+  - Layout helpers (`RtlAwareLayout`) for directional padding/alignment.   
+
+- **Theme system**
+  - `AppTheme`, `AppColorScheme`, `AppTypography`, `AppSpacing`, `AppRadius`, `AppElevation` defined as design tokens.   
+  - Default light and dark themes with semantic color roles (primary, surface, background, error, success, warning, outline, scrim).   
+  - `ThemeServiceImpl`:
+    - Exposes available themes and current theme.
+    - Persists the user’s choice via storage.
+    - Provides `toggleBrightness()`.   
+
+- **Accessibility**
+  - A11y helpers and widgets:
+    - Touch target enforcement.
+    - Label generators (`A11yLabels`).
+    - Focus and semantics helpers.
+    - Text scaling support with clamped min/max.   
 
 ### Changed
-- **App Widget**:
-  - Now requires `LocalizationService` and `ThemeService`
-  - Wraps content with proper `Directionality` for RTL support
-  - Applies text scaling limits for better readability
-  - Builds `ThemeData` from semantic `AppTheme`
-  
-- **DI Setup**:
-  - Initializes localization and theme services early in boot sequence
-  - Registers services in service locator
-  - Services restore saved preferences on initialization
-  
-- **Main Entry**:
-  - Passes localization and theme services to `App` widget
-  - Supports dynamic locale and theme switching
-  
-- **Component Themes**:
-  - ElevatedButton: 48dp minimum height (accessible touch target)
-  - InputDecoration: Consistent padding and border radius
-  - Card: Border instead of shadow for better contrast
-  - Icon: Semantic colors from theme
 
-### Fixed
-- Touch targets too small for accessibility (now enforced at 44x44dp)
-- Text not scaling properly at large system text sizes
-- No RTL support for Arabic and other RTL languages
-- Hard-coded strings preventing localization
+- `App` widget:
+  - Accepts `LocalizationService` and `ThemeService`.
+  - Wraps its tree with appropriate `Directionality`.
+  - Builds `ThemeData` from `AppTheme` rather than hard-coded `ThemeData`.   
 
-### Quality Gates ✅
-- ✅ A11y CI checks pass (touch targets, contrast ratios)
-- ✅ All UI strings are localized (no hard-coded text)
-- ✅ RTL layout works correctly for Arabic locale
-- ✅ Light/dark theme switching works
-- ✅ Text scales correctly from 1.0x to 2.0x
-- ✅ Contrast ratios meet WCAG AA standards
+- DI & main:
+  - DI now initializes localization and theme services early.
+  - `main.dart` passes both into `App`.   
 
-### Testing
-- **i18n Tests**:
-  - Locale switching and persistence
-  - String translation in all supported locales
-  - Fallback to English for missing keys
-  - RTL locale detection
-  - String interpolation support
-  
-- **Accessibility Tests**:
-  - Touch target size validation
-  - Contrast ratio calculations
-  - WCAG AA compliance checking
-  - Semantic label generation
-  - RTL layout helpers
-  - Widget accessibility extensions
+- Component theming:
+  - Buttons: 48dp min height, consistent radius.
+  - Inputs: unified padding and borders.
+  - Cards: low elevation, high-contrast borders.   
 
+### Quality
+
+- i18n tests for locale switching, persistence, interpolation, and fallbacks.
+- Theme tests verifying token completeness and correct properties for light/dark themes.   
+
+---
 
 ## [0.6.0] - 2025-12-05
 
 ### Theme
-Offline-First & Data Resilience: Still useful with a bad connection.
+
+Offline-first & data resilience: the app should still be useful with a sketchy connection.
 
 ### Added
-- **NetworkService**: Monitors device connectivity status (online/offline/unknown)
-  - Stream-based status updates
-  - Mock implementation for v0.6 (ready for connectivity_plus integration)
-- **CacheService**: Data caching with TTL support
-  - In-memory + persistent storage
-  - Last-known-good strategy for offline resilience
-  - Stale data detection and age tracking
-- **AppLifecycleService**: Monitors app foreground/background transitions
-  - Callbacks for app resume/pause events
-  - Time tracking for background duration
-- **OfflineBanner**: Visual indicator when network is unavailable
-  - Non-blocking banner UI
-  - Integrates with OfflineAwareScaffold wrapper
-- **Home Screen Offline Support**:
-  - Last-known-good caching: displays cached data when offline
-  - Background refresh on app resume (with backpressure)
-  - Minimum refresh interval (1 minute) to prevent excessive requests
-  - Cached data indicator when showing stale content
-  - Network-aware retry behavior
 
-### Changed
-- **Home Screen**
-  - Now requires NetworkService, CacheService, and AppLifecycleService dependencies
-  - Loads from cache first, then fetches fresh data
-  - Shows cached data with warning indicator if refresh fails
-  - Automatically refreshes on app resume (respects backpressure rules)
-- **DI Setup**
-  - Registers network, cache, and lifecycle services
-  - Updated router factory to pass new dependencies to screens
-- **Router Factory**
-  - Accepts network, cache, and lifecycle services
-  - Provides them to route screens
+- `NetworkService` with status stream (online/offline/unknown) and a simulated implementation for tests.   
+- `CacheServiceImpl`:
+  - In-memory + persistent storage with TTL.
+  - Index of cache keys for cleanup and inspection. :contentReference[oaicite:105]{index=105}  
+- `AppLifecycleService` to react to foreground/background transitions.   
+- `OfflineBanner` for showing explicit offline state in the UI.   
+- End-to-end tests for:
+  - Network status behavior.
+  - Cache TTL handling.
+  - Offline fallback of feature data.   
 
-### Fixed
-- Home screen now gracefully handles offline scenarios
-- No infinite retry loops - respects network status
-- Background refresh doesn't spam requests (1-minute minimum interval)
-
-### Quality Gates ✅
-- ✅ Key paths (Home) functional in airplane mode with cached data
-- ✅ Retry ceilings honored - no infinite retries
-- ✅ Network status monitoring works correctly
-- ✅ Cache TTL and staleness detection accurate
-- ✅ Background refresh respects backpressure (1-minute minimum)
-
-### Notes
-- This is the "v0.6 – Offline-First & Data Resilience" milestone from the blueprint:
-  - NetworkStatus abstraction provides online/offline detection
-  - Last-known-good strategy shows cached data when network fails
-  - Foreground refresh with backpressure prevents request storms
-  - Visual offline indicator (banner) informs users of connection status
-- For production use:
-  - Replace SimulatedNetworkService with connectivity_plus integration
-  - Implement proper cache serialization for complex types
-  - Add cache eviction policies for memory management
+---
 
 ## [0.5.0] - 2025-12-05
+
+### Theme
+
+Observability & telemetry: know what the app is doing in the wild.
+
 ### Added
-- Observability & Telemetry milestone:
-  - Analytics facade with allow-listed events and consent handling.
-  - Performance metrics for cold start and home readiness.
-  - Crash reporting facade with breadcrumbs and PII scrubbing.
-  - CI guard ensuring only allow-listed analytics events are used.
-  - Feature-level analytics for onboarding and home flows (`onboarding_view`, `onboarding_complete`, `onboarding_skip`, `home_view`, `home_refresh`, `home_error`, `error_shown`, `error_retry`).
+
+- Analytics facade with:
+  - Allow-listed events and parameter schema (`AnalyticsAllowlist`).
+  - Simple consent handling (events blocked when consent is false).
+  - Optional vendor integration behind an adapter.   
+- Performance metrics:
+  - `PerformanceTracker` for start/stop/mark/measure.
+  - Standard metrics like `cold_start` and `home_ready`.   
+- Crash reporting facade with hooks for breadcrumbs and PII scrubbing (behind an interface; vendor optional).   
+- Feature-level analytics for onboarding and home flows (`onboarding_view`, `onboarding_complete`, `onboarding_skip`, `home_view`, `home_refresh`, `home_error`, `error_shown`, `error_retry`).   
 
 ### Changed
-- Home and onboarding screens now emit structured telemetry aligned with the analytics schema.
+
+- Onboarding and Home screens emit structured telemetry aligned with the allow-list.   
+
+---
 
 ## [0.4.0] - 2025-12-04
 
 ### Theme
+
 Error policy & resilience: predictable failures, retries, and safe cancellation.
 
 ### Added
-- Central `ErrorPolicyRegistry` that maps every `ErrorCategory` to a concrete policy:
-  - Presentation mode (inline, banner, toast, silent).
-  - Retry strategy (never, manual, automatic) and retry caps. 
-- `ErrorPresenter` + inline `ErrorCard` widget to render errors according to policy, including banner/toast flows. 
-- `RetryHelper` with:
-  - Policy-based retries (`executeWithPolicy`).
+
+- `ErrorPolicyRegistry` mapping each `ErrorCategory` to:
+  - Presentation mode (inline/banner/toast/silent).
+  - Retry strategy (never/manual/automatic) with caps and delays.
+  - Localized message key.   
+- `ErrorPresenter` and `ErrorCard` for consistent error rendering and analytics logging.   
+- `RetryHelper`:
+  - Policy-aware retries.
   - Exponential backoff with jitter.
-  - Cancellation-aware delay. 
-- `CancellationToken`, `CancellationTokenSource`, and `OperationCancelledException` primitives, plus unit tests for all core cancellation behaviors. 
-- Comprehensive tests for the error taxonomy and error policies (all categories covered, policy invariants asserted). 
-- Integration tests for error flows:
-  - Login: failure, retry, navigation-away safety.
-  - Home: load, retry, and non-crash behavior under simulated failures. 
+  - Cancellation-aware delays.   
+- `CancellationToken`, `CancellationTokenSource`, `OperationCancelledException` primitives plus full unit test coverage.   
 
 ### Changed
-- **Login screen**
-  - Uses `CancellationTokenSource` tied to the widget lifecycle; token is disposed in `dispose()`.   
-  - Throws on cancellation before navigation and gracefully ignores `OperationCancelledException` so navigation-away during an in-flight login doesn’t explode the UI.
-- **Home screen**
-  - Initial load and refresh now go through `RetryHelper.executeWithPolicy` with a cancellation token, so retries and delays respect cancellation and centralized error policy.   
-  - UI is explicit about `loading / empty / error / ready` states and uses `ErrorCard`, `LoadingIndicator`, and `EmptyState` building blocks. 
 
-### Fixed
-- Guard / navigation tests updated to assert deterministic guard order (`OnboardingGuard`, `AuthGuard`, `NoAuthGuard`) and correct redirects. 
-- Retry helper edge cases:
-  - Correct attempt counting.
-  - Respect for `never` retry strategy.
-  - Proper wrapping of non-`AppError` exceptions as `AppError(unknown)`. 
-
-### Notes
-- This is the “v0.4 – Error Policy & Resilience” milestone from the blueprint:
-  - Error→policy mapping is now the single source of truth.
-  - Cancellation is wired from UI to retry/cancellation primitives.
-  - Navigation-away scenarios are covered by tests (login + home). 
-
-## [0.3.0] - 2025-11-20
-
-### Added
-#### Configuration & Feature Flags
-- **ConfigService**: Implements 3-layer precedence (Defaults → Cache → Remote).
-- **Background Refresh**: Config updates happen asynchronously without blocking boot.
-- **Caching Strategy**: Last-known flags persist across restarts.
-- **Simulated Remote Config**: Logic for fetching remote flags (ready for vendor integration).
-- **Feature Gating**: UI (Home Screen) adapts based on `home.promo_banner.enabled` flag.
-
-### Quality Gates ✅
-- ✅ App boots offline using cached configuration.
-- ✅ Startup sequence executes ≤2 remote calls.
-- ✅ Config precedence tests pass (Cache > Default).
-## [0.2.0] - 2024-11-18
-
-### Added
-
-#### Navigation & Routing Foundation
-- **Route Registry**: Dynamic route assembly from feature manifests
-- **Navigation Service Contract**: UI-agnostic navigation abstraction (`NavigationService`)
-- **GoRouter Integration**: Production-ready router with guard support
-- **Guard System**: 
-  - `NavigationGuard` contract with priority-based execution
-  - `OnboardingGuard`: Blocks routes until onboarding is complete
-  - `AuthGuard`: Requires valid authentication, attempts silent refresh
-  - `NoAuthGuard`: Redirects authenticated users away from login
-  - Guards execute in deterministic order: Onboarding (0) → Auth (10) → NoAuth (20)
-
-#### Launch State Machine
-- **LaunchState**: Encapsulates app state at boot (onboarding, auth, deep links)
-- **LaunchStateResolver**: Orchestrates startup sequence
-  1. Initialize configuration (cached first)
-  2. Check onboarding status
-  3. Validate/refresh authentication
-  4. Determine initial route
-- **Boot Sequence**: Clean separation of DI setup, state resolution, and router creation
-
-#### Feature Screens
-- **OnboardingScreen**: Complete/Skip functionality with navigation
-- **LoginScreen**: Email/password validation, error handling, loading states
-- **HomeScreen**: Welcome screen with logout functionality
-- All screens follow dependency injection pattern via constructor
-
-#### Service Layer
-- **Mock Services**: In-memory implementations for v0.2 testing
-  - `MockConfigService`: Feature flag management
-  - `MockStorageService`: Key-value persistence
-  - `MockAuthService`: Authentication lifecycle
-  - `MockAnalyticsService`: Event tracking
-  - `MockCrashService`: Error reporting
-- **Service Locator**: Simple DI container for v0.2 (ready for production DI in later versions)
-
-#### Testing
-- **Guard Tests**: 100% coverage of all guard logic and priorities
-- **Launch State Tests**: Complete state machine scenarios
-- **Integration Tests**: End-to-end navigation flows
-  - Fresh install → Onboarding → Home
-  - Skip onboarding → Login
-  - Invalid/valid credentials
-  - Authenticated user redirect
-  - Logout flow
-  - Guard priority ordering
-
-### Changed
-- **Feature Manifests**: Now include guard requirements and deep link matchers
-- **App Structure**: Root app widget now uses `MaterialApp.router`
-- **Main Entry**: Implements 4-phase boot sequence
-
-### Dependencies
-- Added `go_router: ^14.6.2`
-
-### Documentation
-- Updated README with v0.2 setup instructions
-- Added ADRs for navigation architecture decisions
-- Comprehensive inline code documentation
-
-### Quality Gates ✅
-- ✅ Navigation unit tests achieve >70% coverage
-- ✅ All guarded routes correctly block/allow access
-- ✅ Integration tests cover critical user flows
-- ✅ Startup sequence makes ≤2 async calls (config + auth check)
-- ✅ Guard order is deterministic and testable
-- ✅ Deep link structure is defined (implementation in later versions)
-
-### Migration Notes
-- Update `pubspec.yaml` to include `go_router` dependency
-- Run `flutter pub get`
-- The launch state machine expects storage keys: `onboarding_seen`
-- Guards are stateless and safe to recreate on each navigation
-
-### Known Limitations
-- Deep link handling is stubbed (full implementation in v0.3+)
-- Service implementations are in-memory only
-- No production DI framework yet (planned for v0.3+)
+- Feature flows (login and home at the time) moved to:
+  - Use `RetryHelper` for network calls.
+  - Respect cancellation when navigating away mid-operation.
+  - Render errors via centralized policies instead of ad-hoc handling.   
 
 ---
 
-## [0.1.0] - 2024-11-15
+## [0.3.0] - 2025-11-20
+
+### Theme
+
+Configuration & feature flags.
 
 ### Added
-- Initial project structure and contracts
-- Core error taxonomy (`AppError`, `Result<T>`)
-- Service contracts: Auth, Config, Storage, Analytics, Crash, HttpClient
-- Feature manifests: Onboarding, Auth, Home
-- Empty feature shells
-- ADR template and initial architecture decisions
-- Linting and formatting configuration
-- Basic unit tests for error types
 
-### Quality Gates ✅
-- ✅ Linting and formatting pass
-- ✅ Initial test harness executes
-- ✅ Build produces runnable empty application
+- `ConfigService` with precedence:
+  - Defaults → cached → remote. :contentReference[oaicite:119]{index=119}  
+- Simulated remote config provider for local development.   
+- Background refresh of flags without blocking startup.
+- Example flags:
+  - `onboarding.enabled`
+  - `home.promo_banner.enabled` (used by Home).   
+- Tests covering precedence, caching, and startup behavior.
+
+---
+
+## [0.2.0] - 2024-11-18
+
+### Theme
+
+Navigation & routing foundation.
+
+### Added
+
+- Route registry and manifest-driven routing concept.
+- `NavigationService` contract to decouple UI from router choice.
+- GoRouter integration with guard support.
+- Launch state machine:
+  - Initializes config.
+  - Reads onboarding state.
+  - Computes initial route.   
+- Screens:
+  - Onboarding (complete/skip).
+  - Login.
+  - Home.
+- Mock services for config, storage, auth, analytics, and crash reporting.   
+
+### Testing
+
+- Guard tests with complete coverage of flows and priority ordering.
+- Launch state tests for all startup branches.
+- Integration tests for main navigation paths (Onboarding → Home, Login, Logout).   
+
+---
+
+## [0.1.0] - 2024-11-10
+
+### Theme
+
+Skeleton & contracts.
+
+### Added
+
+- Project layout and initial build setup.
+- Empty feature shells for Onboarding and Home.
+- Initial Core contracts for config, navigation, and error handling.
+- Basic error taxonomy and `Result<T>` helper.
+- Test harness with `flutter_test` and mocktail.   
+
+### Quality
+
+- Lints and formatting in place.
+- App builds and shows a placeholder screen.
+- First ADRs for routing, DI, and project structure captured in docs.
+
