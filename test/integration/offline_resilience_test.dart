@@ -1,24 +1,16 @@
 import 'package:app_flutter_starter/app/services/cache_service_impl.dart';
-import 'package:app_flutter_starter/app/services/mock_services.dart';
 import 'package:app_flutter_starter/app/services/network_service_impl.dart';
 import 'package:app_flutter_starter/core/contracts/network_contract.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../helpers/mock_services.dart';
+
 void main() {
   group('NetworkService', () {
-    test('starts with unknown status', () async {
+    // SimulatedNetworkService defaults to online, unlike the real connectivity impl
+    test('starts with online status', () async {
       final network = SimulatedNetworkService();
       await network.initialize();
-
-      final status = await network.status;
-      expect(status, NetworkStatus.online);
-    });
-
-    test('reports online status', () async {
-      final network = SimulatedNetworkService();
-      await network.initialize();
-
-      network.setStatus(NetworkStatus.online);
 
       final status = await network.status;
       expect(status, NetworkStatus.online);

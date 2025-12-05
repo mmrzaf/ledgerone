@@ -1,9 +1,11 @@
 enum Environment {
   dev,
   stage,
-  prod;
+  prod,
+  test;
 
   bool get isDev => this == Environment.dev;
+
   bool get isProd => this == Environment.prod;
 }
 

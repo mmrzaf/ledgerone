@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../core/contracts/network_contract.dart';
 
-/// Banner that appears when app goes offline
+import '../../core/contracts/i18n_contract.dart';
+import '../../core/contracts/network_contract.dart';
+import '../../core/i18n/string_keys.dart';
+
 class OfflineBanner extends StatelessWidget {
   final NetworkStatus status;
 
@@ -9,62 +11,38 @@ class OfflineBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (status.isOnline) {
-      return const SizedBox.shrink();
-    }
+    if (status.isOnline) return const SizedBox.shrink();
+
+    final l10n = context.l10n;
+    final messageKey = switch (status) {
+      NetworkStatus.offline => L10nKeys.networkOffline,
+      NetworkStatus.online => L10nKeys.networkOnline,
+      _ => L10nKeys.networkUnknown,
+    };
 
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.orange.shade800,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.white.withAlpha((255 * 0.1).round()),
-            offset: const Offset(0, 2),
-            blurRadius: 4,
+      color: Colors.orange.shade100,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.wifi_off, color: Colors.orange),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.get(messageKey),
+              style: const TextStyle(color: Colors.black87),
+            ),
+          ),
+          TextButton(
+            onPressed: () {
+              // Optional: trigger manual retry from parent via callback
+            },
+            child: Text(
+              l10n.get(L10nKeys.retry),
+              style: const TextStyle(color: Colors.orange),
+            ),
           ),
         ],
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Row(
-          children: [
-            const Icon(Icons.cloud_off, color: Colors.white, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                status == NetworkStatus.offline
-                    ? 'No internet connection'
-                    : 'Connection status unknown',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            if (status == NetworkStatus.offline)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withAlpha((255 * 0.2).round()),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Text(
-                  'Offline',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }

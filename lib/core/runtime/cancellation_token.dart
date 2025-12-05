@@ -1,6 +1,7 @@
 /// Exception thrown when an operation is cancelled
 class OperationCancelledException implements Exception {
   final String message;
+
   const OperationCancelledException([this.message = 'Operation was cancelled']);
 
   @override
@@ -43,6 +44,7 @@ class CancellationToken {
   }
 
   factory CancellationToken() => CancellationToken._();
+
   CancellationToken._();
 
   static final none = _NoneCancellationToken();

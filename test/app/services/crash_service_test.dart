@@ -1,7 +1,8 @@
 import 'package:app_flutter_starter/app/services/crash_service_impl.dart';
-import 'package:app_flutter_starter/app/services/mock_services.dart';
 import 'package:app_flutter_starter/core/errors/app_error.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../helpers/mock_services.dart';
 
 void main() {
   group('CrashServiceImpl', () {
@@ -11,6 +12,7 @@ void main() {
     setUp(() {
       storage = MockStorageService();
       crash = CrashServiceImpl(storage: storage);
+      crash.setConsent(true);
     });
 
     test('blocks reporting without consent', () async {
@@ -34,7 +36,6 @@ void main() {
 
     test('adds breadcrumbs', () {
       crash.addBreadcrumb('Test message');
-
       expect(crash.breadcrumbs.length, equals(1));
       expect(crash.breadcrumbs.first.message, equals('Test message'));
     });

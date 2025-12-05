@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+
 import '../../core/contracts/theme_contract.dart';
 
 /// Default light theme
 class DefaultLightTheme {
   static const colorScheme = AppColorScheme(
-    primary: Color(0xFF2563EB), // Blue-600
+    primary: Color(0xFF2563EB),
+    // Blue-600
     primaryContainer: Color(0xFFDCEAFB),
     onPrimary: Color(0xFFFFFFFF),
 
-    secondary: Color(0xFF7C3AED), // Violet-600
+    secondary: Color(0xFF7C3AED),
+    // Violet-600
     secondaryContainer: Color(0xFFEDE9FE),
     onSecondary: Color(0xFFFFFFFF),
 
@@ -20,15 +23,18 @@ class DefaultLightTheme {
     background: Color(0xFFFAFAFA),
     onBackground: Color(0xFF111827),
 
-    error: Color(0xFFDC2626), // Red-600
+    error: Color(0xFFDC2626),
+    // Red-600
     errorContainer: Color(0xFFFEE2E2),
     onError: Color(0xFFFFFFFF),
 
-    success: Color(0xFF16A34A), // Green-600
+    success: Color(0xFF16A34A),
+    // Green-600
     successContainer: Color(0xFFDCFCE7),
     onSuccess: Color(0xFFFFFFFF),
 
-    warning: Color(0xFFEA580C), // Orange-600
+    warning: Color(0xFFEA580C),
+    // Orange-600
     warningContainer: Color(0xFFFFEDD5),
     onWarning: Color(0xFFFFFFFF),
 
@@ -141,11 +147,13 @@ class DefaultLightTheme {
 /// Default dark theme
 class DefaultDarkTheme {
   static const colorScheme = AppColorScheme(
-    primary: Color(0xFF60A5FA), // Blue-400
+    primary: Color(0xFF60A5FA),
+    // Blue-400
     primaryContainer: Color(0xFF1E3A8A),
     onPrimary: Color(0xFF000000),
 
-    secondary: Color(0xFFA78BFA), // Violet-400
+    secondary: Color(0xFFA78BFA),
+    // Violet-400
     secondaryContainer: Color(0xFF5B21B6),
     onSecondary: Color(0xFF000000),
 
@@ -157,15 +165,18 @@ class DefaultDarkTheme {
     background: Color(0xFF111827),
     onBackground: Color(0xFFE5E7EB),
 
-    error: Color(0xFFF87171), // Red-400
+    error: Color(0xFFF87171),
+    // Red-400
     errorContainer: Color(0xFF7F1D1D),
     onError: Color(0xFF000000),
 
-    success: Color(0xFF4ADE80), // Green-400
+    success: Color(0xFF4ADE80),
+    // Green-400
     successContainer: Color(0xFF14532D),
     onSuccess: Color(0xFF000000),
 
-    warning: Color(0xFFFB923C), // Orange-400
+    warning: Color(0xFFFB923C),
+    // Orange-400
     warningContainer: Color(0xFF7C2D12),
     onWarning: Color(0xFF000000),
 

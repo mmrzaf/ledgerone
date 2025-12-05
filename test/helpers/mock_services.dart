@@ -1,8 +1,8 @@
-import '../../core/contracts/analytics_contract.dart';
-import '../../core/contracts/auth_contract.dart';
-import '../../core/contracts/config_contract.dart';
-import '../../core/contracts/crash_contract.dart';
-import '../../core/contracts/storage_contract.dart';
+import 'package:app_flutter_starter/core/contracts/analytics_contract.dart';
+import 'package:app_flutter_starter/core/contracts/config_contract.dart';
+import 'package:app_flutter_starter/core/contracts/crash_contract.dart';
+import 'package:app_flutter_starter/core/contracts/navigation_contract.dart';
+import 'package:app_flutter_starter/core/contracts/storage_contract.dart';
 
 class MockConfigService implements ConfigService {
   final Map<String, dynamic> _flags = {};
@@ -63,36 +63,6 @@ class MockStorageService implements StorageService {
   }
 }
 
-class MockAuthService implements AuthService {
-  bool _isAuthenticated = false;
-  String? _userId;
-
-  @override
-  Future<bool> get isAuthenticated async => _isAuthenticated;
-
-  @override
-  Future<String?> get userId async => _userId;
-
-  @override
-  Future<void> login(String email, String password) async {
-    if (email.isEmpty || password.length < 6) {
-      throw Exception('Invalid credentials');
-    }
-
-    _isAuthenticated = true;
-    _userId = email.split('@').first;
-  }
-
-  @override
-  Future<void> logout() async {
-    _isAuthenticated = false;
-    _userId = null;
-  }
-
-  @override
-  Future<void> refreshSession() async {}
-}
-
 class MockAnalyticsService implements AnalyticsService {
   final List<Map<String, dynamic>> _events = [];
 
@@ -137,4 +107,45 @@ class MockCrashService implements CrashService {
   Future<void> log(String message) async {}
 
   List<Map<String, dynamic>> get errors => List.unmodifiable(_errors);
+}
+
+class MockNavigationService implements NavigationService {
+  final List<String> _stack = <String>[];
+
+  /// Expose history in case a test ever wants to assert on it
+  List<String> get history => List.unmodifiable(_stack);
+
+  @override
+  void goToRoute(String routeId, {Map<String, dynamic>? params}) {
+    _stack.add(routeId);
+  }
+
+  @override
+  void replaceRoute(String routeId, {Map<String, dynamic>? params}) {
+    if (_stack.isNotEmpty) {
+      _stack[_stack.length - 1] = routeId;
+    } else {
+      _stack.add(routeId);
+    }
+  }
+
+  @override
+  void goBack() {
+    if (_stack.isNotEmpty) {
+      _stack.removeLast();
+    }
+  }
+
+  @override
+  bool canGoBack() => _stack.length > 1;
+
+  @override
+  String? get currentRouteId => _stack.isNotEmpty ? _stack.last : null;
+
+  @override
+  void clearAndGoTo(String routeId, {Map<String, dynamic>? params}) {
+    _stack
+      ..clear()
+      ..add(routeId);
+  }
 }

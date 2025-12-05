@@ -2,50 +2,36 @@ import 'package:flutter/material.dart';
 
 import '../../../app/presentation/error_presenter.dart';
 import '../../../app/presentation/offline_banner.dart';
-import '../../../core/contracts/auth_contract.dart';
 import '../../../core/contracts/cache_contract.dart';
 import '../../../core/contracts/config_contract.dart';
+import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/lifecycle_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
 import '../../../core/contracts/network_contract.dart';
 import '../../../core/errors/app_error.dart';
+import '../../../core/errors/result.dart';
+import '../../../core/i18n/string_keys.dart';
 import '../../../core/runtime/cancellation_token.dart';
-import '../../../core/runtime/retry_helper.dart';
+import '../domain/home_models.dart';
+import '../domain/home_repository.dart';
 
 enum HomeContentState { loading, ready, empty, error }
 
-class HomeData {
-  final String message;
-  final DateTime timestamp;
-
-  HomeData({required this.message, required this.timestamp});
-
-  Map<String, dynamic> toJson() => {
-    'message': message,
-    'timestamp': timestamp.toIso8601String(),
-  };
-
-  factory HomeData.fromJson(Map<String, dynamic> json) => HomeData(
-    message: json['message'] as String,
-    timestamp: DateTime.parse(json['timestamp'] as String),
-  );
-}
-
 class HomeScreen extends StatefulWidget {
-  final AuthService authService;
   final NavigationService navigation;
   final ConfigService configService;
   final NetworkService networkService;
   final CacheService cacheService;
   final AppLifecycleService lifecycleService;
+  final HomeRepository homeRepository;
 
   const HomeScreen({
-    required this.authService,
     required this.navigation,
     required this.configService,
     required this.networkService,
     required this.cacheService,
     required this.lifecycleService,
+    required this.homeRepository,
     super.key,
   });
 
@@ -65,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Backpressure: don't refresh more than once per minute
   static const Duration _minRefreshInterval = Duration(minutes: 1);
-  static const String _cacheKey = 'home_data';
+  // static const String _cacheKey = 'home_data';
 
   @override
   void initState() {
@@ -95,11 +81,9 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  /// Handle app returning from background
   void _handleAppResume() {
     debugPrint('Home: App resumed from background');
 
-    // Check if we should refresh
     if (_shouldRefreshOnResume()) {
       debugPrint('Home: Triggering background refresh');
       _loadContent(isBackgroundRefresh: true);
@@ -108,19 +92,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// Determine if we should refresh on app resume
   bool _shouldRefreshOnResume() {
-    // Don't refresh if offline
     if (_networkStatus.isOffline) {
       return false;
     }
 
-    // Don't refresh if already refreshing
     if (_isRefreshing) {
       return false;
     }
 
-    // Don't refresh if we refreshed recently
     if (_lastRefreshTime != null) {
       final timeSinceRefresh = DateTime.now().difference(_lastRefreshTime!);
       if (timeSinceRefresh < _minRefreshInterval) {
@@ -132,7 +112,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadContent({bool isBackgroundRefresh = false}) async {
-    // Don't show loading spinner for background refreshes
+    final token = _cancellationSource.token;
+
     if (!isBackgroundRefresh) {
       setState(() {
         _state = HomeContentState.loading;
@@ -142,102 +123,31 @@ class _HomeScreenState extends State<HomeScreen> {
       setState(() => _isRefreshing = true);
     }
 
-    // Try to load from cache first (last-known-good)
-    final cached = await widget.cacheService.get<Map<String, dynamic>>(
-      _cacheKey,
-    );
-    if (cached != null) {
-      try {
-        final cachedData = HomeData.fromJson(cached.data);
-        debugPrint('Home: Loaded from cache (age: ${cached.age.inMinutes}m)');
+    token.throwIfCancelled();
 
-        if (mounted) {
-          setState(() {
-            _data = cachedData;
-            _state = HomeContentState.ready;
-          });
-        }
-      } catch (e) {
-        debugPrint('Home: Failed to parse cached data: $e');
-      }
-    }
-
-    // Fetch fresh data (with retry)
-    final result = await RetryHelper.executeWithPolicy<HomeData>(
-      operation: () => _fetchDemoData(),
-      category: ErrorCategory.timeout,
-      cancellationToken: _cancellationSource.token,
-      onRetry: (attempt, error) {
-        debugPrint('Home: Retry attempt $attempt after ${error.category}');
-      },
+    final repositoryResult = await widget.homeRepository.load(
+      forceRefresh: isBackgroundRefresh,
     );
 
     if (!mounted) return;
 
-    if (result.wasCancelled) {
-      debugPrint('Home: Load cancelled');
-      setState(() => _isRefreshing = false);
-      return;
-    }
-
-    if (result.isSuccess) {
-      final freshData = result.data!;
-      _lastRefreshTime = DateTime.now();
-
-      // Cache the fresh data
-      await widget.cacheService.set(
-        _cacheKey,
-        freshData.toJson(),
-        ttl: const Duration(minutes: 10),
-      );
-
+    if (repositoryResult is Success<HomeData>) {
+      final freshData = repositoryResult.data;
       setState(() {
         _data = freshData;
         _state = HomeContentState.ready;
         _error = null;
         _isRefreshing = false;
+        _lastRefreshTime = DateTime.now();
       });
-    } else if (result.isFailure) {
-      // If we have cached data, keep showing it with error indicator
-      if (_data != null) {
-        debugPrint('Home: Fetch failed, but showing cached data');
-        setState(() {
-          _error = result.error;
-          _isRefreshing = false;
-          // Keep state as ready to show cached data
-        });
-      } else {
-        // No cached data, show error state
-        setState(() {
-          _error = result.error;
-          _state = HomeContentState.error;
-          _isRefreshing = false;
-        });
-      }
-    }
-  }
-
-  /// Demo async operation that simulates network call
-  Future<HomeData> _fetchDemoData() async {
-    // Simulate network delay
-    await Future<void>.delayed(const Duration(seconds: 1));
-
-    // Simulate occasional failures for demo
-    final now = DateTime.now();
-    if (now.second % 10 == 0) {
-      throw const AppError(
-        category: ErrorCategory.timeout,
-        message: 'Simulated timeout',
-      );
-    }
-
-    return HomeData(message: 'Content loaded successfully', timestamp: now);
-  }
-
-  Future<void> _handleLogout() async {
-    await widget.authService.logout();
-    if (mounted) {
-      widget.navigation.clearAndGoTo('login');
+    } else if (repositoryResult is Failure<HomeData>) {
+      setState(() {
+        _error = repositoryResult.error;
+        _state = _data == null
+            ? HomeContentState.error
+            : HomeContentState.ready;
+        _isRefreshing = false;
+      });
     }
   }
 
@@ -248,12 +158,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final showPromo = widget.configService.getFlag('home.promo_banner.enabled');
-    final variant = widget.configService.getString('ui.theme_variant');
+    final l10n = context.l10n;
 
     return OfflineAwareScaffold(
       networkStatus: _networkStatus,
       appBar: AppBar(
-        title: const Text('Home'),
+        title: Text(l10n.get(L10nKeys.homeTitle)),
         actions: [
           if (_isRefreshing)
             const Center(
@@ -272,13 +182,8 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: _state == HomeContentState.loading
                   ? null
                   : _handleManualRefresh,
-              tooltip: 'Refresh',
+              tooltip: l10n.get(L10nKeys.homeRefresh),
             ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-            tooltip: 'Sign Out',
-          ),
         ],
       ),
       body: RefreshIndicator(
@@ -303,56 +208,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(50),
                           border: Border.all(color: Colors.amber.shade400),
                         ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '✨ New Feature Enabled!',
-                              style: TextStyle(
-                                color: Colors.brown,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
                       ),
                     ],
-                    FutureBuilder<String?>(
-                      future: widget.authService.userId,
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData && snapshot.data != null) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Welcome back!',
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.headlineMedium,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'User: ${snapshot.data}',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: Colors.grey.shade600),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Theme: $variant',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: Colors.grey.shade500),
-                              ),
-                            ],
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
                     const SizedBox(height: 32),
                     const Divider(),
                     const SizedBox(height: 24),
                     Text(
-                      'Demo Content',
+                      l10n.get(L10nKeys.homeDemoContent),
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: 16),
@@ -372,10 +234,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               size: 20,
                             ),
                             const SizedBox(width: 8),
-                            const Expanded(
+                            Expanded(
                               child: Text(
-                                'Showing cached data - refresh failed',
-                                style: TextStyle(fontSize: 12),
+                                l10n.get(L10nKeys.homeOfflineWarning),
+                                style: const TextStyle(fontSize: 12),
                               ),
                             ),
                           ],
@@ -390,7 +252,7 @@ class _HomeScreenState extends State<HomeScreen> {
             SliverFillRemaining(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                child: _buildContent(),
+                child: _buildContent(context),
               ),
             ),
           ],
@@ -399,17 +261,18 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(BuildContext context) {
+    final l10n = context.l10n;
     switch (_state) {
       case HomeContentState.loading:
-        return const LoadingIndicator(message: 'Loading content...');
+        return LoadingIndicator(message: l10n.get(L10nKeys.homeLoadingContent));
 
       case HomeContentState.ready:
-        return _buildReadyState();
+        return _buildReadyState(context);
 
       case HomeContentState.empty:
-        return const EmptyState(
-          message: 'No content available',
+        return EmptyState(
+          message: l10n.get(L10nKeys.homeNoContent),
           icon: Icons.inbox_outlined,
         );
 
@@ -424,7 +287,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildReadyState() {
+  Widget _buildReadyState(BuildContext context) {
+    final l10n = context.l10n;
+    final timestamp = _data?.timestamp.toLocal().toString().split('.')[0] ?? '';
+    final loadedAt = l10n.get(
+      L10nKeys.homeLoadedAt,
+      args: {'timestamp': timestamp},
+    );
+
     return Column(
       children: [
         Container(
@@ -440,7 +310,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Icon(Icons.check_circle, size: 48, color: Colors.green.shade700),
               const SizedBox(height: 12),
               Text(
-                _data?.message ?? 'No data',
+                _data?.message ?? l10n.get(L10nKeys.homeNoContent),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -450,7 +320,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Loaded at ${_data?.timestamp.toLocal().toString().split('.')[0] ?? ''}',
+                loadedAt,
                 style: TextStyle(fontSize: 12, color: Colors.green.shade700),
               ),
             ],
@@ -458,7 +328,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 24),
         Text(
-          'Pull down to refresh or tap the refresh button above.',
+          l10n.get(L10nKeys.homeRefreshInstruction),
           style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
           textAlign: TextAlign.center,
         ),

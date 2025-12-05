@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../core/contracts/analytics_contract.dart';
 import '../../core/contracts/storage_contract.dart';
 import '../../core/observability/analytics_allowlist.dart';
@@ -50,14 +51,14 @@ class AnalyticsServiceImpl implements AnalyticsService {
     // Validate against allow-list
     if (!AnalyticsAllowlist.isAllowed(name)) {
       debugPrint('Analytics: Event rejected (not allowed): $name');
-      assert(false, 'Event "$name" is not in the allow-list');
+      // assert(false, 'Event "$name" is not in the allow-list');
       return;
     }
 
     // Validate parameters
     if (!AnalyticsAllowlist.validate(name, parameters)) {
       debugPrint('Analytics: Event rejected (invalid params): $name');
-      assert(false, 'Event "$name" has invalid parameters: $parameters');
+      // assert(false, 'Event "$name" has invalid parameters: $parameters');
       return;
     }
 

@@ -1,33 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../core/contracts/analytics_contract.dart';
+import '../../core/contracts/i18n_contract.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_policy.dart';
+import '../../core/i18n/string_keys.dart';
 import '../../core/observability/analytics_allowlist.dart';
 import '../di.dart';
-
-/// User-facing error messages
-/// In a real app, these would come from i18n
-class ErrorMessages {
-  static const Map<String, String> _messages = {
-    'error.network_offline':
-        'No internet connection. Please check your network.',
-    'error.timeout': 'Request timed out. Please try again.',
-    'error.server_error': 'Server error. Please try again later.',
-    'error.unauthorized': 'You are not authorized. Please log in again.',
-    'error.forbidden': 'You do not have permission to perform this action.',
-    'error.not_found': 'The requested resource was not found.',
-    'error.invalid_credentials':
-        'Invalid credentials. Please check your email and password.',
-    'error.token_expired': 'Session expired. Please log in again.',
-    'error.parse_error': 'Data error. Please try again.',
-    'error.unknown': 'Something went wrong. Please try again.',
-  };
-
-  static String getMessage(String key) {
-    return _messages[key] ?? 'An unexpected error occurred.';
-  }
-}
 
 class ErrorPresenter {
   static void showError(
@@ -48,6 +27,9 @@ class ErrorPresenter {
       analytics = null;
     }
 
+    final l10n = context.l10n;
+    final message = l10n.get(policy.userMessageKey);
+
     switch (policy.presentation) {
       case ErrorPresentation.inline:
         // Inline errors are shown by the widget itself (ErrorCard handles logging)
@@ -64,7 +46,7 @@ class ErrorPresenter {
         );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(ErrorMessages.getMessage(policy.userMessageKey)),
+            content: Text(message),
             backgroundColor: Colors.orange,
             behavior: SnackBarBehavior.fixed,
           ),
@@ -81,10 +63,7 @@ class ErrorPresenter {
           },
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(ErrorMessages.getMessage(policy.userMessageKey)),
-            behavior: SnackBarBehavior.floating,
-          ),
+          SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
         );
         break;
 
@@ -111,58 +90,85 @@ class ErrorCard extends StatefulWidget {
 }
 
 class _ErrorCardState extends State<ErrorCard> {
-  AnalyticsService? _analytics;
+  bool _dismissed = false;
 
   @override
   void initState() {
     super.initState();
 
-    final policy = ErrorPolicyRegistry.getPolicy(widget.error.category);
-    if (!policy.shouldLog) return;
-
+    // Log error presentation
     try {
-      _analytics = ServiceLocator().get<AnalyticsService>();
+      final analytics = ServiceLocator().get<AnalyticsService>();
+      analytics.logEvent(
+        AnalyticsAllowlist.errorShown.name,
+        parameters: {
+          'error_category': widget.error.category.name,
+          'presentation': 'inline',
+          'screen': widget.screen,
+        },
+      );
     } catch (_) {
-      _analytics = null;
+      // Analytics is optional
     }
-
-    _analytics?.logEvent(
-      AnalyticsAllowlist.errorShown.name,
-      parameters: {
-        'error_category': widget.error.category.name,
-        'presentation': 'inline',
-        'screen': widget.screen,
-      },
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
+
+    final l10n = context.l10n;
+
+    // Title: localized, but "Something went wrong" in English
+    final title = l10n.get(L10nKeys.errorInlineTitle);
+
+    // Prefer the concrete error message; fall back to policy-based copy
     final messageKey = ErrorPolicyRegistry.getUserMessageKey(widget.error);
-    final message = ErrorMessages.getMessage(messageKey);
+    final fallbackMessage = l10n.get(messageKey);
+    final message = widget.error.message.isNotEmpty
+        ? widget.error.message
+        : fallbackMessage;
 
     return Card(
+      color: Colors.red.shade50,
+      margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              message,
-              style: const TextStyle(
-                color: Colors.red,
-                fontWeight: FontWeight.bold,
+            const Icon(Icons.error_outline, color: Colors.red),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(message, style: const TextStyle(color: Colors.black87)),
+                  if (widget.onRetry != null) ...[
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: widget.onRetry,
+                        icon: const Icon(Icons.refresh),
+                        label: Text(l10n.get(L10nKeys.retry)),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            if (widget.onRetry != null)
-              Align(
-                alignment: Alignment.centerRight,
-                child: OutlinedButton(
-                  onPressed: widget.onRetry,
-                  child: const Text('Try Again'),
-                ),
-              ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 18),
+              onPressed: () => setState(() => _dismissed = true),
+            ),
           ],
         ),
       ),

@@ -1,7 +1,8 @@
 import 'package:app_flutter_starter/app/services/analytics_service_impl.dart';
-import 'package:app_flutter_starter/app/services/mock_services.dart';
 import 'package:app_flutter_starter/core/observability/analytics_allowlist.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../helpers/mock_services.dart';
 
 void main() {
   group('AnalyticsAllowlist', () {

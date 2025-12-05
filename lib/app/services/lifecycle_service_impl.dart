@@ -1,5 +1,7 @@
 import 'dart:async';
+
 import 'package:flutter/widgets.dart';
+
 import '../../core/contracts/lifecycle_contract.dart' as core;
 
 class AppLifecycleServiceImpl extends WidgetsBindingObserver
