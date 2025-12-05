@@ -1,5 +1,9 @@
+import 'package:app_flutter_starter/app/services/analytics_service_impl.dart';
+import 'package:app_flutter_starter/app/services/crash_service_impl.dart';
 import 'package:app_flutter_starter/core/config/environment.dart';
 import 'package:app_flutter_starter/core/contracts/config_provider.dart';
+import 'package:app_flutter_starter/core/observability/analytics_allowlist.dart';
+import 'package:app_flutter_starter/core/observability/performance_tracker.dart';
 
 import '../core/contracts/analytics_contract.dart';
 import '../core/contracts/auth_contract.dart';
@@ -53,22 +57,47 @@ Future<DISetupResult> setupDependencies(
   final locator = ServiceLocator();
   locator.register<AppConfig>(appConfig);
 
+  // Core services
   final storage = MockStorageService();
-  final analytics = MockAnalyticsService();
-  final crash = MockCrashService();
   final auth = MockAuthService();
+
+  locator.register<StorageService>(storage);
+  locator.register<AuthService>(auth);
+
+  // Observability services - initialize with consent management
+  final analyticsImpl = AnalyticsServiceImpl(
+    storage: storage,
+    vendor: null, // Replace with real vendor in production
+  );
+  await analyticsImpl.initialize();
+
+  final crashImpl = CrashServiceImpl(
+    storage: storage,
+    vendor: null, // Replace with real vendor in production
+  );
+  await crashImpl.initialize();
+
+  locator.register<AnalyticsService>(analyticsImpl);
+  locator.register<CrashService>(crashImpl);
+
+  // Config service with performance tracking
+  PerformanceTracker().start(PerformanceMetrics.configLoad);
 
   final config = ConfigServiceImpl(
     storage: storage,
     remoteProvider: remoteConfigProvider ?? SimulatedRemoteConfig(),
   );
 
-  locator.register<StorageService>(storage);
-  locator.register<AnalyticsService>(analytics);
-  locator.register<CrashService>(crash);
-  locator.register<AuthService>(auth);
-
   await config.initialize();
+
+  final configMetric = PerformanceTracker().stop(PerformanceMetrics.configLoad);
+  if (configMetric != null) {
+    await analyticsImpl.logEvent(
+      AnalyticsAllowlist.configLoaded.name,
+      parameters: {'source': 'remote', 'duration_ms': configMetric.durationMs},
+    );
+  }
+
   locator.register<ConfigService>(config);
 
   final launchStateResolver = LaunchStateMachineImpl(
@@ -76,6 +105,7 @@ Future<DISetupResult> setupDependencies(
     storage: storage,
     auth: auth,
   );
+
   return DISetupResult(
     launchStateResolver: launchStateResolver,
     locator: locator,
@@ -88,6 +118,8 @@ RouterFactoryResult createRouter({
 }) {
   final storage = locator.get<StorageService>();
   final auth = locator.get<AuthService>();
+  final crash = locator.get<CrashService>() as CrashServiceImpl;
+
   final guards = [OnboardingGuard(storage), AuthGuard(auth), NoAuthGuard(auth)];
 
   final result = RouterFactory.create(
@@ -96,7 +128,11 @@ RouterFactoryResult createRouter({
     storage: storage,
     auth: auth,
   );
+
   locator.register<NavigationService>(result.navigationService);
+
+  // Record initial navigation
+  crash.recordNavigation('(launch)', initialRoute);
 
   return result;
 }
