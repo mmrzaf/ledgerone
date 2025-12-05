@@ -38,6 +38,7 @@ const Map<String, String> translationsEn = {
   'home.loading_content': 'Loading content...',
   'home.offline_warning': 'Showing cached data - refresh failed',
   'home.cached_data': 'Content loaded successfully',
+  'home.loaded_at': 'Loaded at {timestamp}',
 
   // Errors
   'error.network_offline': 'No internet connection. Please check your network.',
@@ -51,7 +52,7 @@ const Map<String, String> translationsEn = {
   'error.session_expired': 'Your session has expired.',
   'error.parse_error': 'Unable to process the response. Please try again.',
   'error.unknown': 'Something went wrong. Please try again.',
-
+  'error.inline_title': 'Something went wrong',
   // Accessibility labels
   'a11y.navigation.back': 'Navigate back',
   'a11y.navigation.menu': 'Open menu',
@@ -65,78 +66,6 @@ const Map<String, String> translationsEn = {
   'network.offline': 'No internet connection',
   'network.online': 'Connected',
   'network.unknown': 'Connection status unknown',
-};
-
-/// Spanish translations (es)
-const Map<String, String> translationsEs = {
-  // Common
-  'app.name': 'Flutter Starter',
-  'common.ok': 'Aceptar',
-  'common.cancel': 'Cancelar',
-  'common.retry': 'Intentar de nuevo',
-  'common.loading': 'Cargando...',
-  'common.error': 'Error',
-  'common.success': 'Éxito',
-
-  // Onboarding
-  'onboarding.title': 'Bienvenido a Flutter Starter',
-  'onboarding.subtitle':
-      'Una plantilla lista para producción con navegación, guardias y arquitectura limpia.',
-  'onboarding.get_started': 'Comenzar',
-  'onboarding.skip': 'Omitir',
-
-  // Login
-  'login.title': 'Iniciar sesión',
-  'login.email': 'Correo electrónico',
-  'login.password': 'Contraseña',
-  'login.submit': 'Iniciar sesión',
-  'login.email_required': 'El correo electrónico es obligatorio',
-  'login.email_invalid': 'Ingrese un correo electrónico válido',
-  'login.password_required': 'La contraseña es obligatoria',
-  'login.password_too_short': 'La contraseña debe tener al menos 6 caracteres',
-
-  // Home
-  'home.title': 'Inicio',
-  'home.welcome': '¡Bienvenido de nuevo!',
-  'home.refresh': 'Actualizar',
-  'home.logout': 'Cerrar sesión',
-  'home.demo_content': 'Contenido de demostración',
-  'home.refresh_instruction':
-      'Desliza hacia abajo para actualizar o toca el botón de actualización arriba.',
-  'home.no_content': 'No hay contenido disponible',
-  'home.loading_content': 'Cargando contenido...',
-  'home.offline_warning': 'Mostrando datos en caché - la actualización falló',
-  'home.cached_data': 'Contenido cargado exitosamente',
-
-  // Errors
-  'error.network_offline':
-      'Sin conexión a internet. Por favor verifica tu red.',
-  'error.timeout': 'Se agotó el tiempo de espera. Por favor intenta de nuevo.',
-  'error.server_error': 'Error del servidor. Por favor intenta más tarde.',
-  'error.bad_request': 'Solicitud inválida. Por favor verifica tu entrada.',
-  'error.unauthorized':
-      'Tu sesión ha expirado. Por favor inicia sesión de nuevo.',
-  'error.forbidden': 'No tienes permiso para acceder a esto.',
-  'error.not_found': 'El recurso solicitado no se encontró.',
-  'error.invalid_credentials': 'Correo electrónico o contraseña inválidos.',
-  'error.session_expired': 'Tu sesión ha expirado.',
-  'error.parse_error':
-      'No se puede procesar la respuesta. Por favor intenta de nuevo.',
-  'error.unknown': 'Algo salió mal. Por favor intenta de nuevo.',
-
-  // Accessibility labels
-  'a11y.navigation.back': 'Navegar atrás',
-  'a11y.navigation.menu': 'Abrir menú',
-  'a11y.close_button': 'Cerrar',
-  'a11y.refresh_button': 'Actualizar contenido',
-  'a11y.loading_indicator': 'Cargando',
-  'a11y.error_icon': 'Error',
-  'a11y.success_icon': 'Éxito',
-
-  // Network status
-  'network.offline': 'Sin conexión a internet',
-  'network.online': 'Conectado',
-  'network.unknown': 'Estado de conexión desconocido',
 };
 
 /// German translations (de)
@@ -181,6 +110,7 @@ const Map<String, String> translationsDe = {
   'home.offline_warning':
       'Zwischengespeicherte Daten werden angezeigt – Aktualisierung fehlgeschlagen',
   'home.cached_data': 'Inhalt erfolgreich geladen',
+  'home.loaded_at': 'Geladen um {timestamp}',
 
   // Errors
   'error.network_offline':
@@ -254,6 +184,7 @@ const Map<String, String> translationsFa = {
   'home.loading_content': 'در حال بارگذاری محتوا...',
   'home.offline_warning': 'نمایش داده‌های کش شده - به‌روزرسانی ناموفق بود',
   'home.cached_data': 'محتوا با موفقیت بارگذاری شد',
+  'home.loaded_at': 'بارگذاری شده در {timestamp}',
 
   // Errors
   'error.network_offline':
@@ -284,10 +215,8 @@ const Map<String, String> translationsFa = {
   'network.unknown': 'وضعیت اتصال نامشخص است',
 };
 
-/// All available translations
 const Map<String, Map<String, String>> allTranslations = {
   'en': translationsEn,
-  'es': translationsEs,
   'de': translationsDe,
   'fa': translationsFa,
 };

@@ -37,6 +37,7 @@ class L10nKeys {
   static const String homeLoadingContent = 'home.loading_content';
   static const String homeOfflineWarning = 'home.offline_warning';
   static const String homeCachedData = 'home.cached_data';
+  static const String homeLoadedAt = 'home.loaded_at';
 
   // Errors
   static const String errorNetworkOffline = 'error.network_offline';
@@ -50,6 +51,7 @@ class L10nKeys {
   static const String errorSessionExpired = 'error.session_expired';
   static const String errorParseError = 'error.parse_error';
   static const String errorUnknown = 'error.unknown';
+  static const String errorInlineTitle = 'error.inline_title';
 
   // Accessibility labels
   static const String a11yNavigationBack = 'a11y.navigation.back';

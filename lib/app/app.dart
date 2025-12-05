@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../core/contracts/i18n_contract.dart';
 import '../core/contracts/theme_contract.dart';
+import '../core/i18n/string_keys.dart';
 
 /// Root application widget with i18n and theming support
 class App extends StatefulWidget {
@@ -27,7 +29,7 @@ class _AppState extends State<App> {
     final locale = widget.localization.currentLocale;
 
     return MaterialApp.router(
-      title: 'Flutter Starter',
+      title: widget.localization.get(L10nKeys.appName),
 
       // Theme configuration
       theme: _buildThemeData(theme),

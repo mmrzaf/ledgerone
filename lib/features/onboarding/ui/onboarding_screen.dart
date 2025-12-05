@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../app/di.dart';
 import '../../../core/contracts/analytics_contract.dart';
+import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
 import '../../../core/contracts/storage_contract.dart';
+import '../../../core/i18n/string_keys.dart';
 import '../../../core/observability/analytics_allowlist.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -51,6 +53,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -61,24 +65,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             children: [
               const Icon(Icons.rocket_launch, size: 120, color: Colors.blue),
               const SizedBox(height: 32),
-              const Text(
-                'Welcome to Flutter Starter',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              Text(
+                l10n.get(L10nKeys.onboardingTitle),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              const Text(
-                'A production-ready template with navigation, guards, and clean architecture.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+              Text(
+                l10n.get(L10nKeys.onboardingSubtitle),
+                style: const TextStyle(fontSize: 16, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 48),
               ElevatedButton(
                 onPressed: _handleComplete,
-                child: const Text('Get Started'),
+                child: Text(l10n.get(L10nKeys.onboardingGetStarted)),
               ),
               const SizedBox(height: 12),
-              TextButton(onPressed: _handleSkip, child: const Text('Skip')),
+              TextButton(
+                onPressed: _handleSkip,
+                child: Text(l10n.get(L10nKeys.onboardingSkip)),
+              ),
             ],
           ),
         ),
