@@ -2,32 +2,32 @@
 
 A production-ready Flutter starter template with robust navigation, route guards, and clean architecture.
 
-## 🚀 What's in v0.2
+## What's in v0.2
 
 **Navigation & Routing Foundation** - Complete implementation of:
-- ✅ Dynamic route registry from feature manifests
-- ✅ Priority-based navigation guards (onboarding → auth → no-auth)
-- ✅ Launch state machine with smart initial route detection
-- ✅ Deep link-ready architecture
-- ✅ UI-agnostic navigation service
+-  Dynamic route registry from feature manifests
+-  Priority-based navigation guards (onboarding → auth → no-auth)
+-  Launch state machine with smart initial route detection
+-  Deep link-ready architecture
+-  UI-agnostic navigation service
 
 **Features Implemented:**
-- 🎯 Onboarding flow (complete/skip)
-- 🔐 Login screen (email/password with validation)
-- 🏠 Home screen (authenticated)
-- 🛡️ Route guards preventing unauthorized access
+-  Onboarding flow (complete/skip)
+-  Login screen (email/password with validation)
+-  Home screen (authenticated)
+-  Route guards preventing unauthorized access
 
 **Testing:**
-- ✅ 70%+ test coverage on navigation logic
-- ✅ Integration tests for critical user flows
-- ✅ Guard priority and redirect logic validated
+-  70%+ test coverage on navigation logic
+-  Integration tests for critical user flows
+-  Guard priority and redirect logic validated
 
-## 📋 Prerequisites
+##  Prerequisites
 
 - Flutter SDK 3.9.2 or higher
 - Dart 3.0 or higher
 
-## 🛠️ Quick Start
+##  Quick Start
 
 ### 1. Install Dependencies
 
@@ -54,7 +54,7 @@ flutter test test/app/navigation/guards_test.dart
 flutter test --coverage
 ```
 
-## 🏗️ Architecture Overview
+##  Architecture Overview
 
 ### Boot Sequence
 
@@ -100,7 +100,7 @@ lib/
     └── home/
 ```
 
-## 🎯 Usage Examples
+##  Usage Examples
 
 ### Adding a New Route
 
@@ -166,7 +166,7 @@ class FeatureFlagGuard implements NavigationGuard {
 }
 ```
 
-## 🧪 Testing Approach
+##  Testing Approach
 
 ### Unit Tests
 
@@ -204,7 +204,7 @@ testWidgets('Login flow works end-to-end', (tester) async {
 });
 ```
 
-## 📖 Key Concepts
+##  Key Concepts
 
 ### Launch State
 
@@ -246,7 +246,7 @@ abstract interface class AuthService {
 
 This allows swapping implementations without changing business logic.
 
-## 🔧 Configuration
+##  Configuration
 
 ### Feature Flags (Mock)
 
@@ -262,7 +262,7 @@ Standard keys used by the template:
 - `onboarding_seen`: Boolean, tracks onboarding completion
 - More keys will be added in future versions
 
-## 📚 Next Steps
+##  Next Steps
 
 **v0.3 - Configuration & Feature Flags** (Upcoming):
 - Remote config with caching
@@ -272,7 +272,7 @@ Standard keys used by the template:
 
 See `BLUEPRINT.md` for the complete roadmap.
 
-## 🤝 Contributing
+##  Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -280,11 +280,11 @@ See `BLUEPRINT.md` for the complete roadmap.
 4. Ensure all tests pass
 5. Submit a pull request
 
-## 📄 License
+##  License
 
 See LICENSE file for details.
 
-## 🆘 Troubleshooting
+##  Troubleshooting
 
 ### Router not navigating
 
@@ -314,4 +314,4 @@ Check that mocks are properly set up and return values match expectations.
 
 ---
 
-**Built with ❤️ for production Flutter apps**
+
