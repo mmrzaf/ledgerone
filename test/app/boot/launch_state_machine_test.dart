@@ -11,29 +11,23 @@ class MockStorageService extends Mock implements StorageService {}
 
 void main() {
   group('LaunchState', () {
-    test('determineInitialRoute returns onboarding when not seen', () {
-      const state = LaunchState(onboardingSeen: false);
+    test(
+      'determineInitialRoute returns onboarding when onboarding not seen',
+      () {
+        const state = LaunchState(onboardingSeen: false);
 
-      expect(state.determineInitialRoute(), 'onboarding');
-    });
+        expect(state.determineInitialRoute(), 'onboarding');
+      },
+    );
 
-    test('determineInitialRoute returns home when authenticated', () {
-      const state = LaunchState(onboardingSeen: true);
+    test(
+      'determineInitialRoute returns home when onboarding has been seen',
+      () {
+        const state = LaunchState(onboardingSeen: true);
 
-      expect(state.determineInitialRoute(), 'home');
-    });
-
-    test('determineInitialRoute returns login when not authenticated', () {
-      const state = LaunchState(onboardingSeen: true);
-
-      expect(state.determineInitialRoute(), 'login');
-    });
-
-    test('onboarding takes precedence over authentication', () {
-      const state = LaunchState(onboardingSeen: false);
-
-      expect(state.determineInitialRoute(), 'onboarding');
-    });
+        expect(state.determineInitialRoute(), 'home');
+      },
+    );
 
     test('toString provides useful debug info', () {
       const state = LaunchState(
@@ -43,7 +37,6 @@ void main() {
 
       final str = state.toString();
       expect(str, contains('onboarded: true'));
-      expect(str, contains('authenticated: false'));
       expect(str, contains('deepLink: /some/path'));
     });
   });
@@ -88,6 +81,17 @@ void main() {
       expect(state.determineInitialRoute(), 'onboarding');
     });
 
+    test('returns correct state for returning user', () async {
+      when(
+        () => storage.getBool('onboarding_seen'),
+      ).thenAnswer((_) async => true);
+
+      final state = await stateMachine.resolve();
+
+      expect(state.onboardingSeen, true);
+      expect(state.determineInitialRoute(), 'home');
+    });
+
     test('handles missing onboarding flag as false', () async {
       when(
         () => storage.getBool('onboarding_seen'),
@@ -96,6 +100,7 @@ void main() {
       final state = await stateMachine.resolve();
 
       expect(state.onboardingSeen, false);
+      expect(state.determineInitialRoute(), 'onboarding');
     });
   });
 }
