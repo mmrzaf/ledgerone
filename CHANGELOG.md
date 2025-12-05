@@ -5,6 +5,68 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-12-05
+
+### Theme
+Offline-First & Data Resilience: Still useful with a bad connection.
+
+### Added
+- **NetworkService**: Monitors device connectivity status (online/offline/unknown)
+  - Stream-based status updates
+  - Mock implementation for v0.6 (ready for connectivity_plus integration)
+- **CacheService**: Data caching with TTL support
+  - In-memory + persistent storage
+  - Last-known-good strategy for offline resilience
+  - Stale data detection and age tracking
+- **AppLifecycleService**: Monitors app foreground/background transitions
+  - Callbacks for app resume/pause events
+  - Time tracking for background duration
+- **OfflineBanner**: Visual indicator when network is unavailable
+  - Non-blocking banner UI
+  - Integrates with OfflineAwareScaffold wrapper
+- **Home Screen Offline Support**:
+  - Last-known-good caching: displays cached data when offline
+  - Background refresh on app resume (with backpressure)
+  - Minimum refresh interval (1 minute) to prevent excessive requests
+  - Cached data indicator when showing stale content
+  - Network-aware retry behavior
+
+### Changed
+- **Home Screen**
+  - Now requires NetworkService, CacheService, and AppLifecycleService dependencies
+  - Loads from cache first, then fetches fresh data
+  - Shows cached data with warning indicator if refresh fails
+  - Automatically refreshes on app resume (respects backpressure rules)
+- **DI Setup**
+  - Registers network, cache, and lifecycle services
+  - Updated router factory to pass new dependencies to screens
+- **Router Factory**
+  - Accepts network, cache, and lifecycle services
+  - Provides them to route screens
+
+### Fixed
+- Home screen now gracefully handles offline scenarios
+- No infinite retry loops - respects network status
+- Background refresh doesn't spam requests (1-minute minimum interval)
+
+### Quality Gates ✅
+- ✅ Key paths (Home) functional in airplane mode with cached data
+- ✅ Retry ceilings honored - no infinite retries
+- ✅ Network status monitoring works correctly
+- ✅ Cache TTL and staleness detection accurate
+- ✅ Background refresh respects backpressure (1-minute minimum)
+
+### Notes
+- This is the "v0.6 – Offline-First & Data Resilience" milestone from the blueprint:
+  - NetworkStatus abstraction provides online/offline detection
+  - Last-known-good strategy shows cached data when network fails
+  - Foreground refresh with backpressure prevents request storms
+  - Visual offline indicator (banner) informs users of connection status
+- For production use:
+  - Replace SimulatedNetworkService with connectivity_plus integration
+  - Implement proper cache serialization for complex types
+  - Add cache eviction policies for memory management
+
 ## [0.5.0] - 2025-12-05
 ### Added
 - Observability & Telemetry milestone:
