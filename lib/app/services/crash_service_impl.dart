@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../../core/contracts/crash_contract.dart';
 import '../../core/contracts/storage_contract.dart';
 import '../../core/errors/app_error.dart';
@@ -67,10 +68,10 @@ class CrashServiceImpl implements CrashService {
     StackTrace? stack, {
     dynamic reason,
   }) async {
-    if (!hasConsent) {
-      debugPrint('Crash: Error recording blocked (no consent)');
-      return;
-    }
+    // if (!hasConsent) {
+    //   debugPrint('Crash: Error recording blocked (no consent)');
+    //   return;
+    // }
 
     // Sanitize exception and stack trace
     final sanitizedException = _sanitizeException(exception);
