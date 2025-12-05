@@ -5,6 +5,104 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2025-12-06
+
+### Theme
+Accessibility, Internationalization & Theming: Usable for real humans in multiple locales.
+
+### Added
+- **Internationalization (i18n) Framework**:
+  - `LocalizationService`: Manages locale selection and string translations
+  - Support for 3 locales: English (en), Spanish (es), Arabic (ar)
+  - Centralized string keys in `L10nKeys` class (type-safe references)
+  - Translation dictionaries with complete coverage for all UI strings
+  - Automatic locale persistence across sessions
+  - Simple `.tr()` extension for inline translation
+  
+- **RTL (Right-to-Left) Support**:
+  - Automatic text direction based on selected locale
+  - Arabic locale with full RTL layout support
+  - `RtlAwareLayout` helpers for directional positioning
+  - Directional edge insets and alignment helpers
+  
+- **Theme System**:
+  - `ThemeService`: Manages theme selection
+  - `AppTheme` contract with semantic color roles
+  - `AppColorScheme`: 25+ semantic color roles (primary, surface, error, success, etc.)
+  - `AppTypography`: Complete type scale (display → body → label)
+  - `AppSpacing`, `AppRadius`, `AppElevation`: Design token constants
+  - Default light and dark themes
+  - Theme persistence across sessions
+  
+- **Accessibility (a11y) Infrastructure**:
+  - `A11yGuidelines`: WCAG AA compliance helpers
+    - Minimum touch target validation (44x44dp)
+    - Contrast ratio calculator
+    - WCAG AA contrast requirement checker
+  - `AccessibleTouchTarget`: Widget enforcing minimum touch targets
+  - `AccessibleAnnouncement`: Screen reader announcements
+  - `A11yFocus`: Focus management helpers
+  - `A11yLabels`: Semantic label generators
+  - Widget extensions for semantic properties (`.withLabel()`, `.asHeader()`, etc.)
+  
+- **Text Scaling Support**:
+  - Automatic clamping to 1.0-2.0 scale range
+  - Tested typography at 1.0x, 1.3x, 1.6x scales
+  - All text styles use relative sizing
+
+### Changed
+- **App Widget**:
+  - Now requires `LocalizationService` and `ThemeService`
+  - Wraps content with proper `Directionality` for RTL support
+  - Applies text scaling limits for better readability
+  - Builds `ThemeData` from semantic `AppTheme`
+  
+- **DI Setup**:
+  - Initializes localization and theme services early in boot sequence
+  - Registers services in service locator
+  - Services restore saved preferences on initialization
+  
+- **Main Entry**:
+  - Passes localization and theme services to `App` widget
+  - Supports dynamic locale and theme switching
+  
+- **Component Themes**:
+  - ElevatedButton: 48dp minimum height (accessible touch target)
+  - InputDecoration: Consistent padding and border radius
+  - Card: Border instead of shadow for better contrast
+  - Icon: Semantic colors from theme
+
+### Fixed
+- Touch targets too small for accessibility (now enforced at 44x44dp)
+- Text not scaling properly at large system text sizes
+- No RTL support for Arabic and other RTL languages
+- Hard-coded strings preventing localization
+
+### Quality Gates ✅
+- ✅ A11y CI checks pass (touch targets, contrast ratios)
+- ✅ All UI strings are localized (no hard-coded text)
+- ✅ RTL layout works correctly for Arabic locale
+- ✅ Light/dark theme switching works
+- ✅ Text scales correctly from 1.0x to 2.0x
+- ✅ Contrast ratios meet WCAG AA standards
+
+### Testing
+- **i18n Tests**:
+  - Locale switching and persistence
+  - String translation in all supported locales
+  - Fallback to English for missing keys
+  - RTL locale detection
+  - String interpolation support
+  
+- **Accessibility Tests**:
+  - Touch target size validation
+  - Contrast ratio calculations
+  - WCAG AA compliance checking
+  - Semantic label generation
+  - RTL layout helpers
+  - Widget accessibility extensions
+
+
 ## [0.6.0] - 2025-12-05
 
 ### Theme
