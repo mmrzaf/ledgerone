@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/di.dart';
 import '../../../app/presentation/error_presenter.dart';
+import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/auth_contract.dart';
 import '../../../core/contracts/config_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/runtime/cancellation_token.dart';
 import '../../../core/runtime/retry_helper.dart';
+import '../../../core/observability/analytics_allowlist.dart';
+import '../../../core/observability/performance_tracker.dart';
 
 enum HomeContentState { loading, ready, empty, error }
 
@@ -40,15 +44,33 @@ class _HomeScreenState extends State<HomeScreen> {
   HomeData? _data;
   AppError? _error;
 
+  AnalyticsService? _analytics;
+  bool _homeReadyTracked = false;
   @override
   void initState() {
     super.initState();
+
+    try {
+      _analytics = ServiceLocator().get<AnalyticsService>();
+    } catch (_) {
+      _analytics = null;
+    }
+
+    PerformanceTracker().start(PerformanceMetrics.homeReady);
+
+    _analytics?.logScreenView('home');
+
     _loadContent();
   }
 
   @override
   void dispose() {
     _cancellationSource.dispose();
+
+    if (!_homeReadyTracked) {
+      PerformanceTracker().reset(PerformanceMetrics.homeReady);
+    }
+
     super.dispose();
   }
 
@@ -81,19 +103,49 @@ class _HomeScreenState extends State<HomeScreen> {
             ? HomeContentState.empty
             : HomeContentState.ready;
       });
+
+      if (!_homeReadyTracked && _state == HomeContentState.ready) {
+        final metric = PerformanceTracker().stop(PerformanceMetrics.homeReady);
+
+        if (metric != null) {
+          _analytics?.logEvent(
+            AnalyticsAllowlist.homeView.name,
+            parameters: {'duration_ms': metric.durationMs},
+          );
+        } else {
+          _analytics?.logEvent(AnalyticsAllowlist.homeView.name);
+        }
+
+        _homeReadyTracked = true;
+      }
     } else if (result.isFailure) {
       setState(() {
         _error = result.error;
         _state = HomeContentState.error;
       });
+
+      final error = result.error;
+      if (error != null) {
+        _analytics?.logEvent(
+          AnalyticsAllowlist.homeError.name,
+          parameters: {'error_category': error.category.name},
+        );
+      }
     }
   }
 
-  /// Demo async operation that simulates network call
+  Future<void> _handleRefresh(String trigger) async {
+    _analytics?.logEvent(
+      AnalyticsAllowlist.homeRefresh.name,
+      parameters: {'trigger': trigger},
+    );
+
+    await _loadContent();
+  }
+
   Future<HomeData> _fetchDemoData() async {
     await Future.delayed(const Duration(seconds: 1));
 
-    // Simulate occasional failures for demo
     final now = DateTime.now();
     if (now.second % 10 == 0) {
       throw const AppError(
@@ -123,7 +175,11 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _state == HomeContentState.loading ? null : _loadContent,
+            onPressed: _state == HomeContentState.loading
+                ? null
+                : () {
+                    _handleRefresh('manual');
+                  },
             tooltip: 'Refresh',
           ),
           IconButton(
@@ -227,20 +283,23 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildContent() {
     switch (_state) {
       case HomeContentState.loading:
-        return const LoadingIndicator(message: 'Loading content...');
+        return LoadingIndicator(message: 'Loading content...');
 
       case HomeContentState.ready:
         return _buildReadyState();
 
       case HomeContentState.empty:
-        return const EmptyState(
+        return EmptyState(
           message: 'No content available',
           icon: Icons.inbox_outlined,
         );
-
       case HomeContentState.error:
         return Center(
-          child: ErrorCard(error: _error!, onRetry: _loadContent),
+          child: ErrorCard(
+            error: _error!,
+            screen: 'home',
+            onRetry: () => _handleRefresh('manual'),
+          ),
         );
     }
   }

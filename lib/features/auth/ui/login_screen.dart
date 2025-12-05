@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
+import '../../../app/di.dart';
 import '../../../app/presentation/error_presenter.dart';
+import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/auth_contract.dart';
+import '../../../core/contracts/crash_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
 import '../../../core/errors/app_error.dart';
+import '../../../core/observability/analytics_allowlist.dart';
+import '../../../core/observability/performance_tracker.dart';
 import '../../../core/runtime/cancellation_token.dart';
+import '../../../app/services/crash_service_impl.dart';
 
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
@@ -25,8 +31,24 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _cancellationSource = CancellationTokenSource();
 
+  late final AnalyticsService _analytics;
+  late final CrashServiceImpl _crash;
+
   bool _isLoading = false;
   AppError? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _analytics = ServiceLocator().get<AnalyticsService>();
+    _crash = ServiceLocator().get<CrashService>() as CrashServiceImpl;
+
+    // Log screen view
+    _analytics.logScreenView('login');
+    _analytics.logEvent(AnalyticsAllowlist.loginView.name);
+
+    _crash.addBreadcrumb('Viewed login screen', category: 'navigation');
+  }
 
   @override
   void dispose() {
@@ -50,6 +72,13 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
 
+    // Start performance tracking
+    PerformanceTracker().start(PerformanceMetrics.loginAttempt);
+
+    // Log attempt
+    await _analytics.logEvent(AnalyticsAllowlist.loginAttempt.name);
+    _crash.addBreadcrumb('Login attempt', category: 'auth');
+
     try {
       _cancellationSource.token.throwIfCancelled();
 
@@ -61,10 +90,27 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       _cancellationSource.token.throwIfCancelled();
+
+      // Stop performance tracking
+      final metric = PerformanceTracker().stop(PerformanceMetrics.loginAttempt);
+
+      // Log success
+      await _analytics.logEvent(
+        AnalyticsAllowlist.loginSuccess.name,
+        parameters: {if (metric != null) 'duration_ms': metric.durationMs},
+      );
+
+      _crash.addBreadcrumb('Login successful', category: 'auth');
+
+      // Set user ID (hashed)
+      final userId = await widget.authService.userId;
+      await _analytics.setUserId(userId);
+
       widget.navigation.clearAndGoTo('home');
     } on OperationCancelledException {
       // Navigation away during login - do nothing
       debugPrint('Login cancelled by navigation');
+      _crash.addBreadcrumb('Login cancelled', category: 'auth');
     } catch (e) {
       if (!mounted) return;
 
@@ -81,7 +127,18 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = false;
       });
 
-      ErrorPresenter.showError(context, appError);
+      // Log failure
+      await _analytics.logEvent(
+        AnalyticsAllowlist.loginFailure.name,
+        parameters: {'error_category': appError.category.name},
+      );
+
+      _crash.recordErrorCategory(appError.category.name, 'login');
+
+      // Record error to crash service
+      await _crash.recordError(appError, appError.stackTrace);
+
+      ErrorPresenter.showError(context, appError, onRetry: _handleLogin);
     }
   }
 
@@ -147,7 +204,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   if (_error != null) ...[
                     const SizedBox(height: 16),
-                    ErrorCard(error: _error!, onRetry: _handleLogin),
+                    ErrorCard(
+                      screen: 'login',
+                      error: _error!,
+                      onRetry: () {
+                        _analytics.logEvent(
+                          AnalyticsAllowlist.errorRetry.name,
+                          parameters: {'error_category': _error!.category.name},
+                        );
+                        _handleLogin();
+                      },
+                    ),
                   ],
                   const SizedBox(height: 24),
                   ElevatedButton(

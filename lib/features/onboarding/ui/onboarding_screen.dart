@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/di.dart';
+import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
 import '../../../core/contracts/storage_contract.dart';
+import '../../../core/observability/analytics_allowlist.dart';
 
-class OnboardingScreen extends StatelessWidget {
+class OnboardingScreen extends StatefulWidget {
   final StorageService storage;
   final NavigationService navigation;
 
@@ -13,14 +16,37 @@ class OnboardingScreen extends StatelessWidget {
     super.key,
   });
 
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  AnalyticsService? _analytics;
+
+  @override
+  void initState() {
+    super.initState();
+
+    try {
+      _analytics = ServiceLocator().get<AnalyticsService>();
+    } catch (_) {
+      _analytics = null;
+    }
+
+    _analytics?.logScreenView('onboarding');
+    _analytics?.logEvent(AnalyticsAllowlist.onboardingView.name);
+  }
+
   Future<void> _handleComplete() async {
-    await storage.setBool('onboarding_seen', true);
-    navigation.replaceRoute('home');
+    await widget.storage.setBool('onboarding_seen', true);
+    _analytics?.logEvent(AnalyticsAllowlist.onboardingComplete.name);
+    widget.navigation.replaceRoute('home');
   }
 
   Future<void> _handleSkip() async {
-    await storage.setBool('onboarding_seen', true);
-    navigation.replaceRoute('login');
+    await widget.storage.setBool('onboarding_seen', true);
+    _analytics?.logEvent(AnalyticsAllowlist.onboardingSkip.name);
+    widget.navigation.replaceRoute('login');
   }
 
   @override
