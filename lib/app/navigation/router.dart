@@ -8,12 +8,14 @@ import '../../core/contracts/lifecycle_contract.dart';
 import '../../core/contracts/navigation_contract.dart';
 import '../../core/contracts/network_contract.dart';
 import '../../core/contracts/storage_contract.dart';
+import '../../features/home/domain/home_repository.dart';
 import '../../features/home/ui/home_screen.dart';
 import '../../features/onboarding/ui/onboarding_screen.dart';
 
 class RouteMetadata {
   final String id;
   final String path;
+
   const RouteMetadata(this.id, this.path);
 }
 
@@ -83,12 +85,9 @@ class RouterFactory {
     required CacheService cache,
     required AppLifecycleService lifecycle,
     required LocalizationService localization,
+    required HomeRepository homeRepository,
   }) {
-    final routeIdToPath = {
-      'onboarding': '/onboarding',
-      'login': '/login',
-      'home': '/home',
-    };
+    final routeIdToPath = {'onboarding': '/onboarding', 'home': '/home'};
 
     final sortedGuards = List<NavigationGuard>.from(guards)
       ..sort((a, b) => a.priority.compareTo(b.priority));
@@ -151,6 +150,7 @@ class RouterFactory {
               networkService: network,
               cacheService: cache,
               lifecycleService: lifecycle,
+              homeRepository: homeRepository,
             );
           },
         ),
