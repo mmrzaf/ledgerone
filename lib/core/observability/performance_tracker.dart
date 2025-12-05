@@ -30,7 +30,9 @@ class PerformanceMetric {
 /// Tracks performance metrics for critical user flows
 class PerformanceTracker {
   static final PerformanceTracker _instance = PerformanceTracker._internal();
+
   factory PerformanceTracker() => _instance;
+
   PerformanceTracker._internal();
 
   final Map<String, DateTime> _starts = {};

@@ -4,5 +4,6 @@ abstract interface class CrashService {
     StackTrace? stack, {
     dynamic reason,
   });
+
   Future<void> log(String message);
 }

@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import '../errors/app_error.dart';
 import '../errors/error_policy.dart';
 import 'cancellation_token.dart';
@@ -49,6 +50,7 @@ class RetryResult<T> {
   });
 
   bool get isSuccess => data != null && error == null;
+
   bool get isFailure => error != null;
 
   factory RetryResult.success(T data, int attemptsMade) {

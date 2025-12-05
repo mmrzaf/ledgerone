@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+
 import '../../core/contracts/i18n_contract.dart';
 import '../../core/contracts/storage_contract.dart';
 import '../../core/i18n/translations.dart';
@@ -19,11 +20,6 @@ class LocalizationServiceImpl implements LocalizationService {
     LocaleInfo(
       languageCode: 'en',
       displayName: 'English',
-      textDirection: TextDirection.ltr,
-    ),
-    LocaleInfo(
-      languageCode: 'es',
-      displayName: 'Español',
       textDirection: TextDirection.ltr,
     ),
     LocaleInfo(
