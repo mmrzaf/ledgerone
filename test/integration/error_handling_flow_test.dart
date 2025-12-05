@@ -188,42 +188,41 @@ void main() {
       }
     });
   });
-	    testWidgets('home load is safe when navigated away', (tester) async {
-      final auth = MockAuthService();
-      // Optional: simulate an authenticated user for realism
-      await auth.login('test@example.com', 'password123');
-      final nav = MockNavigationService();
-      final config = MockConfigService();
-      await config.initialize();
+  testWidgets('home load is safe when navigated away', (tester) async {
+    final auth = MockAuthService();
+    // Optional: simulate an authenticated user for realism
+    await auth.login('test@example.com', 'password123');
+    final nav = MockNavigationService();
+    final config = MockConfigService();
+    await config.initialize();
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: HomeScreen(authService: auth, navigation: nav, configService: config,),
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomeScreen(
+          authService: auth,
+          navigation: nav,
+          configService: config,
         ),
-      );
+      ),
+    );
 
-      // Kick off the initial load
-      await tester.pump();
+    // Kick off the initial load
+    await tester.pump();
 
-      // Immediately "navigate away" by replacing the tree
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: Text('Other screen'),
-          ),
-        ),
-      );
-      await tester.pump();
+    // Immediately "navigate away" by replacing the tree
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: Text('Other screen'))),
+    );
+    await tester.pump();
 
-      // Let timers/microtasks settle. If cancellation + dispose are wrong,
-      // this is where you'd see setState-after-dispose or similar crashes.
-      await tester.pumpAndSettle();
+    // Let timers/microtasks settle. If cancellation + dispose are wrong,
+    // this is where you'd see setState-after-dispose or similar crashes.
+    await tester.pumpAndSettle();
 
-      // HomeScreen should be gone, and the test should complete without errors.
-      expect(find.byType(HomeScreen), findsNothing);
-      expect(find.text('Other screen'), findsOneWidget);
-    });
-
+    // HomeScreen should be gone, and the test should complete without errors.
+    expect(find.byType(HomeScreen), findsNothing);
+    expect(find.text('Other screen'), findsOneWidget);
+  });
 }
 
 class SlowAuthService extends MockAuthService {
