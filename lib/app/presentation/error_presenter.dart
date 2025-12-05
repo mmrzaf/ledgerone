@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+
+import '../../core/contracts/analytics_contract.dart';
 import '../../core/errors/app_error.dart';
 import '../../core/errors/error_policy.dart';
+import '../../core/observability/analytics_allowlist.dart';
+import '../di.dart';
 
 /// User-facing error messages
 /// In a real app, these would come from i18n
@@ -10,129 +14,157 @@ class ErrorMessages {
         'No internet connection. Please check your network.',
     'error.timeout': 'Request timed out. Please try again.',
     'error.server_error': 'Server error. Please try again later.',
-    'error.bad_request': 'Invalid request. Please check your input.',
-    'error.unauthorized': 'Your session has expired. Please sign in again.',
-    'error.forbidden': 'You don\'t have permission to access this.',
+    'error.unauthorized': 'You are not authorized. Please log in again.',
+    'error.forbidden': 'You do not have permission to perform this action.',
     'error.not_found': 'The requested resource was not found.',
-    'error.invalid_credentials': 'Invalid email or password.',
-    'error.session_expired': 'Your session has expired.',
-    'error.parse_error': 'Unable to process the response. Please try again.',
+    'error.invalid_credentials':
+        'Invalid credentials. Please check your email and password.',
+    'error.token_expired': 'Session expired. Please log in again.',
+    'error.parse_error': 'Data error. Please try again.',
     'error.unknown': 'Something went wrong. Please try again.',
   };
 
   static String getMessage(String key) {
-    return _messages[key] ?? _messages['error.unknown']!;
+    return _messages[key] ?? 'An unexpected error occurred.';
   }
 }
 
-/// Widget to present errors according to policy
 class ErrorPresenter {
-  /// Show error according to its policy
   static void showError(
     BuildContext context,
     AppError error, {
+    String screen = 'unknown',
     VoidCallback? onRetry,
   }) {
     final policy = ErrorPolicyRegistry.getPolicy(error.category);
-    final message = ErrorMessages.getMessage(policy.userMessageKey);
+
+    // If the policy says "don't log", we also don't present anything
+    if (!policy.shouldLog) return;
+
+    AnalyticsService? analytics;
+    try {
+      analytics = ServiceLocator().get<AnalyticsService>();
+    } catch (_) {
+      analytics = null;
+    }
 
     switch (policy.presentation) {
       case ErrorPresentation.inline:
-        // Inline errors are shown by the widget itself
+        // Inline errors are shown by the widget itself (ErrorCard handles logging)
         break;
 
       case ErrorPresentation.banner:
+        analytics?.logEvent(
+          AnalyticsAllowlist.errorShown.name,
+          parameters: {
+            'error_category': error.category.name,
+            'presentation': 'banner',
+            'screen': screen,
+          },
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(message),
-            backgroundColor: Colors.orange.shade800,
-            duration: const Duration(seconds: 5),
-            action:
-                onRetry != null && policy.retryStrategy == RetryStrategy.manual
-                ? SnackBarAction(
-                    label: 'Retry',
-                    textColor: Colors.white,
-                    onPressed: onRetry,
-                  )
-                : null,
+            content: Text(ErrorMessages.getMessage(policy.userMessageKey)),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.fixed,
           ),
         );
         break;
 
       case ErrorPresentation.toast:
+        analytics?.logEvent(
+          AnalyticsAllowlist.errorShown.name,
+          parameters: {
+            'error_category': error.category.name,
+            'presentation': 'toast',
+            'screen': screen,
+          },
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(message),
-            duration: const Duration(seconds: 3),
+            content: Text(ErrorMessages.getMessage(policy.userMessageKey)),
             behavior: SnackBarBehavior.floating,
           ),
         );
         break;
 
       case ErrorPresentation.silent:
-        // Don't show to user
         break;
     }
   }
 }
 
-/// Inline error card widget
-class ErrorCard extends StatelessWidget {
+class ErrorCard extends StatefulWidget {
   final AppError error;
+  final String screen;
   final VoidCallback? onRetry;
 
-  const ErrorCard({required this.error, this.onRetry, super.key});
+  const ErrorCard({
+    required this.error,
+    required this.screen,
+    this.onRetry,
+    super.key,
+  });
+
+  @override
+  State<ErrorCard> createState() => _ErrorCardState();
+}
+
+class _ErrorCardState extends State<ErrorCard> {
+  AnalyticsService? _analytics;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final policy = ErrorPolicyRegistry.getPolicy(widget.error.category);
+    if (!policy.shouldLog) return;
+
+    try {
+      _analytics = ServiceLocator().get<AnalyticsService>();
+    } catch (_) {
+      _analytics = null;
+    }
+
+    _analytics?.logEvent(
+      AnalyticsAllowlist.errorShown.name,
+      parameters: {
+        'error_category': widget.error.category.name,
+        'presentation': 'inline',
+        'screen': widget.screen,
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final policy = ErrorPolicyRegistry.getPolicy(error.category);
-    final message = ErrorMessages.getMessage(policy.userMessageKey);
-    final canRetry =
-        policy.retryStrategy != RetryStrategy.never && onRetry != null;
+    final messageKey = ErrorPolicyRegistry.getUserMessageKey(widget.error);
+    final message = ErrorMessages.getMessage(messageKey);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.shade200),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.error_outline, color: Colors.red.shade700, size: 24),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  message,
-                  style: TextStyle(
-                    color: Colors.red.shade900,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (canRetry) ...[
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('Try Again'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red.shade700,
-                  side: BorderSide(color: Colors.red.shade300),
-                ),
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              message,
+              style: const TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(height: 8),
+            if (widget.onRetry != null)
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton(
+                  onPressed: widget.onRetry,
+                  child: const Text('Try Again'),
+                ),
+              ),
           ],
-        ],
+        ),
       ),
     );
   }
