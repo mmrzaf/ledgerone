@@ -1,9 +1,7 @@
 import 'package:app_flutter_starter/app/app.dart';
 import 'package:app_flutter_starter/app/di.dart';
 import 'package:app_flutter_starter/core/config/environment.dart';
-import 'package:app_flutter_starter/core/contracts/auth_contract.dart';
 import 'package:app_flutter_starter/core/contracts/i18n_contract.dart';
-import 'package:app_flutter_starter/core/contracts/storage_contract.dart';
 import 'package:app_flutter_starter/core/contracts/theme_contract.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +9,7 @@ import '../helpers/test_remote_config_provider.dart';
 
 void main() {
   group('Navigation Flow Integration Tests', () {
-    testWidgets('Fresh install: onboarding -> complete -> login (redirect)', (
+    testWidgets('Fresh install: onboarding -> complete -> home', (
       tester,
     ) async {
       final diSetup = await setupDependencies(
@@ -43,11 +41,10 @@ void main() {
       await tester.tap(find.text('Get Started'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Sign In'), findsAtLeastNWidgets(1));
-      expect(find.text('Welcome back!'), findsNothing);
+      expect(find.text('Welcome back!'), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('Onboarding skip -> login', (tester) async {
+    testWidgets('Onboarding skip -> home', (tester) async {
       final diSetup = await setupDependencies(
         AppConfig.dev,
         remoteConfigProvider: TestRemoteConfigProvider(),
@@ -74,160 +71,8 @@ void main() {
       await tester.tap(find.text('Skip'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Sign In'), findsAtLeastNWidgets(1));
+      expect(find.text('Welcome back!'), findsAtLeastNWidgets(1));
       expect(find.byType(TextFormField), findsNWidgets(2));
-    });
-
-    testWidgets('Login flow: invalid -> valid credentials', (tester) async {
-      final diSetup = await setupDependencies(
-        AppConfig.dev,
-        remoteConfigProvider: TestRemoteConfigProvider(),
-      );
-      final storage = diSetup.locator.get<StorageService>();
-      await storage.setBool('onboarding_seen', true);
-
-      final launchState = await diSetup.launchStateResolver.resolve();
-      final initialRoute = launchState.determineInitialRoute();
-      final routerResult = createRouter(
-        initialRoute: initialRoute,
-        locator: diSetup.locator,
-      );
-      final localization = diSetup.locator.get<LocalizationService>();
-      final themeService = diSetup.locator.get<ThemeService>();
-
-      await tester.pumpWidget(
-        App(
-          router: routerResult.router,
-          localization: localization,
-          themeService: themeService,
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      expect(find.text('Sign In'), findsAtLeastNWidgets(1));
-
-      await tester.enterText(find.byType(TextFormField).first, 'invalid-email');
-      await tester.enterText(find.byType(TextFormField).last, 'short');
-      await tester.pump();
-
-      final button = tester.widget<ElevatedButton>(
-        find.widgetWithText(ElevatedButton, 'Sign In'),
-      );
-      expect(button.onPressed, isNull);
-
-      await tester.enterText(
-        find.byType(TextFormField).first,
-        'user@example.com',
-      );
-      await tester.enterText(find.byType(TextFormField).last, 'password123');
-      await tester.pump();
-
-      expect(
-        tester
-            .widget<ElevatedButton>(
-              find.widgetWithText(ElevatedButton, 'Sign In'),
-            )
-            .onPressed,
-        isNotNull,
-      );
-
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Sign In'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Welcome back!'), findsOneWidget);
-    });
-
-    testWidgets('Authenticated user redirects to home from login', (
-      tester,
-    ) async {
-      final diSetup = await setupDependencies(
-        AppConfig.dev,
-        remoteConfigProvider: TestRemoteConfigProvider(),
-      );
-      final storage = diSetup.locator.get<StorageService>();
-      final auth = diSetup.locator.get<AuthService>();
-
-      await storage.setBool('onboarding_seen', true);
-      await auth.login('user@test.com', 'password123');
-
-      final launchState = await diSetup.launchStateResolver.resolve();
-      final initialRoute = launchState.determineInitialRoute();
-
-      expect(initialRoute, 'home');
-
-      final routerResult = createRouter(
-        initialRoute: initialRoute,
-        locator: diSetup.locator,
-      );
-      final localization = diSetup.locator.get<LocalizationService>();
-      final themeService = diSetup.locator.get<ThemeService>();
-
-      await tester.pumpWidget(
-        App(
-          router: routerResult.router,
-          localization: localization,
-          themeService: themeService,
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      expect(find.text('Welcome back!'), findsOneWidget);
-      expect(find.text('Sign In'), findsNothing);
-    });
-
-    testWidgets('Logout navigates to login', (tester) async {
-      final diSetup = await setupDependencies(
-        AppConfig.dev,
-        remoteConfigProvider: TestRemoteConfigProvider(),
-      );
-      final storage = diSetup.locator.get<StorageService>();
-      final auth = diSetup.locator.get<AuthService>();
-
-      await storage.setBool('onboarding_seen', true);
-      await auth.login('user@test.com', 'password123');
-
-      final launchState = await diSetup.launchStateResolver.resolve();
-      final initialRoute = launchState.determineInitialRoute();
-      final routerResult = createRouter(
-        initialRoute: initialRoute,
-        locator: diSetup.locator,
-      );
-      final localization = diSetup.locator.get<LocalizationService>();
-      final themeService = diSetup.locator.get<ThemeService>();
-
-      await tester.pumpWidget(
-        App(
-          router: routerResult.router,
-          localization: localization,
-          themeService: themeService,
-        ),
-      );
-
-      await tester.pumpAndSettle();
-
-      expect(find.text('Welcome back!'), findsOneWidget);
-
-      await tester.tap(find.byIcon(Icons.logout));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Sign In'), findsAtLeastNWidgets(1));
-      expect(find.text('Welcome back!'), findsNothing);
-    });
-
-    testWidgets('Guard evaluation order is correct', (tester) async {
-      final diSetup = await setupDependencies(
-        AppConfig.dev,
-        remoteConfigProvider: TestRemoteConfigProvider(),
-      );
-      final auth = diSetup.locator.get<AuthService>();
-      await auth.login('test@test.com', 'password123');
-
-      final launchState = await diSetup.launchStateResolver.resolve();
-      final initialRoute = launchState.determineInitialRoute();
-
-      expect(initialRoute, 'onboarding');
     });
   });
 }

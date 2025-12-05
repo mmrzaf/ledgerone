@@ -2,7 +2,7 @@ class HomeManifest {
   static const String routePath = '/home';
   static const String routeId = 'home';
 
-  static const List<String> guards = ['requiresOnboarding', 'requiresAuth'];
+  static const List<String> guards = ['requiresOnboarding'];
 
   static const List<String> events = [
     'home_view',

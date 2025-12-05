@@ -28,7 +28,6 @@ void main() {
     await configService.initialize();
 
     // Assert (from default_flags.dart)
-    expect(configService.getFlag('auth.enabled'), isTrue);
     expect(
       configService.getFlag('non_existent_key', defaultValue: false),
       isFalse,
@@ -36,15 +35,15 @@ void main() {
   });
 
   test('initialize loads cache and overrides defaults', () async {
-    // Arrange: Cache says auth.enabled = FALSE
-    final cachedData = json.encode({'auth.enabled': false});
+    // Arrange: Cache says telemetry.enabled = FALSE
+    final cachedData = json.encode({'telemetry.enabled': false});
     when(() => storage.getString(any())).thenAnswer((_) async => cachedData);
 
     // Act
     await configService.initialize();
 
     // Assert: Cache should win over default (which is true)
-    expect(configService.getFlag('auth.enabled'), isFalse);
+    expect(configService.getFlag('telemetry.enabled'), isFalse);
   });
 
   test('remote refresh updates values in background', () async {

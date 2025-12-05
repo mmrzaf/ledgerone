@@ -16,15 +16,12 @@ import 'package:app_flutter_starter/core/observability/analytics_allowlist.dart'
 import 'package:app_flutter_starter/core/observability/performance_tracker.dart';
 
 import '../core/contracts/analytics_contract.dart';
-import '../core/contracts/auth_contract.dart';
 import '../core/contracts/config_contract.dart';
 import '../core/contracts/crash_contract.dart';
 import '../core/contracts/navigation_contract.dart';
 import '../core/contracts/storage_contract.dart';
 import '../core/runtime/launch_state.dart';
 import 'boot/launch_state_machine.dart';
-import 'navigation/guards/auth_guard.dart';
-import 'navigation/guards/no_auth_guard.dart';
 import 'navigation/guards/onboarding_guard.dart';
 import 'navigation/router.dart';
 import 'services/config_service_impl.dart';
@@ -69,10 +66,8 @@ Future<DISetupResult> setupDependencies(
 
   // Core services
   final storage = MockStorageService();
-  final auth = MockAuthService();
 
   locator.register<StorageService>(storage);
-  locator.register<AuthService>(auth);
 
   // Localization service (must initialize early)
   final localization = LocalizationServiceImpl(storage: storage);
@@ -137,7 +132,6 @@ Future<DISetupResult> setupDependencies(
   final launchStateResolver = LaunchStateMachineImpl(
     config: config,
     storage: storage,
-    auth: auth,
   );
 
   return DISetupResult(
@@ -151,16 +145,14 @@ RouterFactoryResult createRouter({
   required ServiceLocator locator,
 }) {
   final storage = locator.get<StorageService>();
-  final auth = locator.get<AuthService>();
   final crash = locator.get<CrashService>() as CrashServiceImpl;
 
-  final guards = [OnboardingGuard(storage), AuthGuard(auth), NoAuthGuard(auth)];
+  final guards = [OnboardingGuard(storage)];
 
   final result = RouterFactory.create(
     initialRoute: initialRoute,
     guards: guards,
     storage: storage,
-    auth: auth,
     config: locator.get<ConfigService>(),
     network: locator.get<NetworkService>(),
     cache: locator.get<CacheService>(),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../app/presentation/error_presenter.dart';
 import '../../../app/presentation/offline_banner.dart';
-import '../../../core/contracts/auth_contract.dart';
 import '../../../core/contracts/cache_contract.dart';
 import '../../../core/contracts/config_contract.dart';
 import '../../../core/contracts/lifecycle_contract.dart';
@@ -32,7 +31,6 @@ class HomeData {
 }
 
 class HomeScreen extends StatefulWidget {
-  final AuthService authService;
   final NavigationService navigation;
   final ConfigService configService;
   final NetworkService networkService;
@@ -40,7 +38,6 @@ class HomeScreen extends StatefulWidget {
   final AppLifecycleService lifecycleService;
 
   const HomeScreen({
-    required this.authService,
     required this.navigation,
     required this.configService,
     required this.networkService,
@@ -234,13 +231,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return HomeData(message: 'Content loaded successfully', timestamp: now);
   }
 
-  Future<void> _handleLogout() async {
-    await widget.authService.logout();
-    if (mounted) {
-      widget.navigation.clearAndGoTo('login');
-    }
-  }
-
   Future<void> _handleManualRefresh() async {
     await _loadContent();
   }
@@ -248,7 +238,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final showPromo = widget.configService.getFlag('home.promo_banner.enabled');
-    final variant = widget.configService.getString('ui.theme_variant');
 
     return OfflineAwareScaffold(
       networkStatus: _networkStatus,
@@ -274,11 +263,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   : _handleManualRefresh,
               tooltip: 'Refresh',
             ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-            tooltip: 'Sign Out',
-          ),
         ],
       ),
       body: RefreshIndicator(
@@ -317,37 +301,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ],
-                    FutureBuilder<String?>(
-                      future: widget.authService.userId,
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData && snapshot.data != null) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Welcome back!',
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.headlineMedium,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'User: ${snapshot.data}',
-                                style: Theme.of(context).textTheme.bodyMedium
-                                    ?.copyWith(color: Colors.grey.shade600),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Theme: $variant',
-                                style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(color: Colors.grey.shade500),
-                              ),
-                            ],
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
                     const SizedBox(height: 32),
                     const Divider(),
                     const SizedBox(height: 24),

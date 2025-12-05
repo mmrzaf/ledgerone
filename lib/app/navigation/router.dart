@@ -1,7 +1,6 @@
 import 'package:app_flutter_starter/core/contracts/i18n_contract.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/contracts/auth_contract.dart';
 import '../../core/contracts/cache_contract.dart';
 import '../../core/contracts/config_contract.dart';
 import '../../core/contracts/guard_contract.dart';
@@ -9,7 +8,6 @@ import '../../core/contracts/lifecycle_contract.dart';
 import '../../core/contracts/navigation_contract.dart';
 import '../../core/contracts/network_contract.dart';
 import '../../core/contracts/storage_contract.dart';
-import '../../features/auth/ui/login_screen.dart';
 import '../../features/home/ui/home_screen.dart';
 import '../../features/onboarding/ui/onboarding_screen.dart';
 
@@ -80,7 +78,6 @@ class RouterFactory {
     required String initialRoute,
     required List<NavigationGuard> guards,
     required StorageService storage,
-    required AuthService auth,
     required ConfigService config,
     required NetworkService network,
     required CacheService cache,
@@ -146,19 +143,9 @@ class RouterFactory {
           },
         ),
         GoRoute(
-          path: '/login',
-          builder: (context, state) {
-            return LoginScreen(
-              authService: auth,
-              navigation: navigationService,
-            );
-          },
-        ),
-        GoRoute(
           path: '/home',
           builder: (context, state) {
             return HomeScreen(
-              authService: auth,
               navigation: navigationService,
               configService: config,
               networkService: network,

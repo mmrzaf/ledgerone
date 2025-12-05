@@ -1,5 +1,4 @@
 import '../../core/contracts/analytics_contract.dart';
-import '../../core/contracts/auth_contract.dart';
 import '../../core/contracts/config_contract.dart';
 import '../../core/contracts/crash_contract.dart';
 import '../../core/contracts/storage_contract.dart';
@@ -61,36 +60,6 @@ class MockStorageService implements StorageService {
   Future<void> clear() async {
     _storage.clear();
   }
-}
-
-class MockAuthService implements AuthService {
-  bool _isAuthenticated = false;
-  String? _userId;
-
-  @override
-  Future<bool> get isAuthenticated async => _isAuthenticated;
-
-  @override
-  Future<String?> get userId async => _userId;
-
-  @override
-  Future<void> login(String email, String password) async {
-    if (email.isEmpty || password.length < 6) {
-      throw Exception('Invalid credentials');
-    }
-
-    _isAuthenticated = true;
-    _userId = email.split('@').first;
-  }
-
-  @override
-  Future<void> logout() async {
-    _isAuthenticated = false;
-    _userId = null;
-  }
-
-  @override
-  Future<void> refreshSession() async {}
 }
 
 class MockAnalyticsService implements AnalyticsService {

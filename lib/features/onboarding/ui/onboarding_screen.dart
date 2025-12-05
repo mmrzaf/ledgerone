@@ -46,7 +46,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _handleSkip() async {
     await widget.storage.setBool('onboarding_seen', true);
     await _analytics?.logEvent(AnalyticsAllowlist.onboardingSkip.name);
-    widget.navigation.replaceRoute('login');
+    widget.navigation.replaceRoute('home');
   }
 
   @override
