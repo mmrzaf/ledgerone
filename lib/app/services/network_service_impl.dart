@@ -1,48 +1,63 @@
 import 'dart:async';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+
 import '../../core/contracts/network_contract.dart';
 
-/// Mock implementation of NetworkService for v0.6
-/// In production, this would use connectivity_plus or similar package
+/// Implementation of NetworkService using connectivity_plus.
+///
+/// This should be the default in prod.
+/// Use SimulatedNetworkService (below / in dev) only for tests or storybook-style demos.
 class NetworkServiceImpl implements NetworkService {
+  final Connectivity _connectivity;
   final StreamController<NetworkStatus> _statusController =
       StreamController<NetworkStatus>.broadcast();
 
   NetworkStatus _currentStatus = NetworkStatus.unknown;
-  Timer? _pollTimer;
+  StreamSubscription<List<ConnectivityResult>>? _subscription;
+
+  NetworkServiceImpl({Connectivity? connectivity})
+    : _connectivity = connectivity ?? Connectivity();
 
   @override
   Future<void> initialize() async {
-    // Start with unknown, then check
-    _currentStatus = NetworkStatus.unknown;
+    // Initial snapshot
+    final results = await _connectivity.checkConnectivity();
+    _updateStatus(_mapConnectivity(results));
 
-    // Initial check
-    await _checkConnectivity();
-
-    // Poll every 5 seconds (in production, use actual connectivity listeners)
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      _checkConnectivity();
+    // Subscribe to changes
+    _subscription = _connectivity.onConnectivityChanged.listen((results) {
+      _updateStatus(_mapConnectivity(results));
     });
 
-    debugPrint('Network: Monitoring initialized');
+    debugPrint('Network: Monitoring initialized (connectivity_plus)');
   }
 
-  Future<void> _checkConnectivity() async {
-    // In production, this would use connectivity_plus to check actual status
-    // For now, simulate occasional offline periods for testing
-    final now = DateTime.now();
-    final isEvenMinute = now.minute % 2 == 0;
+  void _updateStatus(NetworkStatus newStatus) {
+    if (newStatus == _currentStatus) return;
+    _currentStatus = newStatus;
+    _statusController.add(_currentStatus);
+    debugPrint('Network: Status changed to ${_currentStatus.name}');
+  }
 
-    // Simulate being offline every other minute (for demo/testing)
-    final newStatus = isEvenMinute
-        ? NetworkStatus.online
-        : NetworkStatus.offline; // Always online for now
-
-    if (newStatus != _currentStatus) {
-      _currentStatus = newStatus;
-      _statusController.add(_currentStatus);
-      debugPrint('Network: Status changed to ${_currentStatus.name}');
+  /// Map the list of active connectivity types to a single NetworkStatus.
+  ///
+  /// connectivity_plus v2 in your setup uses List\<ConnectivityResult\>.
+  /// - Empty list → unknown
+  /// - All `none` → offline
+  /// - Anything else → online
+  NetworkStatus _mapConnectivity(List<ConnectivityResult> results) {
+    if (results.isEmpty) {
+      return NetworkStatus.unknown;
     }
+
+    final hasNonNone = results.any((r) => r != ConnectivityResult.none);
+    if (!hasNonNone) {
+      return NetworkStatus.offline;
+    }
+
+    return NetworkStatus.online;
   }
 
   @override
@@ -54,25 +69,40 @@ class NetworkServiceImpl implements NetworkService {
   @override
   Future<bool> get isOnline async => _currentStatus.isOnline;
 
+  /// Call from DI tear-down if you add one.
   void dispose() {
-    _pollTimer?.cancel();
+    _subscription?.cancel();
     _statusController.close();
   }
 }
 
-/// Simulated network service that can be controlled for testing
+/// Dev/test helper: manually controlled network status.
+///
+/// This is still a proper implementation of NetworkService – it just lets
+/// tests or demo screens set the current status explicitly.
 class SimulatedNetworkService implements NetworkService {
-  final StreamController<NetworkStatus> _statusController =
-      StreamController<NetworkStatus>.broadcast();
+  late final StreamController<NetworkStatus> _statusController;
 
-  NetworkStatus _currentStatus = NetworkStatus.offline;
+  NetworkStatus _currentStatus = NetworkStatus.online;
+
+  SimulatedNetworkService() {
+    _statusController = StreamController<NetworkStatus>.broadcast(
+      onListen: () {
+        // Every new subscriber immediately receives the current status.
+        _statusController.add(_currentStatus);
+      },
+    );
+  }
 
   @override
   Future<void> initialize() async {
+    // Don't emit here anymore – subscribers may not be attached yet.
     debugPrint('Network: Simulated service initialized');
   }
 
-  /// Manually set network status (for testing)
+  NetworkStatus get currentStatus => _currentStatus;
+
+  /// Manually set network status (for testing / demos).
   void setStatus(NetworkStatus status) {
     if (_currentStatus != status) {
       _currentStatus = status;
