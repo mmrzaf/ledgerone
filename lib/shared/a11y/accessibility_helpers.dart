@@ -103,11 +103,12 @@ class _AccessibleAnnouncementState extends State<AccessibleAnnouncement> {
       _announce();
     }
   }
+
+  void _announce() {
+    final view = View.of(context);
     final textDirection = Directionality.of(context);
 
-    //final view = View.of(context);
-    //SemanticsService.sendAnnouncement(view, widget.message, textDirection);
-    SemanticsService.announce(widget.message, textDirection);
+    SemanticsService.sendAnnouncement(view, widget.message, textDirection);
   }
 
   @override
