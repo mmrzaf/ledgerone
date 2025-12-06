@@ -1,6 +1,6 @@
-import 'package:app_flutter_starter/app/services/crash_service_impl.dart';
-import 'package:app_flutter_starter/core/errors/app_error.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/app/services/crash_service_impl.dart';
+import 'package:ledgerone/core/errors/app_error.dart';
 
 import '../../helpers/mock_services.dart';
 

@@ -1,6 +1,6 @@
-import 'package:app_flutter_starter/shared/a11y/accessibility_helpers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/shared/a11y/accessibility_helpers.dart';
 
 void main() {
   group('A11yGuidelines', () {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/contracts/i18n_contract.dart';
@@ -31,16 +32,20 @@ class _AppState extends State<App> {
     return MaterialApp.router(
       title: widget.localization.get(L10nKeys.appName),
 
-      // Theme configuration
       theme: _buildThemeData(theme),
       darkTheme: _buildThemeData(DefaultDarkTheme.theme),
       themeMode: theme.isDark ? ThemeMode.dark : ThemeMode.light,
 
-      // Localization configuration
       locale: locale.locale,
       supportedLocales: widget.localization.supportedLocales
           .map((l) => l.locale)
           .toList(),
+
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
 
       // Router configuration
       routerConfig: widget.router,

@@ -1,15 +1,15 @@
-import 'package:app_flutter_starter/app/services/cache_service_impl.dart';
-import 'package:app_flutter_starter/core/contracts/cache_contract.dart';
-import 'package:app_flutter_starter/core/errors/app_error.dart';
-import 'package:app_flutter_starter/core/errors/result.dart';
-import 'package:app_flutter_starter/core/network/http_client_contract.dart';
-import 'package:app_flutter_starter/features/home/data/home_local_data_source.dart';
-import 'package:app_flutter_starter/features/home/data/home_remote_data_source.dart';
-import 'package:app_flutter_starter/features/home/data/home_repository_impl.dart';
-import 'package:app_flutter_starter/features/home/domain/home_models.dart';
-import 'package:app_flutter_starter/features/home/domain/home_repository.dart';
-import 'package:app_flutter_starter/features/home/domain/home_source.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/app/services/cache_service_impl.dart';
+import 'package:ledgerone/core/contracts/cache_contract.dart';
+import 'package:ledgerone/core/errors/app_error.dart';
+import 'package:ledgerone/core/errors/result.dart';
+import 'package:ledgerone/core/network/http_client_contract.dart';
+import 'package:ledgerone/features/home/data/home_local_data_source.dart';
+import 'package:ledgerone/features/home/data/home_remote_data_source.dart';
+import 'package:ledgerone/features/home/data/home_repository_impl.dart';
+import 'package:ledgerone/features/home/domain/home_models.dart';
+import 'package:ledgerone/features/home/domain/home_repository.dart';
+import 'package:ledgerone/features/home/domain/home_source.dart';
 
 import '../../helpers/mock_services.dart';
 

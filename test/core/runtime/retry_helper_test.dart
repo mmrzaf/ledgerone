@@ -1,8 +1,8 @@
-import 'package:app_flutter_starter/core/errors/app_error.dart';
-import 'package:app_flutter_starter/core/errors/error_policy.dart';
-import 'package:app_flutter_starter/core/runtime/cancellation_token.dart';
-import 'package:app_flutter_starter/core/runtime/retry_helper.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/core/errors/app_error.dart';
+import 'package:ledgerone/core/errors/error_policy.dart';
+import 'package:ledgerone/core/runtime/cancellation_token.dart';
+import 'package:ledgerone/core/runtime/retry_helper.dart';
 
 void main() {
   group('RetryHelper', () {

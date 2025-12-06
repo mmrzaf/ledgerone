@@ -1,12 +1,12 @@
-import 'package:app_flutter_starter/app/di.dart';
-import 'package:app_flutter_starter/app/presentation/error_presenter.dart';
-import 'package:app_flutter_starter/app/services/localization_service_impl.dart';
-import 'package:app_flutter_starter/core/contracts/analytics_contract.dart';
-import 'package:app_flutter_starter/core/errors/app_error.dart';
-import 'package:app_flutter_starter/core/i18n/string_keys.dart';
-import 'package:app_flutter_starter/core/observability/analytics_allowlist.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/app/di.dart';
+import 'package:ledgerone/app/presentation/error_presenter.dart';
+import 'package:ledgerone/app/services/localization_service_impl.dart';
+import 'package:ledgerone/core/contracts/analytics_contract.dart';
+import 'package:ledgerone/core/errors/app_error.dart';
+import 'package:ledgerone/core/i18n/string_keys.dart';
+import 'package:ledgerone/core/observability/analytics_allowlist.dart';
 
 import '../../helpers/mock_services.dart';
 

@@ -1,14 +1,14 @@
-import 'package:app_flutter_starter/app/navigation/guards/onboarding_guard.dart';
-import 'package:app_flutter_starter/app/navigation/router.dart';
-import 'package:app_flutter_starter/app/services/cache_service_impl.dart';
-import 'package:app_flutter_starter/app/services/lifecycle_service_impl.dart';
-import 'package:app_flutter_starter/app/services/localization_service_impl.dart';
-import 'package:app_flutter_starter/app/services/network_service_impl.dart';
-import 'package:app_flutter_starter/core/contracts/navigation_contract.dart';
-import 'package:app_flutter_starter/core/errors/result.dart';
-import 'package:app_flutter_starter/features/home/domain/home_models.dart';
-import 'package:app_flutter_starter/features/home/domain/home_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/app/navigation/guards/onboarding_guard.dart';
+import 'package:ledgerone/app/navigation/router.dart';
+import 'package:ledgerone/app/services/cache_service_impl.dart';
+import 'package:ledgerone/app/services/lifecycle_service_impl.dart';
+import 'package:ledgerone/app/services/localization_service_impl.dart';
+import 'package:ledgerone/app/services/network_service_impl.dart';
+import 'package:ledgerone/core/contracts/navigation_contract.dart';
+import 'package:ledgerone/core/errors/result.dart';
+import 'package:ledgerone/features/home/domain/home_models.dart';
+import 'package:ledgerone/features/home/domain/home_repository.dart';
 
 import '../../helpers/mock_services.dart';
 

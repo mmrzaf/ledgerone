@@ -1,7 +1,7 @@
-import 'package:app_flutter_starter/app/navigation/guards/onboarding_guard.dart';
-import 'package:app_flutter_starter/core/contracts/guard_contract.dart';
-import 'package:app_flutter_starter/core/contracts/storage_contract.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/app/navigation/guards/onboarding_guard.dart';
+import 'package:ledgerone/core/contracts/guard_contract.dart';
+import 'package:ledgerone/core/contracts/storage_contract.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockStorageService extends Mock implements StorageService {}

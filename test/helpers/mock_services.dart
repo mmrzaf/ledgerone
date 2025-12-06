@@ -1,8 +1,8 @@
-import 'package:app_flutter_starter/core/contracts/analytics_contract.dart';
-import 'package:app_flutter_starter/core/contracts/config_contract.dart';
-import 'package:app_flutter_starter/core/contracts/crash_contract.dart';
-import 'package:app_flutter_starter/core/contracts/navigation_contract.dart';
-import 'package:app_flutter_starter/core/contracts/storage_contract.dart';
+import 'package:ledgerone/core/contracts/analytics_contract.dart';
+import 'package:ledgerone/core/contracts/config_contract.dart';
+import 'package:ledgerone/core/contracts/crash_contract.dart';
+import 'package:ledgerone/core/contracts/navigation_contract.dart';
+import 'package:ledgerone/core/contracts/storage_contract.dart';
 
 class MockConfigService implements ConfigService {
   final Map<String, dynamic> _flags = {};

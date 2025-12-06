@@ -1,7 +1,11 @@
-import 'package:app_flutter_starter/core/contracts/analytics_contract.dart';
-import 'package:app_flutter_starter/core/contracts/i18n_contract.dart';
-import 'package:app_flutter_starter/core/contracts/theme_contract.dart';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ledgerone/core/contracts/analytics_contract.dart';
+import 'package:ledgerone/core/contracts/i18n_contract.dart';
+import 'package:ledgerone/core/contracts/theme_contract.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'app/app.dart';
 import 'app/di.dart';
@@ -10,10 +14,14 @@ import 'core/observability/analytics_allowlist.dart';
 import 'core/observability/performance_tracker.dart';
 
 void main() async {
-  // Mark app start
   PerformanceTracker().start(PerformanceMetrics.coldStart);
 
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
 
   const config = AppConfig.dev;
 

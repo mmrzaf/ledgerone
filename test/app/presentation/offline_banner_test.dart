@@ -1,9 +1,9 @@
-import 'package:app_flutter_starter/app/presentation/offline_banner.dart';
-import 'package:app_flutter_starter/app/services/localization_service_impl.dart';
-import 'package:app_flutter_starter/core/contracts/network_contract.dart';
-import 'package:app_flutter_starter/core/i18n/string_keys.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/app/presentation/offline_banner.dart';
+import 'package:ledgerone/app/services/localization_service_impl.dart';
+import 'package:ledgerone/core/contracts/network_contract.dart';
+import 'package:ledgerone/core/i18n/string_keys.dart';
 
 import '../../helpers/mock_services.dart';
 

@@ -1,22 +1,25 @@
-import 'package:app_flutter_starter/app/services/analytics_service_impl.dart';
-import 'package:app_flutter_starter/app/services/cache_service_impl.dart';
-import 'package:app_flutter_starter/app/services/crash_service_impl.dart';
-import 'package:app_flutter_starter/app/services/dev/dev_http_client.dart';
-import 'package:app_flutter_starter/app/services/http_client_impl.dart';
-import 'package:app_flutter_starter/app/services/lifecycle_service_impl.dart';
-import 'package:app_flutter_starter/app/services/localization_service_impl.dart';
-import 'package:app_flutter_starter/app/services/network_service_impl.dart';
-import 'package:app_flutter_starter/app/services/theme_service_impl.dart';
-import 'package:app_flutter_starter/core/config/environment.dart';
-import 'package:app_flutter_starter/core/contracts/cache_contract.dart';
-import 'package:app_flutter_starter/core/contracts/config_provider.dart';
-import 'package:app_flutter_starter/core/contracts/i18n_contract.dart';
-import 'package:app_flutter_starter/core/contracts/lifecycle_contract.dart';
-import 'package:app_flutter_starter/core/contracts/network_contract.dart';
-import 'package:app_flutter_starter/core/contracts/theme_contract.dart';
-import 'package:app_flutter_starter/core/network/http_client_contract.dart';
-import 'package:app_flutter_starter/core/observability/analytics_allowlist.dart';
-import 'package:app_flutter_starter/core/observability/performance_tracker.dart';
+import 'package:ledgerone/app/services/analytics_service_impl.dart';
+import 'package:ledgerone/app/services/cache_service_impl.dart';
+import 'package:ledgerone/app/services/crash_service_impl.dart';
+import 'package:ledgerone/app/services/dev/dev_http_client.dart';
+import 'package:ledgerone/app/services/http_client_impl.dart';
+import 'package:ledgerone/app/services/lifecycle_service_impl.dart';
+import 'package:ledgerone/app/services/localization_service_impl.dart';
+import 'package:ledgerone/app/services/network_service_impl.dart';
+import 'package:ledgerone/app/services/theme_service_impl.dart';
+import 'package:ledgerone/core/config/environment.dart';
+import 'package:ledgerone/core/contracts/cache_contract.dart';
+import 'package:ledgerone/core/contracts/config_provider.dart';
+import 'package:ledgerone/core/contracts/i18n_contract.dart';
+import 'package:ledgerone/core/contracts/lifecycle_contract.dart';
+import 'package:ledgerone/core/contracts/network_contract.dart';
+import 'package:ledgerone/core/contracts/theme_contract.dart';
+import 'package:ledgerone/core/network/http_client_contract.dart';
+import 'package:ledgerone/core/observability/analytics_allowlist.dart';
+import 'package:ledgerone/core/observability/performance_tracker.dart';
+import 'package:ledgerone/features/ledger/data/database.dart';
+import 'package:ledgerone/features/ledger/data/repositories.dart';
+import 'package:ledgerone/features/ledger/services/price_update_service.dart';
 
 import '../core/contracts/analytics_contract.dart';
 import '../core/contracts/config_contract.dart';
@@ -25,10 +28,6 @@ import '../core/contracts/guard_contract.dart';
 import '../core/contracts/navigation_contract.dart';
 import '../core/contracts/storage_contract.dart';
 import '../core/runtime/launch_state.dart';
-import '../features/home/data/home_local_data_source.dart';
-import '../features/home/data/home_remote_data_source.dart';
-import '../features/home/data/home_repository_impl.dart';
-import '../features/home/domain/home_repository.dart';
 import 'boot/launch_state_machine.dart';
 import 'navigation/guards/onboarding_guard.dart';
 import 'navigation/router.dart';
@@ -213,25 +212,49 @@ Future<DISetupResult> setupDependencies(
   locator.register<HttpClient>(httpClient);
 
   // ---------------------------------------------------------------------------
-  // Home feature data layer
-  // ---------------------------------------------------------------------------
-  final homeLocal = HomeLocalDataSourceImpl(cache);
-  final homeRemote = HomeRemoteDataSourceImpl(httpClient);
-
-  final homeRepository = HomeRepositoryImpl(
-    remote: homeRemote,
-    local: homeLocal,
-  );
-
-  locator.register<HomeRepository>(homeRepository);
-
-  // ---------------------------------------------------------------------------
   // Launch state – v0.8 has NO auth; only onboarding & config matter.
   // ---------------------------------------------------------------------------
   final launchStateResolver = LaunchStateMachineImpl(
     config: config,
     storage: storage,
   );
+
+  // ---------------------------------------------------------------------------
+  // LedgerOne Database & Repositories
+  // ---------------------------------------------------------------------------
+  final ledgerDb = LedgerDatabase();
+
+  final assetRepo = AssetRepositoryImpl(ledgerDb);
+  final accountRepo = AccountRepositoryImpl(ledgerDb);
+  final categoryRepo = CategoryRepositoryImpl(ledgerDb);
+  final transactionRepo = TransactionRepositoryImpl(ledgerDb);
+  final priceRepo = PriceRepositoryImpl(ledgerDb);
+
+  locator.register<LedgerDatabase>(ledgerDb);
+  locator.register<AssetRepository>(assetRepo);
+  locator.register<AccountRepository>(accountRepo);
+  locator.register<CategoryRepository>(categoryRepo);
+  locator.register<TransactionRepository>(transactionRepo);
+  locator.register<PriceRepository>(priceRepo);
+
+  // ---------------------------------------------------------------------------
+  // LedgerOne Services
+  // ---------------------------------------------------------------------------
+  final balanceService = BalanceServiceImpl(
+    ledgerDb,
+    assetRepo,
+    accountRepo,
+    priceRepo,
+  );
+  locator.register<BalanceService>(balanceService);
+
+  final priceUpdateService = PriceUpdateService(
+    httpClient: httpClient,
+    assetRepo: assetRepo,
+    priceRepo: priceRepo,
+    db: ledgerDb,
+  );
+  locator.register<PriceUpdateService>(priceUpdateService);
 
   return DISetupResult(
     launchStateResolver: launchStateResolver,
@@ -250,7 +273,6 @@ RouterFactoryResult createRouter({
   final cache = locator.get<CacheService>();
   final lifecycle = locator.get<AppLifecycleService>();
   final localization = locator.get<LocalizationService>();
-  final homeRepository = locator.get<HomeRepository>();
   // Only onboarding guard in v0.8 baseline (no auth).
   final guards = <NavigationGuard>[OnboardingGuard(storage)];
 
@@ -263,7 +285,6 @@ RouterFactoryResult createRouter({
     cache: cache,
     lifecycle: lifecycle,
     localization: localization,
-    homeRepository: homeRepository,
   );
 
   locator.register<NavigationService>(result.navigationService);

@@ -1,1026 +1,567 @@
-# Flutter Starter Template — Project Blueprint (v0.1 → v0.9)
+# LedgerOne
 
-> **Purpose**
-> A reusable, UI-agnostic Flutter project skeleton you can fork for new apps. It prioritizes **structure, stability, scalability, security, and efficiency**, so you can focus on features—not plumbing.
->
-> The template evolves in two **version lines**:
->
-> * **v0.1 → v0.8**: hardened **baseline without authentication** (Onboarding → Home).
-> * **v0.9+**: same baseline, extended with **authentication** (Onboarding → Login → Home, email+password only).
->
-> Consumers pick a **tag**:
->
-> * Use **v0.8** as the base for apps that will **never** need auth.
-> * Use **v0.9+** for apps that **require auth**.
->   There is no runtime flag to “turn auth off” in the auth line; that’s a version choice. 
+## 1. Product Summary
 
----
+**Working name:** LedgerOne
+**Platform:** Flutter (mobile first).
+**Core idea:**
+One offline-first app that:
 
-## Table of Contents
+* Tracks all assets you own (crypto + fiat).
+* Knows where they live (exchanges, wallets, banks, cash).
+* Lets you manually log what happens (trades, transfers, expenses, income).
+* Can optionally compute a USD portfolio value using a **manual “Update prices”** action and flexible per-asset price configs.
 
-1. [Scope & Principles](#scope--principles)
-2. [Targets & Assumptions](#targets--assumptions)
-3. [Project Structure](#project-structure)
-4. [Layering & Dependency Rules](#layering--dependency-rules)
-5. [Feature Modules](#feature-modules)
-6. [Navigation & Guards](#navigation--guards)
-7. [Configuration & Flags](#configuration--flags)
-8. [Security & Privacy](#security--privacy)
-9. [Performance Requirements](#performance-requirements)
-10. [Offline & Resilience](#offline--resilience)
-11. [Observability (Analytics, Perf, Crash)](#observability-analytics-perf-crash)
-12. [Accessibility & Internationalization](#accessibility--internationalization)
-13. [Theming & UI Abstraction](#theming--ui-abstraction)
-14. [Error Taxonomy & Display Policy](#error-taxonomy--display-policy)
-15. [Testing Strategy](#testing-strategy)
-16. [CI/CD Gates](#cicd-gates)
-17. [Release Plan (v0.1 → v0.9)](#release-plan-v01--v09)
-18. [Operational Playbooks](#operational-playbooks)
-19. [MVP Acceptance Criteria](#mvp-acceptance-criteria)
-20. [Risks & Mitigations](#risks--mitigations)
-21. [Glossary](#glossary)
+No live charts. No trading tools. No automations. Just clarity.
 
 ---
 
-## Scope & Principles
+## 2. Design Principles (things the dev must not mess up)
 
-**Scope**
+1. **Offline-first**
 
-* The starter covers **two version lines**:
+   * App must work fully offline for:
 
-  * **Baseline (v0.1 → v0.8)**
+     * viewing balances
+     * adding/editing transactions
+     * managing assets/accounts/categories
+   * Internet is used only when the user explicitly taps “Update prices”.
 
-    * No authentication at all.
-    * Core screens: **Onboarding → Home**.
-  * **Auth line (v0.9+)**
+2. **Single source of truth**
 
-    * Adds authentication on top of the baseline.
-    * Auth is **email + password only** (no signup, no forgot, no OAuth).
-    * Screens: **Onboarding → Login → Home**.
-* Template is **UI/theme agnostic**; any design system can be swapped in later without touching business logic.
+   * Balances are always derived from transactions.
+   * No hidden balance fields that can get out of sync.
 
-**Principles**
+3. **One unified model**
 
-* **Stable**: minimal global state; explicit contracts; predictable boot sequence.
-* **Scalable**: vertical feature modules; interfaces in Core; implementations swappable.
-* **Secure**: least privilege; secure storage (auth line); redacted logs; safe-by-default behaviors.
-* **Efficient**: fast cold start; lazy work; cancellable I/O; capped retries.
-* **Clear**: decisions documented; tests cover flows, contracts, and failure modes.
-* **Version-explicit**: baseline and auth are separated by **tags**, not config switches.
+   * Money and crypto share the same underlying data model.
+   * “Crypto tab” and “Money tab” are just different views/filters.
 
----
+4. **No positions, no guardrails in v1**
 
-## Targets & Assumptions
+   * No “open positions”, “targets”, “warnings”, or risk rules.
+   * Keep it lean; these are future extensions.
 
-* Flutter stable, Dart 3+.
-* Platforms:
+5. **User owns everything**
 
-  * Android
-  * iOS
-  * Web (web auth only if backend supports it in v0.9+).
-* No vendor lock-in:
-
-  * HTTP client, DI, router, analytics, crash reporter etc. are **behind interfaces**.
+   * Local storage only.
+   * Simple export/backup.
+   * No external account connections (no exchange API keys in v1).
 
 ---
 
-## Project Structure
+## 3. Core Concepts (Domain Model)
 
-```text
-app/              # Composition root (DI wiring, route assembly, app lifecycle)
+Describe these clearly to the builder; they map to DB tables and domain classes.
 
-core/             # Interfaces, primitives, cross-cutting concerns (no feature logic)
-  contracts/      # Service interfaces (ConfigService, NavService, AuthService[v0.9+], etc.)
-  errors/         # Error taxonomy, result types, error→policy mapping
-  policy/         # Security, logging, telemetry allow-list
-  runtime/        # Clock, UUID, cancellation token, network status abstractions
-  config/         # Flag/env access abstraction
-  storage/        # UserPrefs interfaces; SessionStore appears in v0.9+ (auth)
-  network/        # HttpClient abstraction, interceptor contracts
-  # core/auth/    # Added in v0.9+: auth-related shared contracts & types
+### 3.1 Asset
 
-features/
-  onboarding/     # ui/, logic/, domain/ (use cases), data/ (mappers/repos if any)
-  home/           # ui/, logic/, (optional) data/
-  # auth/         # Added in v0.9+: ui/, logic/, domain/, data/ (login only)
+Represents any unit of value you track.
 
-shared/           # Optional: a11y helpers, simple UI primitives; no business logic
-assets/           # i18n placeholders, images (optional)
-test/             # unit/, widget/, integration/ (mirrors src)
-docs/             # ADRs, playbooks, release notes, security notes
-tool/             # CI configs, scripts (no secrets)
-```
+Attributes:
 
-**Version specifics**
+* Identifier (internal id)
+* Symbol (for display, e.g. BTC, ETH, USDT, EUR)
+* Name (Bitcoin, Ether, Euro, etc.)
+* Type: crypto, fiat, or other
+* Number of decimals (precision)
+* Optional “price source configuration” (stored as text; this will be the JSON-like config the user pastes)
 
-* **v0.1 → v0.8**: only `onboarding/` and `home/` features exist; no auth contracts or auth feature code.
-* **v0.9+**: `core/auth/`, `features/auth/`, and auth-specific wiring in `app/` are introduced.
+Notes:
 
-**Rules**
-
-* Features **do not** import each other. They depend only on **Core contracts**.
-* **App** composes DI bindings and the route table.
-* **Core** contains **interfaces + primitives + policies only** (no feature business logic).
+* USDT is just another asset.
+* EUR is just another asset.
+* The app does not hardcode any asset list; user can create assets but you can ship some defaults.
 
 ---
 
-## Layering & Dependency Rules
+### 3.2 Account
 
-* Stack:
+Represents a container where assets live (exchange, wallet, bank…).
 
-  * **UI** ↔ **Feature Logic (state)** ↔ **Use Cases** ↔ **Repositories** ↔ **Data Sources**
+Attributes:
 
-* **Contracts live in Core**:
-
-  * `ConfigService`, `NavService`, `ErrorHandler`, `NetworkClient`, `Storage`, `AuthService` (auth line), etc.
-
-* **Concrete implementations** live outside Core:
-
-  * In `app/` (global services) or `features/*/data/` (feature-specific).
-
-* DI binds **interface → implementation** once at startup.
-
-* Cross-cutting policies (security, logging, telemetry, error) live in Core and are **consumed** uniformly.
+* Identifier
+* Name (e.g. Binance Spot, Metamask, ING Main)
+* Type: exchange, bank, wallet, cash, other
+* Archived flag (for closed/unused accounts)
+* Notes
 
 ---
 
-## Feature Modules
+### 3.3 Category
 
-Each feature supplies a **Manifest** and follows the same contract pattern.
+Used primarily for fiat income/expense classification.
 
-### Manifest (per feature)
+Attributes:
 
-* **Routes it owns**: route IDs (strings), path patterns, deep link targets.
-* **Guards required**:
-
-  * Baseline: `requiresOnboarding`.
-  * Auth line: `requiresOnboarding`, `requiresAuth`, `requiresNoAuth`.
-* **Public events**: analytics event names/properties emitted by the feature.
-* **Dependencies requested**: Core interfaces only.
-* **State surface**: inputs, outputs, events (UI-agnostic description).
-
-### Onboarding (requirements)
-
-* **Applies to:** baseline (v0.1+) and auth line (v0.9+).
-
-* **Purpose**
-
-  * Present first-run guidance and minimal setup.
-  * Mark the user as “onboarded”.
-
-* **State**
-
-  * Current step index.
-  * Boolean `onboardingSeen`.
-
-* **Outputs**
-
-  * `onboardingSeen = true` on **Complete** or **Skip**.
-
-* **Routing**
-
-  * **Baseline (≤ v0.8)**:
-
-    * On complete/skip → **Home**.
-  * **Auth line (v0.9+)**:
-
-    * On complete/skip:
-
-      * If a valid session exists → **Home**.
-      * Else → **Login**.
-
-* **Constraints**
-
-  * No OS permission prompts here (notifications, location, etc.). Those are requested later within specific features.
-
-* **Analytics**
-
-  * `onboarding_view`
-  * `onboarding_complete`
-  * `onboarding_skip`
-
-### Login (email/password only, v0.9+)
-
-* **Applies to:** auth line only, starting v0.9.
-
-* **Inputs**
-
-  * `identifier` (email or username)
-  * `password`
-
-* **Validation**
-
-  * Minimal local validation:
-
-    * Email format (if using email).
-    * Non-empty password.
-  * Submit button disabled until form is valid.
-
-* **Operations**
-
-  * `login(identifier, password)`:
-
-    * Calls `AuthService.login()`.
-    * Persists session on success (`SessionStore` in secure storage).
-  * `logout()`:
-
-    * Clears session.
-    * Routes back to **Login** (and potentially Onboarding again, depending on strategy).
-
-* **Errors**
-
-  * Neutral messages (do not reveal whether an email exists).
-  * Clear differentiation between validation errors and server errors.
-
-* **Routing**
-
-  * On success:
-
-    * If invoked from a guarded deep link:
-
-      * Re-run guards and navigate to the originally requested route.
-    * Otherwise → **Home**.
-  * On logout:
-
-    * Redirect to **Login** (optionally via Onboarding if you decide to re-show it).
-
-* **Analytics**
-
-  * `login_view`
-  * `login_attempt`
-  * `login_success`
-  * `login_failure` (with reason category, not raw error text)
-
-### Home
-
-* **Applies to:** baseline and auth line.
-
-* **States**
-
-  * `loading`
-  * `ready`
-  * `empty`
-  * `error` (inline, retryable)
-
-* **Behavior**
-
-  * Supports:
-
-    * Initial load.
-    * Manual refresh (e.g. pull-to-refresh).
-    * Optional background refresh when app returns to foreground.
-  * **Baseline:** always accessible (no auth guards).
-  * **Auth line:** can be protected via `requiresAuth` guard.
-
-* **Analytics**
-
-  * `home_view`
-  * `home_refresh`
-  * `home_error`
+* Identifier
+* Name (Rent, Groceries, Investment, Salary, etc.)
+* Kind: expense, income, transfer, or mixed
+* Optional parent category (for grouping)
 
 ---
 
-## Navigation & Guards
+### 3.4 Transaction
 
-**Route IDs**
+A real-world event at a specific time:
 
-* Route IDs are string constants owned by features.
-* Deep link paths map to route IDs in the app layer.
+Examples: trade, transfer, income, expense, correction.
 
-**Guard Types (defined in App)**
+Attributes:
 
-* **Baseline (≤ v0.8)**
+* Identifier
+* Date and time (ISO 8601 format)
+* Kind: trade, transfer, income, expense, adjustment
+* Description (free text)
 
-  * `requiresOnboarding`
-
-    * Blocks access until `onboardingSeen = true`.
-    * If not seen: redirect to Onboarding, then resume intended route after complete/skip.
-
-* **Auth line (v0.9+)**
-  In addition to `requiresOnboarding`:
-
-  * `requiresAuth`
-
-    * If no valid session: redirect to Login.
-    * After login, re-evaluate guards and proceed to target route.
-
-  * `requiresNoAuth`
-
-    * If already authenticated: redirect away from Login (e.g. to Home).
-
-**Guard Behavior**
-
-* Evaluation order is fixed:
-
-  1. `requiresOnboarding`
-  2. `requiresAuth` (auth line only)
-  3. `requiresNoAuth` (auth line only)
-* Deep links:
-
-  * Routed through the same guard chain.
-  * If blocked, user is redirected (Onboarding / Login) and the original intent is retried when conditions are satisfied.
-
-**Initial Route Decision (App launch state machine)**
-
-* **Baseline (v0.1 → v0.8)**
-
-  1. Load flags/env (cached first, from `ConfigService`).
-  2. Read `onboardingSeen` from storage.
-  3. Decision:
-
-     * If `onboarding.enabled == true` and `onboardingSeen == false`:
-
-       * Initial route = **Onboarding**.
-     * Else:
-
-       * Initial route = **Home**.
-  4. Home then manages its own data loading.
-
-* **Auth line (v0.9+)**
-
-  1. Load flags/env (cached first).
-  2. Read `onboardingSeen`.
-  3. If onboarding enabled and not seen:
-
-     * Initial route = **Onboarding**.
-  4. Otherwise:
-
-     * Try to restore session from `SessionStore` and (optionally) perform silent token refresh.
-     * If a valid session exists:
-
-       * Initial route = **Home**.
-     * If no valid session:
-
-       * Initial route = **Login**.
+Important: a transaction is just a logical “envelope” that contains one or more “legs”.
 
 ---
 
-## Configuration & Flags
+### 3.5 Transaction Leg
 
-**Sources & Precedence**
+Each leg represents the change to one account in one asset.
 
-1. Built-in defaults (bundled with app).
-2. Cached remote flags/config.
-3. Fresh remote config (fetched at runtime).
-4. Developer overrides (dev-only).
+Attributes:
 
-**Caching**
+* Identifier
+* Reference to a transaction
+* Reference to an account
+* Reference to an asset
+* Amount:
 
-* Cache last-known remote config.
-* Define TTL, per key or per bundle.
-* On cold start:
+  * Positive means balance increases.
+  * Negative means balance decreases.
+* Role: main, fee, gas, tax, or other
+* Optional category (mainly used for fiat expenses/income legs)
 
-  * Use cached values immediately.
-  * Refresh asynchronously and update in-memory config.
+Example mental mapping:
 
-**Access**
+* “You send 500 EUR from Bank A to Binance” = one transfer transaction with two legs:
 
-* Single **ConfigService** in Core:
+  * Bank A / EUR: -500 (main)
+  * Binance / EUR: +500 (main)
 
-  * `getBool`, `getString`, `getInt`, etc.
-* Features and app layer never directly read platform env or dart `const` env; they go through `ConfigService`.
-
-**Representative keys (examples)**
-
-* Baseline & auth line:
-
-  * `onboarding.enabled` (bool)
-  * `telemetry.enabled` (bool)
-  * `home.layout` (string/enum)
-  * `theme.tokens.enabled` (bool)
-* Auth line only (v0.9+):
-
-  * `auth.login_endpoint`
-  * `auth.token_ttl_seconds`
-  * `auth.refresh_endpoint`
-* **Not present**: a toggle like `auth.enabled`.
-  Auth vs no-auth is decided by choosing the correct **tag** (v0.8 vs v0.9+), not by config.
-
-**Build-time keys (compile-time)**
-
-* `APP_ENV` (e.g., `dev`, `stage`, `prod`)
-* `API_BASE_URL` (shared or per-feature base URLs)
+All balances come from summing these legs.
 
 ---
 
-## Security & Privacy
+### 3.6 Price Snapshot
 
-### Baseline (≤ v0.8)
+Stored price of an asset in some currency (in this version: always USD) at a given time.
 
-* No user credentials or tokens.
-* Focus on:
+Attributes:
 
-  * HTTPS only.
-  * No PII in logs or analytics events.
-  * Minimal, redacted logging of errors.
+* Identifier
+* Reference to asset
+* Currency code (e.g. USD)
+* Price (1 unit of the asset in that currency)
+* Timestamp of when it was taken
+* Optional source name (e.g. “coingecko”, “binance”)
 
-### Auth line (v0.9+ additions)
-
-* **Credentials & session**
-
-  * Tokens stored only in secure platform storage (Keychain/Keystore equivalents).
-  * `SessionStore` abstraction centralizes access.
-
-* **Networking**
-
-  * Auth header injection via HTTP interceptors controlled by `AuthService`.
-  * Optional certificate pinning (document policy if used).
-
-* **Token refresh**
-
-  * Single-flight: only one refresh attempt at a time.
-  * Capped exponential backoff with jitter on repeated failures.
-
-* **Logging**
-
-  * All secrets (tokens, passwords, keys) are redacted.
-  * Debug logs disabled in release builds by default.
-
-* **Clipboard & screenshots**
-
-  * Password fields do not leak values to clipboard by default.
-  * Screenshot restrictions for sensitive screens are configurable per app.
-
-* **Crash reporting & analytics**
-
-  * Behind user consent and environment flags.
-  * No PII or secrets in crash reports or analytics.
+These are created only when the user runs a manual price update.
 
 ---
 
-## Performance Requirements
+### 3.7 Price Source Configuration
 
-* **Cold start**
+This is not a separate stored entity; it’s part of the asset as a text field.
 
-  * Target ≤ **1.5s** on mid-range Android in release builds.
-  * Separate, looser budgets for debug.
+Concept:
 
-* **Startup network**
+* A structured configuration describing how to fetch the asset’s price from any HTTP API.
 
-  * Baseline: typically config fetch only.
-  * Auth line: at most **2 calls**:
+Fields (conceptual, the builder will map this to JSON structure internally):
 
-    * Config/flags.
-    * Optional silent session refresh.
+* HTTP method (usually GET)
+* URL of the endpoint
+* Query parameters (key–value pairs)
+* Headers (key–value pairs)
+* Path inside the JSON response where the numeric price is found, using a simple dot notation
+* Multiplier to transform the returned value if needed (for example, if the API returns cents instead of units)
 
-* **Home first content**
+The app must:
 
-  * Aim for ≤ **500ms** after initial route is decided.
-
-* **I/O behavior**
-
-  * All network operations cancellable.
-  * Retries use capped exponential backoff with jitter.
-  * Avoid heavy work on the main isolate at startup.
-
-* **Memory**
-
-  * Avoid large singletons.
-  * Prefer lazy initialization of heavy services.
+* Parse this configuration from text.
+* Validate it.
+* Use it to run HTTP requests during price updates.
+* Extract the numeric price from the API response.
 
 ---
 
-## Offline & Resilience
+## 4. Core Behaviors and Calculations
 
-* `NetworkStatus` abstraction (online/offline/unknown).
-* Offline UI:
+These rules are important; they define how the app “thinks”.
 
-  * Banner or inline messaging on Home when offline.
-* **Baseline**
+### 4.1 Balances
 
-  * Last-known-good Home data where feasible.
-  * Read-through caching for stable data.
-* **Auth line**
+Balance of an asset in a specific account:
 
-  * Clear distinction between “offline and cannot log in” vs “online but unauthorized/expired token”.
-* Foreground handling:
+* Sum of all amounts from transaction legs where account and asset match.
 
-  * On app resume:
+Total balance of an asset across all accounts:
 
-    * Baseline: optional refresh for critical data.
-    * Auth: optional token refresh + data refresh (guarded by backpressure and retry policies).
+* Sum of all amounts from legs with that asset, regardless of account.
+
+There is no separate “balance table”. All balances must be derived from transaction legs.
 
 ---
 
-## Observability (Analytics, Perf, Crash)
+### 4.2 USD Valuation
 
-**Analytics allow-list (stable names)**
+For each asset with a non-zero total balance:
 
-* Lifecycle
+1. Look up the most recent price snapshot in USD for that asset.
+2. Multiply asset balance by that price → asset value in USD.
+3. Sum all asset USD values to get portfolio USD value.
 
-  * `app_launch`
-  * `config_loaded`
-* Onboarding
+If an asset has no price snapshot:
 
-  * `onboarding_view`
-  * `onboarding_complete`
-  * `onboarding_skip`
-* Home
-
-  * `home_view`
-  * `home_refresh`
-  * `home_error`
-* Auth (v0.9+)
-
-  * `login_view`
-  * `login_attempt`
-  * `login_success`
-  * `login_failure`
-* Error UX
-
-  * `error_shown` (with `error_category`)
-
-**Performance marks**
-
-* `cold_start_ms`
-* `home_ready_ms`
-* `login_latency_ms` (v0.9+)
-
-Define start/stop points in docs (e.g., process start → first frame rendered for `cold_start_ms`).
-
-**Consent**
-
-* Telemetry off by default until user consent is captured (if required in your jurisdiction).
-* Respect OS-level privacy/analytics settings.
-
-**Crash reporting**
-
-* Crash facade in Core.
-* Per app, bind a concrete vendor.
-* Attach only:
-
-  * Route IDs.
-  * Error categories.
-  * Non-sensitive breadcrumbs (e.g., “login_attempt”, “home_refresh”).
+* Its USD value is treated as unknown.
+* The UI should still show its quantity, but no USD valuation.
 
 ---
 
-## Accessibility & Internationalization
+### 4.3 Price Update Flow
 
-* Touch targets ≥ 44x44 dp.
-* Logical, predictable focus order.
-* Screen transitions and critical messages announced to screen readers.
-* Text scaling:
+Triggered by a manual user action, such as a button “Update prices”.
 
-  * Validate at 1.0 / 1.3 / 1.6 system scales.
-* i18n:
+Behavior:
 
-  * All user-visible strings are keyed (no inline literals).
-  * Allow ~30–50% string expansion.
-  * Layouts are RTL-safe.
+1. Find all assets that have a price source configuration defined.
+2. For each of these assets:
 
----
+   * Parse the config.
+   * Perform the HTTP request described in the config.
+   * Parse the response.
+   * Extract the price using the configured response path.
+   * Apply the multiplier.
+   * Create a new price snapshot record for that asset in USD, with the current timestamp.
 
-## Theming & UI Abstraction
+Rules:
 
-* **Theme adapter** (optional but recommended):
-
-  * Exposes **semantic roles** (e.g., `primaryAction`, `secondaryAction`, `dangerAction`, `surfaceBackground`, `textMuted`) instead of raw color constants.
-  * Features only reference roles; actual tokens are provided by the app.
-
-* **Fallback theme**
-
-  * If no theme adapter is wired, a neutral default theme is used.
-
-* No fixed dependency on any particular component library; apps can adopt Material 2/3 or custom kits by plugging into the theme adapter.
+* Failures for one asset must not cancel updates for others.
+* The app should surface basic errors (e.g. invalid config, HTTP error, parse error).
+* No automatic background price updates. Only manual.
 
 ---
 
-## Error Taxonomy & Display Policy
+### 4.4 Transaction Types and Patterns
 
-**Categories (fixed)**
+The builder should implement **predefined transaction flows** that generate transaction + legs correctly.
 
-* Network & server:
+You want these patterns:
 
-  * `network_offline`
-  * `timeout`
-  * `server_5xx`
-  * `bad_request`
-* Auth-related (auth line, v0.9+):
+1. Trade (crypto or fiat-for-crypto)
 
-  * `unauthorized`
-  * `forbidden`
-  * `invalid_credentials`
-  * `token_expired`
-* Resource:
+   * One account.
+   * At least one leg where an asset decreases (what you pay).
+   * At least one leg where another asset increases (what you receive).
+   * Optional fee leg(s) in a third asset or the same asset.
 
-  * `not_found`
-* Data & unknown:
+2. Transfer
 
-  * `parse_error`
-  * `unknown`
+   * Same asset.
+   * Two accounts.
+   * One negative leg (source account), one positive leg (destination account).
 
-**For each category define**
+3. Income
 
-* **User copy key** (i18n-driven; no hardcoded strings in code).
-* **Retry strategy**
+   * Typically fiat.
+   * One positive leg on a fiat account.
+   * Optional category (e.g. Salary).
 
-  * `auto` / `manual` / `none`.
-  * Max attempts and backoff rules.
-* **UI surface**
+4. Expense
 
-  * Inline error card.
-  * Non-blocking banner.
-  * Snackbar/toast.
-  * Avoid modal dialogs for most cases.
-* **Telemetry tag**
+   * Typically fiat.
+   * One negative leg on a fiat account.
+   * Category required (Rent, Groceries, etc.).
 
-  * Category name and counters per session.
+5. Adjustment
+
+   * For corrections, manual fixing, imported balances.
+   * App should allow arbitrary legs, but clearly mark these as adjustments.
 
 ---
 
-## Testing Strategy
+## 5. Application Structure (High-Level Modules)
 
-**Unit tests**
+The builder can choose patterns, but you want roughly this structure:
 
-* Baseline:
+1. **Presentation / UI**
 
-  * Config precedence & caching behavior.
-  * Error mapping to user policies.
-  * Retry/backoff and cancellation behavior.
-* Auth line (v0.9+):
+   * Screens:
 
-  * Session lifecycle (login, logout, token refresh, expiry).
-  * Guard logic for protected routes.
+     * Dashboard
+     * Crypto
+     * Money
+     * Transaction editor
+     * Asset editor
+     * Account editor
+     * Category manager
+     * Settings / Backup / Price update
+   * State management appropriate for Flutter.
 
-**Widget tests**
+2. **Domain / Application Layer**
 
-* Onboarding:
+   * Services or use-cases responsible for:
 
-  * First-run behavior.
-  * Skip/complete flows.
-  * Routing decision to Home (baseline) or Login/Home (auth line).
-* Home:
+     * Creating/editing/deleting assets, accounts, categories.
+     * Creating transactions via the predefined flows (trade, transfer, income, expense, adjustment).
+     * Computing balances per account and per asset.
+     * Computing portfolio-level data (e.g. crypto vs fiat in USD).
+     * Parsing and executing price source configurations.
+     * Generating backups and exports.
 
-  * `loading/empty/error/ready` UI states.
-  * Retry idempotence.
-* Auth (v0.9+):
+3. **Data Layer**
 
-  * Form validation and error display.
-  * Login success/failure paths.
-
-**Integration tests**
-
-* Baseline (v0.1 → v0.8):
-
-  * Fresh install → Onboarding → Home.
-  * Returning user with onboarding complete → Home.
-* Auth line (v0.9+):
-
-  * Fresh install → Onboarding → Login → Home.
-  * Returning user with valid session → Home.
-  * Returning user with expired session → (optional silent refresh) → Login.
-
-**Golden tests (optional, theme-agnostic)**
-
-* Onboarding, Home (and Login in v0.9+), in:
-
-  * Light/dark theme.
-  * Text scales 1.0 / 1.3 / 1.6.
-
-**Non-functional**
-
-* A11y checks.
-* Basic bundle size & cold-start budgets.
-* Analytics schema validation (no non-allow-listed events).
+   * Local persistence (SQLite or similar).
+   * HTTP client for price updates.
+   * Mappers between storage models and domain entities.
 
 ---
 
-## CI/CD Gates
+## 6. Screens and UX (What the User Actually Sees)
 
-**Every PR**
+Describe it so the builder doesn’t guess.
 
-* Static analysis & formatting.
-* Unit + widget tests (and goldens if configured).
-* Analytics schema check:
+### 6.1 Main Navigation
 
-  * Only allow-listed events permitted.
-* Secrets scan and denylist patterns.
+Main navigation uses bottom tabs:
 
-**Nightly (optional)**
+* Dashboard
+* Crypto
+* Money
+* Settings
 
-* Device-farm smoke tests:
-
-  * Cold start metrics.
-  * Baseline flows (Onboarding → Home).
-  * Auth flows for v0.9+ (Onboarding → Login → Home).
-
-**Release jobs (per app using the starter)**
-
-* Signed builds per flavor (dev/stage/prod).
-* Changelog enforcement.
-* Performance and size budgets verified against thresholds.
+Tabs should be independent views over the same data.
 
 ---
 
-## Release Plan (v0.1 → v0.9)
+### 6.2 Dashboard
 
-> All versions share the same architecture. The line splits at **v0.8/v0.9**:
->
-> * **v0.8**: hardened baseline with **no auth** — recommended starting point for apps that never need auth.
-> * **v0.9**: introduces auth on top — recommended starting point for apps that require auth.
+Purpose:
 
-### v0.1 — Skeleton & Contracts
+* Quick overview of entire financial picture.
 
-* **Theme:** Laying the foundation.
-* **Deliverables:**
+Should show:
 
-  * Project directory layout and build system.
-  * Empty feature shells (Onboarding, Home).
-  * Core interfaces (signatures only) for `ConfigService`, `NavService`, `ErrorHandler`.
-  * Initial error taxonomy outline.
-  * ADR template and first ADRs (routing, DI, project structure).
-* **Quality Gates:**
+* Total portfolio value in USD (if any price snapshots exist).
+* Total crypto value in USD.
+* Total fiat value in USD.
+* Option to refresh prices (manual button).
+* A simple list of top few assets by USD value (show symbol, quantity, USD value if available).
 
-  * Linting and formatting pipelines pass.
-  * Unit test harness runs.
-  * App builds and shows a placeholder screen.
-
-### v0.2 — Navigation & Routing Foundation
-
-* **Theme:** How the user moves through the app.
-* **Deliverables:**
-
-  * Route registry assembled from feature manifests.
-  * Guard system with deterministic order and redirect policies.
-  * Deep link rules (e.g., `/home`, `/onboarding`).
-  * Launch state machine stub using fake data stores.
-* **Quality Gates:**
-
-  * Navigation tests for guard paths & deep links (≥ ~70% coverage).
-  * All guarded routes behave correctly with static flags.
-
-### v0.3 — Configuration & Feature Flags
-
-* **Theme:** Controlling behavior without redeploying.
-* **Deliverables:**
-
-  * `ConfigService` with precedence (defaults → cached → remote).
-  * Cold start uses cached config; remote refresh is async.
-  * Flags for:
-
-    * `onboarding.enabled`
-    * Home variants (`home.layout` or similar).
-* **Quality Gates:**
-
-  * App is usable offline with cached config.
-  * Startup uses ≤ 2 remote calls.
-  * Tests prove config precedence ordering.
-
-### v0.4 — Error Policy & Resilience
-
-* **Theme:** Predictable failure behavior.
-* **Deliverables:**
-
-  * Error→policy mapping (retry, show, redirect, ignore).
-  * Capped exponential backoff with jitter.
-  * Cancellation tokens wired from UI to network.
-  * Spec for how errors are shown in UI (banner vs inline vs toast).
-* **Quality Gates:**
-
-  * Chaos tests (network failures, slow responses) pass.
-  * Cancellation verified when navigating away.
-
-### v0.5 — Observability & Telemetry
-
-* **Theme:** Seeing what the app is doing.
-* **Deliverables:**
-
-  * Analytics facade with event allow-list and consent handling.
-  * Performance marks for cold start and Home readiness.
-  * Crash reporting facade.
-  * CI check that only allow-listed events are used.
-* **Quality Gates:**
-
-  * Observed events match defined schema.
-  * PII scans on events pass.
-
-### v0.6 — Offline-First & Data Resilience
-
-* **Theme:** Still useful with a bad connection.
-* **Deliverables:**
-
-  * `NetworkStatus` abstraction and minimal offline UI.
-  * Last-known-good strategy for Home.
-  * Foreground refresh policy (e.g., refresh on app resume with backpressure rules).
-* **Quality Gates:**
-
-  * Key paths (esp. Home) are functional in airplane mode (within reason).
-  * Retry ceilings honored; no infinite retries.
-
-### v0.7 — Accessibility, i18n & Theming
-
-* **Theme:** Usable for real humans in multiple locales.
-* **Deliverables:**
-
-  * A11y checklist and automated checks in CI.
-  * i18n framework with string keys and at least one extra locale.
-  * RTL audit and fixes.
-  * Theme adapter contract and neutral default implementation.
-* **Quality Gates:**
-
-  * A11y CI checks pass.
-  * Pseudo-locale build works without catastrophic layout issues.
-  * Light/dark theme snapshots validated.
-
-### v0.8 — Baseline Hardened (No-Auth Line)
-
-* **Theme:** Production-ready baseline without auth.
-* **Deliverables:**
-
-  * All non-auth features and infra hardened:
-
-    * Onboarding.
-    * Home.
-    * Config, navigation, error handling, offline, observability, theming, a11y.
-  * Sample “Vertical Feature” demonstrating best practices.
-  * Threat model for non-auth flows (config, analytics, storage).
-* **Quality Gates:**
-
-  * All E2E baseline flows green:
-
-    * First install → Onboarding → Home.
-    * Return launches → Home.
-  * Coverage ≥ ~80% on critical code paths.
-  * Cold-start and bundle-size budgets met.
-* **Usage note:**
-
-  * This is the **tag to fork** for apps that **do not need authentication**.
-  * Future auth work does not have to be pulled in.
-
-### v0.9 — Auth Extension Line (Auth Apps Only)
-
-* **Theme:** Add authentication on top of the v0.8 baseline.
-* **Deliverables:**
-
-  * `core/auth/` contracts and `features/auth/` module.
-  * Email/password login UI and logic.
-  * `AuthService` and `SessionStore` contracts wired in `app/`.
-  * `requiresAuth` and `requiresNoAuth` guards integrated into routing.
-  * Startup flow extended to handle session restoration and Login.
-* **Quality Gates:**
-
-  * E2E auth flows green:
-
-    * First install → Onboarding → Login → Home.
-    * Return with valid session → Home.
-    * Optional: expired session → Login flow.
-  * Tokens stored only in secure storage.
-  * No tokens or credentials appear in logs or analytics.
-* **Usage note:**
-
-  * This is the **tag to fork** for apps that **require authentication**.
-  * There is no config switch to disable auth in v0.9+; if you don’t want auth, start at v0.8 instead.
+No charts required in v1; if at all, very simple.
 
 ---
 
-## Operational Playbooks
+### 6.3 Crypto Tab
 
-### Add a Feature
+Two main sections:
 
-1. Create `features/<name>/` with:
+1. View by Asset:
 
-   * `ui/`, `logic/`, `domain/`, `data/`.
-2. Define the feature Manifest:
+   * List of all crypto assets with:
 
-   * Routes, guard requirements, dependencies, analytics events.
-3. If new infra is needed:
+     * Symbol and name.
+     * Total quantity across all accounts.
+     * Latest known USD valuation if available.
+   * Selecting an asset opens a detail view:
 
-   * Add Core interfaces (in `core/contracts/`), not concrete classes.
-4. Bind implementations in `app/di/`.
-5. Add unit, widget, and integration tests as relevant.
-6. Add events to analytics allow-list.
+     * Per-account breakdown (how much BTC on each exchange/wallet).
+     * Transaction history related to that asset.
 
-### Touch Core Safely
+2. View by Account:
 
-* Core should remain small: **interfaces, primitives, policies**.
-* Any breaking change to Core:
+   * List of accounts where type is exchange or wallet.
+   * Each entry shows:
 
-  * Requires an ADR.
-  * Requires migration notes and a minor version bump of the starter.
+     * Account name.
+     * Number of different assets.
+   * Selecting an account opens:
 
-### Breaking Changes & Versioning
+     * List of assets held in that account.
+     * Balance per asset.
+     * Transaction history for that account.
 
-* Use semantic versioning for the starter:
+Actions in Crypto tab:
 
-  * Breaking template changes → **minor** bump (until 1.0).
-* Maintain `CHANGELOG.md`:
+* Add trade.
+* Add transfer between accounts.
+* Add deposit from external.
+* Add withdrawal to external.
 
-  * List changes.
-  * Note which line (baseline vs auth) is impacted.
-  * Provide migration notes.
-
----
-
-## MVP Acceptance Criteria
-
-### Baseline (v0.8)
-
-* On first launch with onboarding enabled:
-
-  * Onboarding appears.
-  * **Skip/Complete** sets `onboardingSeen` and navigates to Home.
-* On subsequent launches:
-
-  * Home is shown directly (if onboarding is disabled or already seen).
-* Home:
-
-  * Renders **loading / empty / error / ready** states correctly.
-  * Retry is idempotent and non-blocking.
-* Architecture:
-
-  * Features depend only on Core contracts.
-  * No cross-feature imports.
-* Infra:
-
-  * Config precedence works.
-  * Error handling, offline behavior, observability, theming, a11y all wired according to spec.
-
-### Auth Line (v0.9)
-
-* Login:
-
-  * Validates input before calling backend.
-  * Handles server failures and `invalid_credentials` cleanly.
-  * Persists session securely.
-* Startup:
-
-  * With valid session → Home (bypasses Login).
-  * Without session → Login (or Onboarding first if not seen).
-* Guards:
-
-  * `requiresAuth` correctly blocks protected routes for unauthenticated users.
-  * `requiresNoAuth` prevents logged-in users from going back to Login.
-* Observability:
-
-  * Auth events emitted as per allow-list (`login_attempt`, `login_success`, etc.).
-  * No credentials in logs or telemetry.
+All these actions open the Transaction editor with appropriate type and pre-configured structure.
 
 ---
 
-## Risks & Mitigations
+### 6.4 Money Tab
 
-* **Starter bloat**
+Focuses on fiat and categories.
 
-  * Keep Core contract-only; move heavy code to `app/` and features.
-* **Vendor lock-in**
+Sections:
 
-  * Hide vendors (HTTP/router/analytics/crash) behind Core interfaces.
-* **Hidden coupling between baseline and auth**
+1. Accounts:
 
-  * Make sure v0.8 contains **no auth code**; introduce auth only in v0.9.
-  * Be explicit in docs and changelog about what each tag includes.
-* **Performance drift**
+   * List of fiat-related accounts (type: bank, cash, maybe fintech).
+   * Show current balance per account in its native asset (e.g. EUR).
 
-  * Maintain CI checks for cold start, bundle size, and network calls count.
-* **Security drift (auth line)**
+2. Transactions:
 
-  * Regular secrets scans.
-  * Logging redaction tests.
-  * ADRs for any changes to auth or storage policies.
-* **Consumers picking the wrong tag**
+   * Filterable list of income and expense transactions.
+   * Default filter: current month.
+   * Basic summary:
 
-  * Document clearly:
+     * Total income this period.
+     * Total expenses this period.
+     * Net result.
 
-    * “If you don’t need auth, fork v0.8.”
-    * “If you need auth, fork v0.9+.”
+3. Categories:
 
----
+   * Group expenses by category for the current period (e.g. Rent, Groceries, etc.).
+   * Simple list with totals.
 
-## Glossary
+Actions:
 
-* **Core**
-  Cross-cutting interfaces, primitives, and policies; no feature-specific logic.
-
-* **Feature**
-  Vertical slice owning routes, state, use cases, and (optionally) data access.
-
-* **Manifest**
-  A feature’s declaration of routes, guards, dependencies, and analytics events.
-
-* **Guard**
-  Route-time policy controlling access (onboarding/auth constraints).
-
-* **Baseline line**
-  Versions **v0.1 → v0.8** of the template, which have **no auth**.
-
-* **Auth line**
-  Versions **v0.9+** of the template, which include the auth module.
-
-* **Allow-list**
-  Set of analytics events that are permitted to be emitted.
-
-* **Single-flight**
-  Ensuring only one in-flight token refresh at any given time.
-
-* **Tag**
-  Git tag (e.g., `v0.8.0`, `v0.9.0`) that consumers fork from to start their app.
+* Add income.
+* Add expense.
+* Add transfer between fiat accounts.
 
 ---
 
-### Notes for Consumers
+### 6.5 Transaction Editor
 
-* If your app **doesn’t need authentication**, fork **v0.8** and ignore later tags.
-* If your app **needs authentication**, fork **v0.9+** and wire your backend into `AuthService` and `SessionStore`.
-* Don’t try to “fake” a mode by toggling flags; use the right **tag** so you’re not carrying unused complexity.
+Unified screen that adapts based on transaction kind.
+
+User flow:
+
+1. Select transaction type:
+
+   * Trade
+   * Transfer
+   * Income
+   * Expense
+   * Adjustment
+
+2. Form fields adjust:
+
+For trades:
+
+* Choose account.
+* Choose “from” asset and amount.
+* Choose “to” asset and amount.
+* Optional fee asset and amount.
+* Date/time.
+* Description.
+
+For transfers:
+
+* From account, to account.
+* Asset and amount.
+* Date/time.
+* Description.
+
+For income:
+
+* Account.
+* Asset (usually fiat).
+* Amount.
+* Category (income type).
+* Date/time.
+* Description.
+
+For expense:
+
+* Account.
+* Asset (usually fiat).
+* Amount.
+* Category (expense type).
+* Date/time.
+* Description.
+
+Internally, this screen must translate user input into a Transaction plus the correct set of Transaction Legs.
+
+---
+
+### 6.6 Asset Editor
+
+Purpose:
+
+* Create or edit an asset and optionally attach a price source configuration.
+
+Fields:
+
+* Symbol.
+* Name.
+* Type (crypto / fiat / other).
+* Decimals.
+* Optional price source config text area for advanced users.
+
+Additional behavior:
+
+* Button to “Test price source”:
+
+  * Parses config.
+  * Calls the API.
+  * Tries to extract a numeric price.
+  * Shows result or error clearly (without saving if it fails).
+
+---
+
+### 6.7 Account Editor
+
+Fields:
+
+* Name.
+* Type.
+* Notes.
+* Archive toggle (to hide old accounts from normal lists but keep their history).
+
+---
+
+### 6.8 Settings / Tools
+
+Contains:
+
+* Manual price update button (same function as on Dashboard).
+* Data export:
+
+  * Export whole database or full dataset as a single file (backup).
+  * Optionally, export CSV summaries (not mandatory in v1 but nice).
+* Data import / restore from backup file.
+* Maybe app lock settings (PIN/biometric) if implemented.
+
+---
+
+## 7. Security and Backup Expectations
+
+The blueprint should tell the builder:
+
+* All financial data is stored locally on the device.
+
+* Support an easy backup mechanism:
+
+  * Single backup file containing either the DB file or a serialized version of all entities.
+  * Restore should overwrite local data after a clear confirmation.
+
+* If feasible, support app-level lock (PIN or biometric) to open the app, especially if platform support is straightforward.
+
+---
+
+## 8. Future-Proofing (Optional but Important for Architecture)
+
+Even though v1 will not implement these, the design should allow them later without breaking the schema:
+
+* Positions (grouping certain transaction legs into “investment positions”).
+* Guardrails / allocation rules:
+
+  * For example: rules that compare crypto vs fiat proportions, or warn on certain thresholds.
+* Exchange API integrations:
+
+  * Ability to add a separate module that imports transactions from real APIs into the same data model.
+
+The chosen model (assets, accounts, transactions, legs, price snapshots) already supports these naturally; the builder just needs to avoid hardcoding assumptions that block extensions.
+
 

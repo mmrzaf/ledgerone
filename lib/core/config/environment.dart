@@ -21,14 +21,14 @@ class AppConfig {
   });
 
   static const dev = AppConfig(
+    appName: 'Ledger One (DEV)',
     environment: Environment.dev,
-    apiBaseUrl: 'https://dev-api.example.com',
-    appName: 'Flutter Starter (Dev)',
+    apiBaseUrl: '',
   );
 
   static const prod = AppConfig(
     environment: Environment.prod,
     apiBaseUrl: 'https://api.example.com',
-    appName: 'Flutter Starter',
+    appName: 'Ledger One',
   );
 }

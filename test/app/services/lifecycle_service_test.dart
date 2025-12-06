@@ -1,10 +1,7 @@
-import 'dart:async';
-
-import 'package:app_flutter_starter/app/services/lifecycle_service_impl.dart';
-import 'package:app_flutter_starter/core/contracts/lifecycle_contract.dart'
-    as core;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/app/services/lifecycle_service_impl.dart';
+import 'package:ledgerone/core/contracts/lifecycle_contract.dart' as core;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -1,12 +1,10 @@
 import 'dart:async';
-import 'dart:io';
-
-import 'package:app_flutter_starter/app/services/http_client_impl.dart';
-import 'package:app_flutter_starter/core/config/environment.dart';
-import 'package:app_flutter_starter/core/errors/app_error.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:ledgerone/app/services/http_client_impl.dart';
+import 'package:ledgerone/core/config/environment.dart';
+import 'package:ledgerone/core/errors/app_error.dart';
 
 void main() {
   group('HttpClientImpl', () {

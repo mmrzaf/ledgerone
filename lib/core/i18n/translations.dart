@@ -16,30 +16,6 @@ const Map<String, String> translationsEn = {
   'onboarding.get_started': 'Get Started',
   'onboarding.skip': 'Skip',
 
-  // Login
-  'login.title': 'Sign In',
-  'login.email': 'Email',
-  'login.password': 'Password',
-  'login.submit': 'Sign In',
-  'login.email_required': 'Email is required',
-  'login.email_invalid': 'Enter a valid email',
-  'login.password_required': 'Password is required',
-  'login.password_too_short': 'Password must be at least 6 characters',
-
-  // Home
-  'home.title': 'Home',
-  'home.welcome': 'Welcome back!',
-  'home.refresh': 'Refresh',
-  'home.logout': 'Sign Out',
-  'home.demo_content': 'Demo Content',
-  'home.refresh_instruction':
-      'Pull down to refresh or tap the refresh button above.',
-  'home.no_content': 'No content available',
-  'home.loading_content': 'Loading content...',
-  'home.offline_warning': 'Showing cached data - refresh failed',
-  'home.cached_data': 'Content loaded successfully',
-  'home.loaded_at': 'Loaded at {timestamp}',
-
   // Errors
   'error.network_offline': 'No internet connection. Please check your network.',
   'error.timeout': 'Request timed out. Please try again.',
@@ -53,6 +29,7 @@ const Map<String, String> translationsEn = {
   'error.parse_error': 'Unable to process the response. Please try again.',
   'error.unknown': 'Something went wrong. Please try again.',
   'error.inline_title': 'Something went wrong',
+
   // Accessibility labels
   'a11y.navigation.back': 'Navigate back',
   'a11y.navigation.menu': 'Open menu',
@@ -66,6 +43,168 @@ const Map<String, String> translationsEn = {
   'network.offline': 'No internet connection',
   'network.online': 'Connected',
   'network.unknown': 'Connection status unknown',
+
+  // ------------------------------------------------------------
+  // LedgerOne – App & Onboarding
+  // ------------------------------------------------------------
+  'ledger.app_title': 'LedgerOne',
+
+  'ledger.onboarding.welcome_title': 'Welcome to LedgerOne',
+  'ledger.onboarding.welcome_subtitle':
+      'Your private, offline-first finance & crypto tracker.',
+  'ledger.onboarding.feature1_title': 'Track Everything',
+  'ledger.onboarding.feature1_desc':
+      'Manage crypto and cash in one place. Track every asset across all your accounts.',
+  'ledger.onboarding.feature2_title': 'Offline-first',
+  'ledger.onboarding.feature2_desc':
+      'Works fully offline. Your data stays on your device. Prices update only when you choose.',
+  'ledger.onboarding.feature3_title': 'Total Control',
+  'ledger.onboarding.feature3_desc':
+      'No automatic syncing or hidden connections. You control everything. Export and back up anytime.',
+  'ledger.onboarding.get_started': 'Get Started',
+  'ledger.onboarding.skip': 'Skip',
+  'ledger.onboarding.next': 'Next',
+  'ledger.onboarding.previous': 'Previous',
+
+  // LedgerOne – Dashboard
+  'ledger.dashboard.title': 'Dashboard',
+  'ledger.dashboard.total_portfolio': 'Total Portfolio',
+  'ledger.dashboard.crypto': 'Crypto',
+  'ledger.dashboard.fiat': 'Fiat',
+  'ledger.dashboard.top_holdings': 'Top Holdings',
+  'ledger.dashboard.quick_actions': 'Quick Actions',
+  'ledger.dashboard.no_assets':
+      'No assets yet. Add your first transaction to see your portfolio.',
+  'ledger.dashboard.update_prices': 'Update Prices',
+  'ledger.dashboard.updating_prices': 'Updating prices...',
+  'ledger.dashboard.prices_updated':
+      'Updated {success} prices; {failed} failed.',
+  'ledger.dashboard.price_update_failed': 'Price update failed.',
+  'ledger.dashboard.last_update': 'Updated {time}',
+  'ledger.dashboard.just_now': 'just now',
+  'ledger.dashboard.minutes_ago': '{minutes} min ago',
+  'ledger.dashboard.hours_ago': '{hours} hr ago',
+  'ledger.dashboard.days_ago': '{days} days ago',
+
+  // LedgerOne – Navigation
+  'ledger.nav.dashboard': 'Dashboard',
+  'ledger.nav.crypto': 'Crypto',
+  'ledger.nav.money': 'Money',
+  'ledger.nav.settings': 'Settings',
+
+  // LedgerOne – Quick Actions
+  'ledger.action.add_transaction': 'Add Transaction',
+  'ledger.action.view_accounts': 'View Accounts',
+  'ledger.action.manage_assets': 'Manage Assets',
+  'ledger.action.backup_data': 'Back Up Data',
+
+  // LedgerOne – Transaction Editor
+  'ledger.tx_editor.title': 'New Transaction',
+  'ledger.tx_editor.title_edit': 'Edit Transaction',
+  'ledger.tx_editor.type': 'Transaction Type',
+  'ledger.tx_editor.description': 'Description',
+  'ledger.tx_editor.description_hint':
+      'Add a short description for this transaction',
+  'ledger.tx_editor.description_required': 'Description is required',
+  'ledger.tx_editor.date_time': 'Date & Time',
+  'ledger.tx_editor.account': 'Account',
+  'ledger.tx_editor.account_required': 'Account is required',
+  'ledger.tx_editor.from_account': 'From Account',
+  'ledger.tx_editor.to_account': 'To Account',
+  'ledger.tx_editor.to_account_required': 'Destination account is required',
+  'ledger.tx_editor.asset': 'Asset',
+  'ledger.tx_editor.asset_required': 'Asset is required',
+  'ledger.tx_editor.from_asset': 'From Asset (Paying)',
+  'ledger.tx_editor.from_asset_required': 'From asset is required',
+  'ledger.tx_editor.to_asset': 'To Asset (Receiving)',
+  'ledger.tx_editor.to_asset_required': 'To asset is required',
+  'ledger.tx_editor.fee_asset': 'Fee Asset (optional)',
+  'ledger.tx_editor.fee_asset_hint':
+      'Select the asset used to pay fees, if any',
+  'ledger.tx_editor.no_fee': 'No fee',
+  'ledger.tx_editor.amount': 'Amount',
+  'ledger.tx_editor.amount_required': 'Amount is required',
+  'ledger.tx_editor.amount_invalid': 'Enter a valid amount',
+  'ledger.tx_editor.amount_paid': 'Amount Paid',
+  'ledger.tx_editor.amount_received': 'Amount Received',
+  'ledger.tx_editor.fee_amount': 'Fee Amount',
+  'ledger.tx_editor.category': 'Category',
+  'ledger.tx_editor.category_required':
+      'Category is required for expense transactions',
+  'ledger.tx_editor.adjustment_helper':
+      'Positive values increase the balance; negative values decrease it.',
+  'ledger.tx_editor.create': 'Create Transaction',
+  'ledger.tx_editor.update': 'Update Transaction',
+  'ledger.tx_editor.created': 'Transaction created.',
+  'ledger.tx_editor.updated': 'Transaction updated.',
+
+  // LedgerOne – Transaction Types
+  'ledger.tx_type.income': 'Income',
+  'ledger.tx_type.expense': 'Expense',
+  'ledger.tx_type.transfer': 'Transfer',
+  'ledger.tx_type.trade': 'Trade',
+  'ledger.tx_type.adjustment': 'Adjustment',
+
+  // LedgerOne – Crypto Screen
+  'ledger.crypto.title': 'Crypto Assets',
+  'ledger.crypto.by_asset': 'By Asset',
+  'ledger.crypto.by_account': 'By Account',
+  'ledger.crypto.no_assets':
+      'No crypto assets yet. Add a crypto transaction to get started.',
+  'ledger.crypto.no_accounts': 'No accounts yet. Create an account first.',
+  'ledger.crypto.total_value': 'Total Value',
+  'ledger.crypto.assets': 'Assets',
+
+  // LedgerOne – Money Screen
+  'ledger.money.title': 'Money',
+  'ledger.money.accounts': 'Accounts',
+  'ledger.money.transactions': 'Transactions',
+  'ledger.money.categories': 'Categories',
+  'ledger.money.no_accounts': 'No accounts yet. Create one to get started.',
+  'ledger.money.no_transactions': 'No transactions this month.',
+  'ledger.money.this_month': 'This Month',
+  'ledger.money.total_income': 'Total Income',
+  'ledger.money.total_expenses': 'Total Expenses',
+  'ledger.money.net_income': 'Net Income',
+
+  // LedgerOne – Settings
+  'ledger.settings.title': 'Settings',
+  'ledger.settings.general': 'General',
+  'ledger.settings.language': 'Language',
+  'ledger.settings.theme': 'Theme',
+  'ledger.settings.theme_light': 'Light',
+  'ledger.settings.theme_dark': 'Dark',
+  'ledger.settings.theme_system': 'System Default',
+  'ledger.settings.data': 'Data',
+  'ledger.settings.backup': 'Back Up Data',
+  'ledger.settings.restore': 'Restore Data',
+  'ledger.settings.export': 'Export CSV',
+  'ledger.settings.about': 'About',
+  'ledger.settings.version': 'Version',
+
+  // LedgerOne – Common
+  'ledger.common.save': 'Save',
+  'ledger.common.cancel': 'Cancel',
+  'ledger.common.delete': 'Delete',
+  'ledger.common.edit': 'Edit',
+  'ledger.common.add': 'Add',
+  'ledger.common.close': 'Close',
+  'ledger.common.confirm': 'Confirm',
+  'ledger.common.balance': 'Balance',
+  'ledger.common.accounts': 'Accounts',
+  'ledger.common.assets': 'Assets',
+  'ledger.common.no_data': 'No data available',
+  'ledger.common.loading': 'Loading...',
+  'ledger.common.loading_data': 'Loading data...',
+
+  // LedgerOne – Accessibility
+  'ledger.a11y.update_prices': 'Update asset prices',
+  'ledger.a11y.navigate_back': 'Navigate back',
+  'ledger.a11y.open_settings': 'Open settings',
+  'ledger.a11y.select_date': 'Select date',
+  'ledger.a11y.select_time': 'Select time',
+  'ledger.a11y.asset_icon': 'Asset icon for {asset}',
+  'ledger.a11y.account_icon': 'Account icon for {account}',
 };
 
 /// German translations (de)
@@ -86,32 +225,6 @@ const Map<String, String> translationsDe = {
   'onboarding.get_started': 'Loslegen',
   'onboarding.skip': 'Überspringen',
 
-  // Login
-  'login.title': 'Anmelden',
-  'login.email': 'E-Mail',
-  'login.password': 'Passwort',
-  'login.submit': 'Anmelden',
-  'login.email_required': 'E-Mail ist erforderlich',
-  'login.email_invalid': 'Gib eine gültige E-Mail-Adresse ein',
-  'login.password_required': 'Passwort ist erforderlich',
-  'login.password_too_short':
-      'Das Passwort muss mindestens 6 Zeichen lang sein',
-
-  // Home
-  'home.title': 'Startseite',
-  'home.welcome': 'Willkommen zurück!',
-  'home.refresh': 'Aktualisieren',
-  'home.logout': 'Abmelden',
-  'home.demo_content': 'Demo-Inhalt',
-  'home.refresh_instruction':
-      'Zum Aktualisieren nach unten ziehen oder oben auf die Schaltfläche „Aktualisieren“ tippen.',
-  'home.no_content': 'Kein Inhalt verfügbar',
-  'home.loading_content': 'Inhalt wird geladen...',
-  'home.offline_warning':
-      'Zwischengespeicherte Daten werden angezeigt – Aktualisierung fehlgeschlagen',
-  'home.cached_data': 'Inhalt erfolgreich geladen',
-  'home.loaded_at': 'Geladen um {timestamp}',
-
   // Errors
   'error.network_offline':
       'Keine Internetverbindung. Bitte überprüfe deine Netzwerkverbindung.',
@@ -128,6 +241,7 @@ const Map<String, String> translationsDe = {
   'error.parse_error':
       'Die Antwort konnte nicht verarbeitet werden. Bitte versuche es erneut.',
   'error.unknown': 'Etwas ist schiefgelaufen. Bitte versuche es erneut.',
+  'error.inline_title': 'Etwas ist schiefgelaufen',
 
   // Accessibility labels
   'a11y.navigation.back': 'Zurück navigieren',
@@ -142,6 +256,170 @@ const Map<String, String> translationsDe = {
   'network.offline': 'Keine Internetverbindung',
   'network.online': 'Verbunden',
   'network.unknown': 'Verbindungsstatus unbekannt',
+
+  // ------------------------------------------------------------
+  // LedgerOne – App & Onboarding
+  // ------------------------------------------------------------
+  'ledger.app_title': 'LedgerOne',
+
+  'ledger.onboarding.welcome_title': 'Willkommen bei LedgerOne',
+  'ledger.onboarding.welcome_subtitle':
+      'Dein privater Offline-Tracker für Finanzen und Krypto.',
+  'ledger.onboarding.feature1_title': 'Alles im Blick',
+  'ledger.onboarding.feature1_desc':
+      'Verwalte Krypto und Fiat an einem Ort. Behalte alle Assets über alle Konten hinweg im Blick.',
+  'ledger.onboarding.feature2_title': 'Offline-First',
+  'ledger.onboarding.feature2_desc':
+      'Funktioniert vollständig offline. Deine Daten bleiben auf deinem Gerät. Kurse werden nur aktualisiert, wenn du es willst.',
+  'ledger.onboarding.feature3_title': 'Volle Kontrolle',
+  'ledger.onboarding.feature3_desc':
+      'Keine automatische Synchronisierung oder versteckte Verbindungen. Du behältst die Kontrolle. Exportiere und sichere deine Daten jederzeit.',
+  'ledger.onboarding.get_started': 'Loslegen',
+  'ledger.onboarding.skip': 'Überspringen',
+  'ledger.onboarding.next': 'Weiter',
+  'ledger.onboarding.previous': 'Zurück',
+
+  // LedgerOne – Dashboard
+  'ledger.dashboard.title': 'Dashboard',
+  'ledger.dashboard.total_portfolio': 'Gesamtportfolio',
+  'ledger.dashboard.crypto': 'Krypto',
+  'ledger.dashboard.fiat': 'Fiat',
+  'ledger.dashboard.top_holdings': 'Top-Positionen',
+  'ledger.dashboard.quick_actions': 'Schnellaktionen',
+  'ledger.dashboard.no_assets':
+      'Noch keine Assets erfasst. Lege deine erste Transaktion an.',
+  'ledger.dashboard.update_prices': 'Kurse aktualisieren',
+  'ledger.dashboard.updating_prices': 'Kurse werden aktualisiert...',
+  'ledger.dashboard.prices_updated':
+      '{success} Kurse aktualisiert, {failed} fehlgeschlagen.',
+  'ledger.dashboard.price_update_failed':
+      'Kurse konnten nicht aktualisiert werden.',
+  'ledger.dashboard.last_update': 'Aktualisiert {time}',
+  'ledger.dashboard.just_now': 'gerade eben',
+  'ledger.dashboard.minutes_ago': 'vor {minutes} Min.',
+  'ledger.dashboard.hours_ago': 'vor {hours} Std.',
+  'ledger.dashboard.days_ago': 'vor {days} Tagen',
+
+  // LedgerOne – Navigation
+  'ledger.nav.dashboard': 'Dashboard',
+  'ledger.nav.crypto': 'Krypto',
+  'ledger.nav.money': 'Geld',
+  'ledger.nav.settings': 'Einstellungen',
+
+  // LedgerOne – Quick Actions
+  'ledger.action.add_transaction': 'Transaktion hinzufügen',
+  'ledger.action.view_accounts': 'Konten anzeigen',
+  'ledger.action.manage_assets': 'Assets verwalten',
+  'ledger.action.backup_data': 'Daten sichern',
+
+  // LedgerOne – Transaction Editor
+  'ledger.tx_editor.title': 'Neue Transaktion',
+  'ledger.tx_editor.title_edit': 'Transaktion bearbeiten',
+  'ledger.tx_editor.type': 'Transaktionstyp',
+  'ledger.tx_editor.description': 'Beschreibung',
+  'ledger.tx_editor.description_hint':
+      'Kurze Beschreibung der Transaktion eingeben',
+  'ledger.tx_editor.description_required': 'Beschreibung ist erforderlich',
+  'ledger.tx_editor.date_time': 'Datum & Uhrzeit',
+  'ledger.tx_editor.account': 'Konto',
+  'ledger.tx_editor.account_required': 'Konto ist erforderlich',
+  'ledger.tx_editor.from_account': 'Quellkonto',
+  'ledger.tx_editor.to_account': 'Zielkonto',
+  'ledger.tx_editor.to_account_required': 'Zielkonto ist erforderlich',
+  'ledger.tx_editor.asset': 'Asset',
+  'ledger.tx_editor.asset_required': 'Asset ist erforderlich',
+  'ledger.tx_editor.from_asset': 'Quell-Asset (Zahlung)',
+  'ledger.tx_editor.from_asset_required': 'Quell-Asset ist erforderlich',
+  'ledger.tx_editor.to_asset': 'Ziel-Asset (Empfang)',
+  'ledger.tx_editor.to_asset_required': 'Ziel-Asset ist erforderlich',
+  'ledger.tx_editor.fee_asset': 'Gebühren-Asset (optional)',
+  'ledger.tx_editor.fee_asset_hint':
+      'Auswählen, falls eine Gebühr angefallen ist',
+  'ledger.tx_editor.no_fee': 'Keine Gebühr',
+  'ledger.tx_editor.amount': 'Betrag',
+  'ledger.tx_editor.amount_required': 'Betrag ist erforderlich',
+  'ledger.tx_editor.amount_invalid': 'Bitte einen gültigen Betrag eingeben',
+  'ledger.tx_editor.amount_paid': 'Gezahlter Betrag',
+  'ledger.tx_editor.amount_received': 'Erhaltener Betrag',
+  'ledger.tx_editor.fee_amount': 'Gebührenbetrag',
+  'ledger.tx_editor.category': 'Kategorie',
+  'ledger.tx_editor.category_required':
+      'Für Ausgaben ist eine Kategorie erforderlich',
+  'ledger.tx_editor.adjustment_helper':
+      'Positive Werte erhöhen den Saldo, negative verringern ihn.',
+  'ledger.tx_editor.create': 'Transaktion erstellen',
+  'ledger.tx_editor.update': 'Transaktion aktualisieren',
+  'ledger.tx_editor.created': 'Transaktion erstellt',
+  'ledger.tx_editor.updated': 'Transaktion aktualisiert',
+
+  // LedgerOne – Transaction Types
+  'ledger.tx_type.income': 'Einnahme',
+  'ledger.tx_type.expense': 'Ausgabe',
+  'ledger.tx_type.transfer': 'Überweisung',
+  'ledger.tx_type.trade': 'Handel',
+  'ledger.tx_type.adjustment': 'Anpassung',
+
+  // LedgerOne – Crypto Screen
+  'ledger.crypto.title': 'Krypto-Assets',
+  'ledger.crypto.by_asset': 'Nach Asset',
+  'ledger.crypto.by_account': 'Nach Konto',
+  'ledger.crypto.no_assets':
+      'Noch keine Krypto-Assets erfasst. Lege eine Transaktion an.',
+  'ledger.crypto.no_accounts': 'Noch keine Konten. Erstelle zuerst ein Konto.',
+  'ledger.crypto.total_value': 'Gesamtwert',
+  'ledger.crypto.assets': 'Assets',
+
+  // LedgerOne – Money Screen
+  'ledger.money.title': 'Geld',
+  'ledger.money.accounts': 'Konten',
+  'ledger.money.transactions': 'Transaktionen',
+  'ledger.money.categories': 'Kategorien',
+  'ledger.money.no_accounts':
+      'Noch keine Konten vorhanden. Erstelle ein Konto, um zu starten.',
+  'ledger.money.no_transactions': 'Keine Transaktionen in diesem Monat.',
+  'ledger.money.this_month': 'Dieser Monat',
+  'ledger.money.total_income': 'Gesamteinnahmen',
+  'ledger.money.total_expenses': 'Gesamtausgaben',
+  'ledger.money.net_income': 'Nettoeinkommen',
+
+  // LedgerOne – Settings
+  'ledger.settings.title': 'Einstellungen',
+  'ledger.settings.general': 'Allgemein',
+  'ledger.settings.language': 'Sprache',
+  'ledger.settings.theme': 'Design',
+  'ledger.settings.theme_light': 'Hell',
+  'ledger.settings.theme_dark': 'Dunkel',
+  'ledger.settings.theme_system': 'System',
+  'ledger.settings.data': 'Daten',
+  'ledger.settings.backup': 'Daten sichern',
+  'ledger.settings.restore': 'Daten wiederherstellen',
+  'ledger.settings.export': 'CSV exportieren',
+  'ledger.settings.about': 'Über',
+  'ledger.settings.version': 'Version',
+
+  // LedgerOne – Common
+  'ledger.common.save': 'Speichern',
+  'ledger.common.cancel': 'Abbrechen',
+  'ledger.common.delete': 'Löschen',
+  'ledger.common.edit': 'Bearbeiten',
+  'ledger.common.add': 'Hinzufügen',
+  'ledger.common.close': 'Schließen',
+  'ledger.common.confirm': 'Bestätigen',
+  'ledger.common.balance': 'Saldo',
+  'ledger.common.accounts': 'Konten',
+  'ledger.common.assets': 'Assets',
+  'ledger.common.no_data': 'Keine Daten verfügbar',
+  'ledger.common.loading': 'Wird geladen...',
+  'ledger.common.loading_data': 'Daten werden geladen...',
+
+  // LedgerOne – Accessibility
+  'ledger.a11y.update_prices': 'Asset-Kurse aktualisieren',
+  'ledger.a11y.navigate_back': 'Zurück navigieren',
+  'ledger.a11y.open_settings': 'Einstellungen öffnen',
+  'ledger.a11y.select_date': 'Datum auswählen',
+  'ledger.a11y.select_time': 'Uhrzeit auswählen',
+  'ledger.a11y.asset_icon': 'Asset-Symbol für {asset}',
+  'ledger.a11y.account_icon': 'Konto-Symbol für {account}',
 };
 
 /// Persian (Farsi) translations (fa) - RTL language
@@ -161,30 +439,6 @@ const Map<String, String> translationsFa = {
       'یک قالب آماده برای محیط واقعی با ناوبری، گاردها و معماری تمیز.',
   'onboarding.get_started': 'شروع کنید',
   'onboarding.skip': 'رد کردن',
-
-  // Login
-  'login.title': 'ورود',
-  'login.email': 'ایمیل',
-  'login.password': 'رمز عبور',
-  'login.submit': 'ورود',
-  'login.email_required': 'ایمیل الزامی است',
-  'login.email_invalid': 'یک ایمیل معتبر وارد کنید',
-  'login.password_required': 'رمز عبور الزامی است',
-  'login.password_too_short': 'رمز عبور باید حداقل ۶ کاراکتر باشد',
-
-  // Home
-  'home.title': 'صفحه اصلی',
-  'home.welcome': 'خوش برگشتی!',
-  'home.refresh': 'به‌روزرسانی',
-  'home.logout': 'خروج',
-  'home.demo_content': 'محتوای نمایشی',
-  'home.refresh_instruction':
-      'برای به‌روزرسانی پایین بکشید یا روی دکمه به‌روزرسانی در بالا بزنید.',
-  'home.no_content': 'هیچ محتوایی در دسترس نیست',
-  'home.loading_content': 'در حال بارگذاری محتوا...',
-  'home.offline_warning': 'نمایش داده‌های کش شده - به‌روزرسانی ناموفق بود',
-  'home.cached_data': 'محتوا با موفقیت بارگذاری شد',
-  'home.loaded_at': 'بارگذاری شده در {timestamp}',
 
   // Errors
   'error.network_offline':
@@ -213,6 +467,167 @@ const Map<String, String> translationsFa = {
   'network.offline': 'بدون اتصال اینترنت',
   'network.online': 'متصل',
   'network.unknown': 'وضعیت اتصال نامشخص است',
+
+  // ------------------------------------------------------------
+  // LedgerOne – App & Onboarding
+  // ------------------------------------------------------------
+  'ledger.app_title': 'LedgerOne',
+
+  'ledger.onboarding.welcome_title': 'به LedgerOne خوش آمدید',
+  'ledger.onboarding.welcome_subtitle':
+      'ردیاب شخصی دارایی‌های مالی و کریپتوی شما',
+  'ledger.onboarding.feature1_title': 'همه چیز را دنبال کنید',
+  'ledger.onboarding.feature1_desc':
+      'کریپتو و فیات را یک‌جا مدیریت کنید. همه دارایی‌های خود را در چند حساب مختلف دنبال کنید.',
+  'ledger.onboarding.feature2_title': 'اول آفلاین',
+  'ledger.onboarding.feature2_desc':
+      'کاملاً آفلاین کار می‌کند. داده‌های شما فقط روی دستگاه شما می‌ماند. قیمت‌ها فقط وقتی که خودتان بخواهید به‌روزرسانی می‌شوند.',
+  'ledger.onboarding.feature3_title': 'کنترل کامل',
+  'ledger.onboarding.feature3_desc':
+      'بدون همگام‌سازی خودکار یا اتصال پنهان. همه چیز تحت کنترل شماست. هر زمان خواستید می‌توانید خروجی بگیرید و پشتیبان تهیه کنید.',
+  'ledger.onboarding.get_started': 'شروع کنید',
+  'ledger.onboarding.skip': 'رد کردن',
+  'ledger.onboarding.next': 'بعدی',
+  'ledger.onboarding.previous': 'قبلی',
+
+  // LedgerOne – Dashboard
+  'ledger.dashboard.title': 'داشبورد',
+  'ledger.dashboard.total_portfolio': 'ارزش کل پرتفوی',
+  'ledger.dashboard.crypto': 'کریپتو',
+  'ledger.dashboard.fiat': 'فیات',
+  'ledger.dashboard.top_holdings': 'دارایی‌های برتر',
+  'ledger.dashboard.quick_actions': 'اقدامات سریع',
+  'ledger.dashboard.no_assets':
+      'هنوز هیچ دارایی‌ای ثبت نکرده‌اید. اولین تراکنش خود را اضافه کنید.',
+  'ledger.dashboard.update_prices': 'به‌روزرسانی قیمت‌ها',
+  'ledger.dashboard.updating_prices': 'در حال به‌روزرسانی قیمت‌ها...',
+  'ledger.dashboard.prices_updated':
+      '{success} قیمت به‌روزرسانی شد؛ {failed} مورد ناموفق بود.',
+  'ledger.dashboard.price_update_failed': 'به‌روزرسانی قیمت‌ها ناموفق بود.',
+  'ledger.dashboard.last_update': 'آخرین به‌روزرسانی: {time}',
+  'ledger.dashboard.just_now': 'همین الان',
+  'ledger.dashboard.minutes_ago': '{minutes} دقیقه پیش',
+  'ledger.dashboard.hours_ago': '{hours} ساعت پیش',
+  'ledger.dashboard.days_ago': '{days} روز پیش',
+
+  // LedgerOne – Navigation
+  'ledger.nav.dashboard': 'داشبورد',
+  'ledger.nav.crypto': 'کریپتو',
+  'ledger.nav.money': 'پول',
+  'ledger.nav.settings': 'تنظیمات',
+
+  // LedgerOne – Quick Actions
+  'ledger.action.add_transaction': 'افزودن تراکنش',
+  'ledger.action.view_accounts': 'مشاهده حساب‌ها',
+  'ledger.action.manage_assets': 'مدیریت دارایی‌ها',
+  'ledger.action.backup_data': 'پشتیبان‌گیری از داده‌ها',
+
+  // LedgerOne – Transaction Editor
+  'ledger.tx_editor.title': 'تراکنش جدید',
+  'ledger.tx_editor.title_edit': 'ویرایش تراکنش',
+  'ledger.tx_editor.type': 'نوع تراکنش',
+  'ledger.tx_editor.description': 'توضیحات',
+  'ledger.tx_editor.description_hint': 'توضیحی برای این تراکنش وارد کنید',
+  'ledger.tx_editor.description_required': 'توضیحات الزامی است',
+  'ledger.tx_editor.date_time': 'تاریخ و زمان',
+  'ledger.tx_editor.account': 'حساب',
+  'ledger.tx_editor.account_required': 'حساب الزامی است',
+  'ledger.tx_editor.from_account': 'از حساب',
+  'ledger.tx_editor.to_account': 'به حساب',
+  'ledger.tx_editor.to_account_required': 'حساب مقصد الزامی است',
+  'ledger.tx_editor.asset': 'دارایی',
+  'ledger.tx_editor.asset_required': 'دارایی الزامی است',
+  'ledger.tx_editor.from_asset': 'از دارایی (پرداخت)',
+  'ledger.tx_editor.from_asset_required': 'دارایی مبدأ الزامی است',
+  'ledger.tx_editor.to_asset': 'به دارایی (دریافت)',
+  'ledger.tx_editor.to_asset_required': 'دارایی مقصد الزامی است',
+  'ledger.tx_editor.fee_asset': 'دارایی کارمزد (اختیاری)',
+  'ledger.tx_editor.fee_asset_hint':
+      'اگر کارمزدی پرداخت شده، دارایی کارمزد را انتخاب کنید',
+  'ledger.tx_editor.no_fee': 'بدون کارمزد',
+  'ledger.tx_editor.amount': 'مقدار',
+  'ledger.tx_editor.amount_required': 'مقدار الزامی است',
+  'ledger.tx_editor.amount_invalid': 'یک مقدار معتبر وارد کنید',
+  'ledger.tx_editor.amount_paid': 'مقدار پرداخت‌شده',
+  'ledger.tx_editor.amount_received': 'مقدار دریافت‌شده',
+  'ledger.tx_editor.fee_amount': 'مقدار کارمزد',
+  'ledger.tx_editor.category': 'دسته',
+  'ledger.tx_editor.category_required': 'برای هزینه‌ها انتخاب دسته الزامی است',
+  'ledger.tx_editor.adjustment_helper':
+      'مقادیر مثبت موجودی را افزایش می‌دهند و مقادیر منفی آن را کاهش می‌دهند.',
+  'ledger.tx_editor.create': 'ایجاد تراکنش',
+  'ledger.tx_editor.update': 'به‌روزرسانی تراکنش',
+  'ledger.tx_editor.created': 'تراکنش ایجاد شد.',
+  'ledger.tx_editor.updated': 'تراکنش به‌روزرسانی شد.',
+
+  // LedgerOne – Transaction Types
+  'ledger.tx_type.income': 'درآمد',
+  'ledger.tx_type.expense': 'هزینه',
+  'ledger.tx_type.transfer': 'انتقال',
+  'ledger.tx_type.trade': 'معامله',
+  'ledger.tx_type.adjustment': 'تنظیم',
+
+  // LedgerOne – Crypto Screen
+  'ledger.crypto.title': 'دارایی‌های کریپتو',
+  'ledger.crypto.by_asset': 'بر اساس دارایی',
+  'ledger.crypto.by_account': 'بر اساس حساب',
+  'ledger.crypto.no_assets':
+      'هنوز هیچ دارایی کریپتویی ثبت نکرده‌اید. یک تراکنش اضافه کنید.',
+  'ledger.crypto.no_accounts': 'هنوز حسابی ندارید. ابتدا یک حساب ایجاد کنید.',
+  'ledger.crypto.total_value': 'ارزش کل',
+  'ledger.crypto.assets': 'دارایی‌ها',
+
+  // LedgerOne – Money Screen
+  'ledger.money.title': 'پول',
+  'ledger.money.accounts': 'حساب‌ها',
+  'ledger.money.transactions': 'تراکنش‌ها',
+  'ledger.money.categories': 'دسته‌ها',
+  'ledger.money.no_accounts':
+      'هنوز هیچ حسابی ثبت نشده است. یک حساب جدید ایجاد کنید.',
+  'ledger.money.no_transactions': 'در این ماه تراکنشی ثبت نشده است.',
+  'ledger.money.this_month': 'این ماه',
+  'ledger.money.total_income': 'کل درآمد',
+  'ledger.money.total_expenses': 'کل هزینه‌ها',
+  'ledger.money.net_income': 'درآمد خالص',
+
+  // LedgerOne – Settings
+  'ledger.settings.title': 'تنظیمات',
+  'ledger.settings.general': 'عمومی',
+  'ledger.settings.language': 'زبان',
+  'ledger.settings.theme': 'تم',
+  'ledger.settings.theme_light': 'روشن',
+  'ledger.settings.theme_dark': 'تیره',
+  'ledger.settings.theme_system': 'سیستم',
+  'ledger.settings.data': 'داده‌ها',
+  'ledger.settings.backup': 'پشتیبان‌گیری از داده‌ها',
+  'ledger.settings.restore': 'بازیابی داده‌ها',
+  'ledger.settings.export': 'خروجی CSV',
+  'ledger.settings.about': 'درباره',
+  'ledger.settings.version': 'نسخه',
+
+  // LedgerOne – Common
+  'ledger.common.save': 'ذخیره',
+  'ledger.common.cancel': 'لغو',
+  'ledger.common.delete': 'حذف',
+  'ledger.common.edit': 'ویرایش',
+  'ledger.common.add': 'افزودن',
+  'ledger.common.close': 'بستن',
+  'ledger.common.confirm': 'تأیید',
+  'ledger.common.balance': 'موجودی',
+  'ledger.common.accounts': 'حساب‌ها',
+  'ledger.common.assets': 'دارایی‌ها',
+  'ledger.common.no_data': 'هیچ داده‌ای موجود نیست',
+  'ledger.common.loading': 'در حال بارگذاری...',
+  'ledger.common.loading_data': 'در حال بارگذاری داده‌ها...',
+
+  // LedgerOne – Accessibility
+  'ledger.a11y.update_prices': 'به‌روزرسانی قیمت دارایی‌ها',
+  'ledger.a11y.navigate_back': 'بازگشت',
+  'ledger.a11y.open_settings': 'باز کردن تنظیمات',
+  'ledger.a11y.select_date': 'انتخاب تاریخ',
+  'ledger.a11y.select_time': 'انتخاب زمان',
+  'ledger.a11y.asset_icon': 'نماد دارایی برای {asset}',
+  'ledger.a11y.account_icon': 'نماد حساب برای {account}',
 };
 
 const Map<String, Map<String, String>> allTranslations = {

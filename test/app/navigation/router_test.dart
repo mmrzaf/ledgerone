@@ -1,14 +1,14 @@
-import 'package:app_flutter_starter/app/navigation/guards/onboarding_guard.dart';
-import 'package:app_flutter_starter/app/navigation/router.dart';
-import 'package:app_flutter_starter/app/services/cache_service_impl.dart';
-import 'package:app_flutter_starter/app/services/lifecycle_service_impl.dart';
-import 'package:app_flutter_starter/app/services/localization_service_impl.dart';
-import 'package:app_flutter_starter/app/services/network_service_impl.dart';
-import 'package:app_flutter_starter/core/errors/result.dart';
-import 'package:app_flutter_starter/features/home/domain/home_models.dart';
-import 'package:app_flutter_starter/features/home/domain/home_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/app/navigation/guards/onboarding_guard.dart';
+import 'package:ledgerone/app/navigation/router.dart';
+import 'package:ledgerone/app/services/cache_service_impl.dart';
+import 'package:ledgerone/app/services/lifecycle_service_impl.dart';
+import 'package:ledgerone/app/services/localization_service_impl.dart';
+import 'package:ledgerone/app/services/network_service_impl.dart';
+import 'package:ledgerone/core/errors/result.dart';
+import 'package:ledgerone/features/home/domain/home_models.dart';
+import 'package:ledgerone/features/home/domain/home_repository.dart';
 
 import '../../helpers/mock_services.dart';
 
@@ -79,9 +79,7 @@ void main() {
       await tester.pumpWidget(MaterialApp.router(routerConfig: result.router));
 
       await tester.pumpAndSettle();
-
-      // Should show onboarding screen
-      expect(find.text('Welcome to Flutter Starter'), findsOneWidget);
+      expect(find.text('Welcome to Ledger One'), findsOneWidget);
     });
 
     testWidgets('creates router with home as initial route', (tester) async {
@@ -126,9 +124,7 @@ void main() {
       await tester.pumpWidget(MaterialApp.router(routerConfig: result.router));
 
       await tester.pumpAndSettle();
-
-      // Should redirect to onboarding (not seen)
-      expect(find.text('Welcome to Flutter Starter'), findsOneWidget);
+      expect(find.text('Welcome to Ledger One'), findsOneWidget);
     });
 
     test('navigation service can navigate between routes', () async {
