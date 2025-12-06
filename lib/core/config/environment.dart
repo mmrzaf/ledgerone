@@ -20,7 +20,11 @@ class AppConfig {
     required this.appName,
   });
 
-  static const dev = AppConfig(appName: 'Ledger One (DEV)');
+  static const dev = AppConfig(
+    appName: 'Ledger One (DEV)',
+    environment: Environment.dev,
+    apiBaseUrl: '',
+  );
 
   static const prod = AppConfig(
     environment: Environment.prod,
