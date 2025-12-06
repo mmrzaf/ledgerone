@@ -1,7 +1,7 @@
-import 'package:app_flutter_starter/app/services/cache_service_impl.dart';
-import 'package:app_flutter_starter/app/services/network_service_impl.dart';
-import 'package:app_flutter_starter/core/contracts/network_contract.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/app/services/cache_service_impl.dart';
+import 'package:ledgerone/app/services/network_service_impl.dart';
+import 'package:ledgerone/core/contracts/network_contract.dart';
 
 import '../helpers/mock_services.dart';
 

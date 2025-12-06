@@ -1,7 +1,8 @@
-import 'package:app_flutter_starter/app/services/localization_service_impl.dart';
-import 'package:app_flutter_starter/core/i18n/string_keys.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import 'package:ledgerone/app/services/localization_service_impl.dart';
+import 'package:ledgerone/core/i18n/string_keys.dart';
 
 import '../../helpers/mock_services.dart';
 
@@ -30,9 +31,7 @@ void main() {
       expect(fa.textDirection, TextDirection.rtl);
     });
 
-    test('uses English as default locale', () {
-      expect(localization.currentLocale.languageCode, 'en');
-      expect(localization.get(L10nKeys.appName), 'Flutter Starter');
+    expect(localization.get(L10nKeys.appName), 'Ledger One');
     });
 
     test('switches locale and returns proper translations', () async {

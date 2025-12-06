@@ -1,7 +1,7 @@
-import 'package:app_flutter_starter/core/contracts/analytics_contract.dart';
-import 'package:app_flutter_starter/core/contracts/i18n_contract.dart';
-import 'package:app_flutter_starter/core/contracts/theme_contract.dart';
 import 'package:flutter/material.dart';
+import 'package:ledgerone/core/contracts/analytics_contract.dart';
+import 'package:ledgerone/core/contracts/i18n_contract.dart';
+import 'package:ledgerone/core/contracts/theme_contract.dart';
 
 import 'app/app.dart';
 import 'app/di.dart';

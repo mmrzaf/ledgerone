@@ -1,8 +1,8 @@
-import 'package:app_flutter_starter/app/boot/launch_state_machine.dart';
-import 'package:app_flutter_starter/core/contracts/config_contract.dart';
-import 'package:app_flutter_starter/core/contracts/storage_contract.dart';
-import 'package:app_flutter_starter/core/runtime/launch_state.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/app/boot/launch_state_machine.dart';
+import 'package:ledgerone/core/contracts/config_contract.dart';
+import 'package:ledgerone/core/contracts/storage_contract.dart';
+import 'package:ledgerone/core/runtime/launch_state.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockConfigService extends Mock implements ConfigService {}

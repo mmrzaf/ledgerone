@@ -1,7 +1,7 @@
-import 'package:app_flutter_starter/app/services/theme_service_impl.dart';
-import 'package:app_flutter_starter/app/theme/default_themes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/app/services/theme_service_impl.dart';
+import 'package:ledgerone/app/theme/default_themes.dart';
 
 import '../../helpers/mock_services.dart';
 

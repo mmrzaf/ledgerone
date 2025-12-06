@@ -1,5 +1,5 @@
-import 'package:app_flutter_starter/app/services/localization_service_impl.dart';
 import 'package:flutter/widgets.dart';
+import 'package:ledgerone/app/services/localization_service_impl.dart';
 
 /// Locale information
 class LocaleInfo {

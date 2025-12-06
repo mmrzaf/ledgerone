@@ -1,5 +1,5 @@
-import 'package:app_flutter_starter/core/contracts/i18n_contract.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ledgerone/core/contracts/i18n_contract.dart';
 
 import '../../core/contracts/cache_contract.dart';
 import '../../core/contracts/config_contract.dart';

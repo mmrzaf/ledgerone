@@ -1,16 +1,12 @@
 /// English translations (base language)
-const Map<String, String> translationsEn = {
-  // Common
-  'app.name': 'Flutter Starter',
+'app.name': 'Ledger One',
   'common.ok': 'OK',
   'common.cancel': 'Cancel',
   'common.retry': 'Try Again',
   'common.loading': 'Loading...',
   'common.error': 'Error',
   'common.success': 'Success',
-
-  // Onboarding
-  'onboarding.title': 'Welcome to Flutter Starter',
+  'onboarding.title': 'Welcome to Ledger One',
   'onboarding.subtitle':
       'A production-ready template with navigation, guards, and clean architecture.',
   'onboarding.get_started': 'Get Started',
@@ -69,18 +65,14 @@ const Map<String, String> translationsEn = {
 };
 
 /// German translations (de)
-const Map<String, String> translationsDe = {
-  // Common
-  'app.name': 'Flutter Starter',
+'app.name': 'Ledger One',
   'common.ok': 'OK',
   'common.cancel': 'Abbrechen',
   'common.retry': 'Erneut versuchen',
   'common.loading': 'Wird geladen...',
   'common.error': 'Fehler',
   'common.success': 'Erfolg',
-
-  // Onboarding
-  'onboarding.title': 'Willkommen bei Flutter Starter',
+  'onboarding.title': 'Willkommen bei Ledger One',
   'onboarding.subtitle':
       'Eine produktionsreife Vorlage mit Navigation, Guards und sauberer Architektur.',
   'onboarding.get_started': 'Loslegen',
@@ -145,18 +137,14 @@ const Map<String, String> translationsDe = {
 };
 
 /// Persian (Farsi) translations (fa) - RTL language
-const Map<String, String> translationsFa = {
-  // Common
-  'app.name': 'Flutter Starter',
+'app.name': 'Ledger One',
   'common.ok': 'تأیید',
   'common.cancel': 'انصراف',
   'common.retry': 'تلاش دوباره',
   'common.loading': 'در حال بارگذاری...',
   'common.error': 'خطا',
   'common.success': 'موفقیت',
-
-  // Onboarding
-  'onboarding.title': 'به Flutter Starter خوش آمدید',
+  'onboarding.title': 'به Ledger One خوش آمدید',
   'onboarding.subtitle':
       'یک قالب آماده برای محیط واقعی با ناوبری، گاردها و معماری تمیز.',
   'onboarding.get_started': 'شروع کنید',

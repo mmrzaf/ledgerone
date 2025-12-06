@@ -1,6 +1,6 @@
-import 'package:app_flutter_starter/core/errors/app_error.dart';
-import 'package:app_flutter_starter/core/errors/result.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/core/errors/app_error.dart';
+import 'package:ledgerone/core/errors/result.dart';
 
 void main() {
   group('Core Error Taxonomy', () {

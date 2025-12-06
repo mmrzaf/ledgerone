@@ -1,4 +1,4 @@
-import 'package:app_flutter_starter/core/contracts/config_provider.dart';
+import 'package:ledgerone/core/contracts/config_provider.dart';
 
 class TestRemoteConfigProvider implements RemoteConfigProvider {
   final Map<String, dynamic> config;

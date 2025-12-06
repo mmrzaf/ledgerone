@@ -20,15 +20,11 @@ class AppConfig {
     required this.appName,
   });
 
-  static const dev = AppConfig(
-    environment: Environment.dev,
-    apiBaseUrl: 'https://dev-api.example.com',
-    appName: 'Flutter Starter (Dev)',
-  );
+  static const dev = AppConfig(appName: 'Ledger One (DEV)');
 
   static const prod = AppConfig(
     environment: Environment.prod,
     apiBaseUrl: 'https://api.example.com',
-    appName: 'Flutter Starter',
+    appName: 'Ledger One',
   );
 }
