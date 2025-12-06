@@ -1,4 +1,4 @@
-name: Release (build all platforms)
+name: Release – LedgerOne (all platforms)
 
 on:
   push:
@@ -7,26 +7,30 @@ on:
 
 env:
   FLUTTER_CHANNEL: stable
+  ARTIFACT_RETENTION_DAYS: 30
+  APP_NAME: LedgerOne
 
 jobs:
   prepare:
-    name: Prepare
+    name: Prepare release metadata
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.get_version.outputs.version }}
+      version: ${{ steps.tag.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Get tag version
-        id: get_version
+      - name: Extract version from tag
+        id: tag
         run: |
-          echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          echo "Releasing version: ${{ steps.get_version.outputs.version }}"
+          TAG="${GITHUB_REF#refs/tags/}"
+          echo "version=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Print release info
+        run: echo "Releasing $APP_NAME version ${{ steps.tag.outputs.version }}"
 
   build-android:
-    name: Build Android (apk + aab)
+    name: Android – APK & AAB
     runs-on: ubuntu-latest
     needs: prepare
     steps:
@@ -37,38 +41,41 @@ jobs:
         uses: subosito/flutter-action@v2
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
 
-      - name: Pub get
+      - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build release APK
+      - name: Build Android APK (release)
         run: flutter build apk --release
 
-      - name: Build app bundle (AAB)
+      - name: Build Android App Bundle (AAB, release)
         run: flutter build appbundle --release
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: android-artifacts
+          name: android
           path: |
             build/app/outputs/flutter-apk/app-release.apk
             build/app/outputs/bundle/release/app-release.aab
-          retention-days: 30
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
   build-web:
-    name: Build Web
+    name: Web – static bundle
     runs-on: ubuntu-latest
     needs: prepare
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
 
-      - name: Pub get
+      - name: Flutter pub get
         run: flutter pub get
 
       - name: Build web (release)
@@ -77,80 +84,88 @@ jobs:
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
-          name: web-artifact
+          name: web
           path: build/web
-          retention-days: 30
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
   build-linux:
-    name: Build Linux (release)
+    name: Linux – x64 bundle
     runs-on: ubuntu-latest
     needs: prepare
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install native build dependencies
+      - name: Install Linux / sqflite dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential clang cmake pkg-config \
+            build-essential clang cmake ninja-build pkg-config \
             libgtk-3-dev libglib2.0-dev libpulse-dev libasound2-dev \
-            libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
+            libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+            sqlite3 libsqlite3-dev
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
 
-      - name: Pub get
+      - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build linux (release)
+      - name: Build Linux (release)
         run: flutter build linux --release
 
-      - name: Upload linux artifact
+      - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
-          name: linux-artifact
+          name: linux
           path: build/linux/x64/release/bundle
-          retention-days: 30
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
   build-windows:
-    name: Build Windows (release)
+    name: Windows – x64 bundle
     runs-on: windows-latest
     needs: prepare
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Flutter on Windows
         uses: subosito/flutter-action@v2
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
 
-      - name: Pub get
+      - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build windows (release)
+      - name: Build Windows (release)
         run: flutter build windows --release
 
-      - name: Upload windows artifact
+      - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
-          name: windows-artifact
+          name: windows
           path: build\windows\x64\runner\Release
-          retention-days: 30
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
   build-macos:
-    name: Build macOS (release)
+    name: macOS – x64 app
     runs-on: macos-latest
     needs: prepare
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Flutter on macOS
         uses: subosito/flutter-action@v2
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
 
-      - name: Pub get
+      - name: Flutter pub get
         run: flutter pub get
 
       - name: Build macOS (release)
@@ -159,50 +174,62 @@ jobs:
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: macos-artifact
+          name: macos
           path: build/macos/Build/Products/Release
-          retention-days: 30
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
   build-ios:
-    name: Build iOS (xcarchive / ipa)
+    name: iOS – app / IPA
     runs-on: macos-latest
     needs: prepare
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Setup Flutter on macOS
         uses: subosito/flutter-action@v2
         with:
           channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
 
-      - name: Pub get
+      - name: Flutter pub get
         run: flutter pub get
 
-      - name: Build iOS archive (xcarchive) without codesign if no secrets
+      - name: Build iOS
+        shell: bash
         run: |
           set -euo pipefail
-          if [ -n "${{ secrets.APPLE_CERT }}" ] && [ -n "${{ secrets.APPLE_PROVISION }}" ]; then
-            echo "Signing assets provided. Proceeding with signed build (you must configure codesign steps)."
-            flutter build ipa --export-method ad-hoc --no-tree-shake-icons --build-number="${{ needs.prepare.outputs.version }}" || flutter build ipa
-          else
-            echo "No Apple signing secrets provided. Building without codesign (xcarchive)."
-            # build without codesign; don't fail workflow if this step can't produce a signed ipa
-            flutter build ios --no-codesign --release || true
-          fi
-        shell: bash
 
-      - name: Upload ios artifact
+          if [ -n "${{ secrets.APPLE_CERT }}" ] && [ -n "${{ secrets.APPLE_PROVISION }}" ]; then
+            echo "Apple signing secrets found – building signed IPA."
+            flutter build ipa \
+              --export-method ad-hoc \
+              --no-tree-shake-icons
+          else
+            echo "No Apple signing secrets – building unsigned iOS app (no codesign)."
+            flutter build ios --no-codesign --release
+          fi
+
+      - name: Upload iOS Runner.app (unsigned build)
         uses: actions/upload-artifact@v4
+        if: ${{ hashFiles('build/ios/iphoneos/Runner.app/**') != '' }}
         with:
-          name: ios-artifact
-          path: |
-            build/ios/iphoneos/Runner.app
-            build/ios/iphoneos/*.xcarchive
-          retention-days: 30
+          name: ios
+          path: build/ios/iphoneos/Runner.app
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
+
+      - name: Upload iOS IPA (if produced)
+        uses: actions/upload-artifact@v4
+        if: ${{ hashFiles('build/ios/ipa/*.ipa') != '' }}
+        with:
+          name: ios
+          path: build/ios/ipa/*.ipa
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
 
   create-github-release:
-    name: Create GitHub Release and attach artifacts
+    name: GitHub Release – attach artifacts
     needs:
+      - prepare
       - build-android
       - build-web
       - build-linux
@@ -217,26 +244,83 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: release-artifacts
-      
-      - name: Create ZIP Archives for Release
-        run: |
-          cd release-artifacts
-          zip -r android.zip android-artifacts
-          zip -r web.zip web-artifact
-          zip -r linux.zip linux-artifact
-          zip -r windows.zip windows-artifact
-          zip -r macos.zip macos-artifact
-          zip -r ios.zip ios-artifact
-          ls -l *.zip
+
+      - name: Package release files (zip only what makes sense)
         shell: bash
+        env:
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          cd release-artifacts
+          mkdir -p dist
+
+          APP="${APP_NAME:-LedgerOne}"
+          V="${VERSION:-dev}"
+
+          echo "Packaging ${APP} ${V}"
+
+          # ----- ZIPS multi-file bundles -----
+          if [ -d web ]; then
+            zip -r "dist/${APP}-${V}-web.zip" web
+          fi
+
+          if [ -d linux ]; then
+            zip -r "dist/${APP}-${V}-linux-x64.zip" linux
+          fi
+
+          if [ -d windows ]; then
+            zip -r "dist/${APP}-${V}-windows-x64.zip" windows
+          fi
+
+          if [ -d macos ]; then
+            zip -r "dist/${APP}-${V}-macos-x64.zip" macos
+          fi
+
+          # ----- RAW FILES -----
+          # Android APK / AAB
+          if [ -d android ]; then
+            APK="$(find android -maxdepth 5 -type f -name 'app-release.apk' | head -n 1 || true)"
+            if [ -n "$APK" ]; then
+              cp "$APK" "dist/${APP}-${V}-android.apk"
+            fi
+
+            AAB="$(find android -maxdepth 5 -type f -name 'app-release.aab' | head -n 1 || true)"
+            if [ -n "$AAB" ]; then
+              cp "$AAB" "dist/${APP}-${V}-android.aab"
+            fi
+          fi
+
+          # iOS IPA (if it exists)
+          if [ -d ios ]; then
+            IPA="$(find ios -maxdepth 5 -type f -name '*.ipa' | head -n 1 || true)"
+            if [ -n "$IPA" ]; then
+              cp "$IPA" "dist/${APP}-${V}-ios.ipa"
+            fi
+          fi
+
+          echo "Final release files:"
+          ls -lh dist
 
       - name: Create GitHub Release
-        id: gh_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: "Automated build artifacts for tag ${{ github.ref_name }}."
-          files: release-artifacts/*.zip 
+          name: "${{ env.APP_NAME }} ${{ github.ref_name }}"
+          body: |
+            LedgerOne – offline-first personal finance & crypto tracking.
+
+            Built from tag `${{ github.ref_name }}`.
+
+            Included artifacts:
+            - Android: APK + AAB
+            - Web build (static bundle)
+            - Linux x64 bundle
+            - Windows x64 bundle
+            - macOS x64 app bundle
+            - iOS IPA
+
+          files: release-artifacts/dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
