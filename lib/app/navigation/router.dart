@@ -1,5 +1,13 @@
 import 'package:go_router/go_router.dart';
+import 'package:ledgerone/app/di.dart';
 import 'package:ledgerone/core/contracts/i18n_contract.dart';
+import 'package:ledgerone/features/ledger/data/database.dart';
+import 'package:ledgerone/features/ledger/services/price_update_service.dart';
+import 'package:ledgerone/features/ledger/ui/crypto_screen.dart';
+import 'package:ledgerone/features/ledger/ui/dashboard_screen.dart';
+import 'package:ledgerone/features/ledger/ui/money_screen.dart';
+import 'package:ledgerone/features/ledger/ui/settings_screen.dart';
+import 'package:ledgerone/features/ledger/ui/transaction_editor_screen.dart';
 
 import '../../core/contracts/cache_contract.dart';
 import '../../core/contracts/config_contract.dart';
@@ -8,8 +16,6 @@ import '../../core/contracts/lifecycle_contract.dart';
 import '../../core/contracts/navigation_contract.dart';
 import '../../core/contracts/network_contract.dart';
 import '../../core/contracts/storage_contract.dart';
-import '../../features/home/domain/home_repository.dart';
-import '../../features/home/ui/home_screen.dart';
 import '../../features/onboarding/ui/onboarding_screen.dart';
 
 class RouteMetadata {
@@ -45,7 +51,12 @@ class NavigationServiceImpl implements NavigationService {
 
   @override
   void goBack() {
-    _router.pop();
+    if (_router.canPop()) {
+      _router.pop();
+    } else {
+      final fallbackPath = _routeIdToPath['dashboard'] ?? '/dashboard';
+      _router.go(fallbackPath);
+    }
   }
 
   @override
@@ -85,10 +96,17 @@ class RouterFactory {
     required CacheService cache,
     required AppLifecycleService lifecycle,
     required LocalizationService localization,
-    required HomeRepository homeRepository,
   }) {
-    final routeIdToPath = {'onboarding': '/onboarding', 'home': '/home'};
-
+    final routeIdToPath = {
+      'onboarding': '/onboarding',
+      'dashboard': '/dashboard',
+      'crypto': '/crypto',
+      'money': '/money',
+      'transaction_editor': '/transaction',
+      'assets': '/assets',
+      'accounts': '/accounts',
+      'settings': '/settings',
+    };
     final sortedGuards = List<NavigationGuard>.from(guards)
       ..sort((a, b) => a.priority.compareTo(b.priority));
 
@@ -141,17 +159,71 @@ class RouterFactory {
             );
           },
         ),
+
         GoRoute(
-          path: '/home',
+          path: '/dashboard',
           builder: (context, state) {
-            return HomeScreen(
+            final balanceService = ServiceLocator().get<BalanceService>();
+            final priceUpdateService = ServiceLocator()
+                .get<PriceUpdateService>();
+
+            return DashboardScreen(
               navigation: navigationService,
-              configService: config,
-              networkService: network,
-              cacheService: cache,
-              lifecycleService: lifecycle,
-              homeRepository: homeRepository,
+              balanceService: balanceService,
+              priceUpdateService: priceUpdateService,
             );
+          },
+        ),
+
+        GoRoute(
+          path: '/crypto',
+          builder: (context, state) {
+            final balanceService = ServiceLocator().get<BalanceService>();
+            final assetRepo = ServiceLocator().get<AssetRepository>();
+
+            return CryptoScreen(
+              navigation: navigationService,
+              balanceService: balanceService,
+              assetRepo: assetRepo,
+            );
+          },
+        ),
+
+        GoRoute(
+          path: '/money',
+          builder: (context, state) {
+            final balanceService = ServiceLocator().get<BalanceService>();
+
+            return MoneyScreen(
+              navigation: navigationService,
+              balanceService: balanceService,
+            );
+          },
+        ),
+        GoRoute(
+          path: '/transaction',
+          builder: (context, state) {
+            final db = ServiceLocator().get<LedgerDatabase>();
+            final assetRepo = ServiceLocator().get<AssetRepository>();
+            final accountRepo = ServiceLocator().get<AccountRepository>();
+            final categoryRepo = ServiceLocator().get<CategoryRepository>();
+            final txRepo = ServiceLocator().get<TransactionRepository>();
+
+            return TransactionEditorScreen(
+              navigation: navigationService,
+              database: db,
+              assetRepo: assetRepo,
+              accountRepo: accountRepo,
+              categoryRepo: categoryRepo,
+              transactionRepo: txRepo,
+            );
+          },
+        ),
+
+        GoRoute(
+          path: '/settings',
+          builder: (context, state) {
+            return SettingsScreen(navigation: navigationService);
           },
         ),
       ],

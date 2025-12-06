@@ -6,7 +6,7 @@ class LaunchState {
   const LaunchState({required this.onboardingSeen, this.initialDeepLink});
 
   String determineInitialRoute() {
-    return onboardingSeen ? 'home' : 'onboarding';
+    return onboardingSeen ? 'dashboard' : 'onboarding';
   }
 
   @override
