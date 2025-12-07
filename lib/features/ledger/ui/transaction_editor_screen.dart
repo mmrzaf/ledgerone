@@ -1,29 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../app/di.dart';
+import '../../../app/presentation/error_presenter.dart';
+import '../../../core/contracts/analytics_contract.dart';
+import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
-import '../data/database.dart';
+import '../../../core/errors/app_error.dart';
+import '../../../core/i18n/string_keys.dart';
+import '../data/repositories_interfaces.dart';
 import '../domain/models.dart';
+import '../domain/services.dart';
 
 class TransactionEditorScreen extends StatefulWidget {
   final NavigationService navigation;
-  final LedgerDatabase database;
-  final AssetRepository assetRepo;
-  final AccountRepository accountRepo;
-  final CategoryRepository categoryRepo;
-  final TransactionRepository transactionRepo;
-  final Transaction? existingTransaction;
-  final List<TransactionLeg>? existingLegs;
+  final TransactionService transactionService;
+  final AnalyticsService analytics;
 
   const TransactionEditorScreen({
     required this.navigation,
-    required this.database,
-    required this.assetRepo,
-    required this.accountRepo,
-    required this.categoryRepo,
-    required this.transactionRepo,
-    this.existingTransaction,
-    this.existingLegs,
+    required this.transactionService,
+    required this.analytics,
     super.key,
   });
 
@@ -35,22 +32,20 @@ class TransactionEditorScreen extends StatefulWidget {
 class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // Common fields
   TransactionType _type = TransactionType.expense;
   DateTime _timestamp = DateTime.now();
   final _descriptionController = TextEditingController();
 
-  // Type-specific fields
   Account? _selectedAccount;
-  Account? _toAccount; // For transfers
+  Account? _toAccount;
   Asset? _selectedAsset;
-  Asset? _fromAsset; // For trades
-  Asset? _toAsset; // For trades
-  Asset? _feeAsset; // For trades
+  Asset? _fromAsset;
+  Asset? _toAsset;
+  Asset? _feeAsset;
   Category? _selectedCategory;
 
   final _amountController = TextEditingController();
-  final _toAmountController = TextEditingController(); // For trades
+  final _toAmountController = TextEditingController();
   final _feeAmountController = TextEditingController();
 
   List<Asset> _assets = [];
@@ -63,11 +58,8 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   @override
   void initState() {
     super.initState();
+    widget.analytics.logScreenView('transaction_editor');
     _loadData();
-
-    if (widget.existingTransaction != null) {
-      _loadExistingTransaction();
-    }
   }
 
   @override
@@ -80,134 +72,39 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   }
 
   Future<void> _loadData() async {
-    final assets = await widget.assetRepo.getAll();
-    final accounts = await widget.accountRepo.getAll();
-    final categories = await widget.categoryRepo.getAll();
+    try {
+      final assetRepo = ServiceLocator().get<AssetRepository>();
+      final accountRepo = ServiceLocator().get<AccountRepository>();
+      final categoryRepo = ServiceLocator().get<CategoryRepository>();
 
-    setState(() {
-      _assets = assets;
-      _accounts = accounts;
-      _categories = categories;
-      _loading = false;
-    });
+      final assets = await assetRepo.getAll();
+      final accounts = await accountRepo.getAll();
+      final categories = await categoryRepo.getAll();
 
-    if (widget.existingTransaction != null && widget.existingLegs != null) {
-      _loadExistingTransaction();
-    }
-  }
-
-  void _loadExistingTransaction() {
-    if (_assets.isEmpty || _accounts.isEmpty) return;
-
-    final tx = widget.existingTransaction;
-    final legs = widget.existingLegs ?? const <TransactionLeg>[];
-
-    if (tx == null || legs.isEmpty) return;
-
-    setState(() {
-      _type = tx.type;
-      _timestamp = tx.timestamp;
-      _descriptionController.text = tx.description;
-
-      switch (_type) {
-        case TransactionType.transfer:
-          final fromLeg = legs.firstWhere(
-            (l) => l.amount < 0,
-            orElse: () => legs.first,
-          );
-          final toLeg = legs.firstWhere(
-            (l) => l.amount > 0,
-            orElse: () => legs.first,
-          );
-
-          _selectedAccount = _accounts.firstWhere(
-            (a) => a.id == fromLeg.accountId,
-            orElse: () => _accounts.first,
-          );
-
-          _toAccount = _accounts.firstWhere(
-            (a) => a.id == toLeg.accountId,
-            orElse: () => _accounts.first,
-          );
-
-          _selectedAsset = _assets.firstWhere(
-            (a) => a.id == fromLeg.assetId,
-            orElse: () => _assets.first,
-          );
-
-          _amountController.text = fromLeg.amount.abs().toString();
-          break;
-
-        case TransactionType.trade:
-          final fromLeg = legs.firstWhere(
-            (l) => l.role == LegRole.main && l.amount < 0,
-            orElse: () =>
-                legs.firstWhere((l) => l.amount < 0, orElse: () => legs.first),
-          );
-
-          final toLeg = legs.firstWhere(
-            (l) => l.role == LegRole.main && l.amount > 0,
-            orElse: () =>
-                legs.firstWhere((l) => l.amount > 0, orElse: () => legs.first),
-          );
-
-          final feeLeg = legs.where((l) => l.role == LegRole.fee).firstOrNull;
-
-          _selectedAccount = _accounts.firstWhere(
-            (a) => a.id == fromLeg.accountId,
-            orElse: () => _accounts.first,
-          );
-
-          _fromAsset = _assets.firstWhere(
-            (a) => a.id == fromLeg.assetId,
-            orElse: () => _assets.first,
-          );
-
-          _toAsset = _assets.firstWhere(
-            (a) => a.id == toLeg.assetId,
-            orElse: () => _assets.first,
-          );
-
-          _amountController.text = fromLeg.amount.abs().toString();
-          _toAmountController.text = toLeg.amount.abs().toString();
-
-          if (feeLeg != null) {
-            _feeAsset = _assets.firstWhere(
-              (a) => a.id == feeLeg.assetId,
-              orElse: () => _assets.first,
-            );
-            _feeAmountController.text = feeLeg.amount.abs().toString();
-          }
-          break;
-
-        default:
-          // income / expense / adjustment → main-leg + category logic
-          final mainLeg = legs.firstWhere(
-            (l) => l.role == LegRole.main,
-            orElse: () => legs.first,
-          );
-
-          _selectedAccount = _accounts.firstWhere(
-            (a) => a.id == mainLeg.accountId,
-            orElse: () => _accounts.first,
-          );
-
-          _selectedAsset = _assets.firstWhere(
-            (a) => a.id == mainLeg.assetId,
-            orElse: () => _assets.first,
-          );
-
-          _amountController.text = mainLeg.amount.abs().toString();
-
-          if (mainLeg.categoryId != null && _categories.isNotEmpty) {
-            _selectedCategory = _categories.firstWhere(
-              (c) => c.id == mainLeg.categoryId,
-              orElse: () => _categories.first,
-            );
-          }
-          break;
+      if (mounted) {
+        setState(() {
+          _assets = assets;
+          _accounts = accounts;
+          _categories = categories;
+          _loading = false;
+        });
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ErrorPresenter.showError(
+          context,
+          e is AppError
+              ? e
+              : AppError(
+                  category: ErrorCategory.unknown,
+                  message: e.toString(),
+                  originalError: e,
+                ),
+          screen: 'transaction_editor',
+        );
+      }
+    }
   }
 
   Future<void> _save() async {
@@ -216,177 +113,128 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     setState(() => _saving = true);
 
     try {
-      final transaction = Transaction(
-        id: widget.existingTransaction?.id ?? widget.database.generateId(),
-        timestamp: _timestamp,
-        type: _type,
-        description: _descriptionController.text.trim(),
-        createdAt: widget.existingTransaction?.createdAt ?? DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+      final description = _descriptionController.text.trim();
 
-      final legs = _buildLegs(transaction.id);
+      switch (_type) {
+        case TransactionType.income:
+          await widget.transactionService.createIncome(
+            accountId: _selectedAccount!.id,
+            assetId: _selectedAsset!.id,
+            amount: _parseAmount(_amountController.text),
+            categoryId: _selectedCategory?.id,
+            description: description,
+            timestamp: _timestamp,
+          );
+          break;
 
-      if (widget.existingTransaction != null) {
-        await widget.transactionRepo.update(transaction, legs);
-      } else {
-        await widget.transactionRepo.insert(transaction, legs);
+        case TransactionType.expense:
+          await widget.transactionService.createExpense(
+            accountId: _selectedAccount!.id,
+            assetId: _selectedAsset!.id,
+            amount: _parseAmount(_amountController.text),
+            categoryId: _selectedCategory!.id,
+            description: description,
+            timestamp: _timestamp,
+          );
+          break;
+
+        case TransactionType.transfer:
+          await widget.transactionService.createTransfer(
+            fromAccountId: _selectedAccount!.id,
+            toAccountId: _toAccount!.id,
+            assetId: _selectedAsset!.id,
+            amount: _parseAmount(_amountController.text),
+            description: description,
+            timestamp: _timestamp,
+          );
+          break;
+
+        case TransactionType.trade:
+          await widget.transactionService.createTrade(
+            accountId: _selectedAccount!.id,
+            fromAssetId: _fromAsset!.id,
+            fromAmount: _parseAmount(_amountController.text),
+            toAssetId: _toAsset!.id,
+            toAmount: _parseAmount(_toAmountController.text),
+            feeAssetId: _feeAsset?.id,
+            feeAmount: _feeAmountController.text.isEmpty
+                ? null
+                : _parseAmount(_feeAmountController.text),
+            description: description,
+            timestamp: _timestamp,
+          );
+          break;
+
+        case TransactionType.adjustment:
+          await widget.transactionService.createAdjustment(
+            accountId: _selectedAccount!.id,
+            assetId: _selectedAsset!.id,
+            amount: _parseAmount(_amountController.text),
+            description: description,
+            timestamp: _timestamp,
+          );
+          break;
       }
 
       if (mounted) {
+        final l10n = context.l10n;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              widget.existingTransaction != null
-                  ? 'Transaction updated'
-                  : 'Transaction created',
-            ),
+            content: Text(l10n.get(L10nKeys.ledgerTxEditorCreated)),
             backgroundColor: Colors.green,
           ),
         );
         widget.navigation.goBack();
       }
-    } catch (e) {
+    } on AppError catch (e) {
+      if (!mounted) return;
+
       setState(() => _saving = false);
+      ErrorPresenter.showError(context, e, screen: 'transaction_editor');
+    } catch (e) {
+      if (!mounted) return;
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
+      setState(() => _saving = false);
+      ErrorPresenter.showError(
+        context,
+        AppError(
+          category: ErrorCategory.unknown,
+          message: e.toString(),
+          originalError: e,
+        ),
+        screen: 'transaction_editor',
+      );
     }
-  }
-
-  List<TransactionLeg> _buildLegs(String transactionId) {
-    final legs = <TransactionLeg>[];
-
-    switch (_type) {
-      case TransactionType.income:
-        legs.add(
-          TransactionLeg(
-            id: widget.database.generateId(),
-            transactionId: transactionId,
-            accountId: _selectedAccount!.id,
-            assetId: _selectedAsset!.id,
-            amount: _parseAmount(_amountController.text), // Positive
-            role: LegRole.main,
-            categoryId: _selectedCategory?.id,
-          ),
-        );
-        break;
-
-      case TransactionType.expense:
-        legs.add(
-          TransactionLeg(
-            id: widget.database.generateId(),
-            transactionId: transactionId,
-            accountId: _selectedAccount!.id,
-            assetId: _selectedAsset!.id,
-            amount: -_parseAmount(_amountController.text), // Negative
-            role: LegRole.main,
-            categoryId: _selectedCategory?.id,
-          ),
-        );
-        break;
-
-      case TransactionType.transfer:
-        // Negative leg (from)
-        legs.add(
-          TransactionLeg(
-            id: widget.database.generateId(),
-            transactionId: transactionId,
-            accountId: _selectedAccount!.id,
-            assetId: _selectedAsset!.id,
-            amount: -_parseAmount(_amountController.text),
-            role: LegRole.main,
-          ),
-        );
-
-        // Positive leg (to)
-        legs.add(
-          TransactionLeg(
-            id: widget.database.generateId(),
-            transactionId: transactionId,
-            accountId: _toAccount!.id,
-            assetId: _selectedAsset!.id,
-            amount: _parseAmount(_amountController.text),
-            role: LegRole.main,
-          ),
-        );
-        break;
-
-      case TransactionType.trade:
-        // What you pay (negative)
-        legs.add(
-          TransactionLeg(
-            id: widget.database.generateId(),
-            transactionId: transactionId,
-            accountId: _selectedAccount!.id,
-            assetId: _fromAsset!.id,
-            amount: -_parseAmount(_amountController.text),
-            role: LegRole.main,
-          ),
-        );
-
-        // What you receive (positive)
-        legs.add(
-          TransactionLeg(
-            id: widget.database.generateId(),
-            transactionId: transactionId,
-            accountId: _selectedAccount!.id,
-            assetId: _toAsset!.id,
-            amount: _parseAmount(_toAmountController.text),
-            role: LegRole.main,
-          ),
-        );
-
-        // Optional fee
-        if (_feeAsset != null && _feeAmountController.text.isNotEmpty) {
-          legs.add(
-            TransactionLeg(
-              id: widget.database.generateId(),
-              transactionId: transactionId,
-              accountId: _selectedAccount!.id,
-              assetId: _feeAsset!.id,
-              amount: -_parseAmount(_feeAmountController.text),
-              role: LegRole.fee,
-            ),
-          );
-        }
-        break;
-
-      case TransactionType.adjustment:
-        legs.add(
-          TransactionLeg(
-            id: widget.database.generateId(),
-            transactionId: transactionId,
-            accountId: _selectedAccount!.id,
-            assetId: _selectedAsset!.id,
-            amount: _parseAmount(_amountController.text),
-            role: LegRole.main,
-          ),
-        );
-        break;
-    }
-
-    return legs;
   }
 
   double _parseAmount(String text) {
-    return double.tryParse(text.trim()) ?? 0.0;
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      throw const AppError(
+        category: ErrorCategory.badRequest,
+        message: 'Amount cannot be empty',
+      );
+    }
+
+    final parsed = double.tryParse(trimmed);
+    if (parsed == null || parsed == 0.0) {
+      throw const AppError(
+        category: ErrorCategory.badRequest,
+        message: 'Invalid amount',
+      );
+    }
+
+    return parsed;
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.existingTransaction != null
-              ? 'Edit Transaction'
-              : 'New Transaction',
-        ),
+        title: Text(l10n.get(L10nKeys.ledgerTxEditorTitle)),
         actions: [
           if (_saving)
             const Center(
@@ -403,35 +251,31 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
             IconButton(
               icon: const Icon(Icons.check),
               onPressed: _save,
-              tooltip: 'Save',
+              tooltip: l10n.get(L10nKeys.ledgerCommonSave),
             ),
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? LoadingIndicator(message: l10n.get(L10nKeys.ledgerCommonLoading))
           : Form(
               key: _formKey,
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  _buildTypeSelector(theme),
+                  _buildTypeSelector(theme, l10n),
                   const SizedBox(height: 24),
-                  _buildDateTimePicker(theme),
+                  _buildDateTimePicker(theme, l10n),
                   const SizedBox(height: 16),
-                  _buildDescriptionField(),
+                  _buildDescriptionField(l10n),
                   const SizedBox(height: 24),
-                  ..._buildTypeSpecificFields(theme),
+                  ..._buildTypeSpecificFields(theme, l10n),
                   const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
                       onPressed: _saving ? null : _save,
-                      child: Text(
-                        widget.existingTransaction != null
-                            ? 'Update Transaction'
-                            : 'Create Transaction',
-                      ),
+                      child: Text(l10n.get(L10nKeys.ledgerTxEditorCreate)),
                     ),
                   ),
                 ],
@@ -440,51 +284,38 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     );
   }
 
-  Widget _buildTypeSelector(ThemeData theme) {
+  Widget _buildTypeSelector(ThemeData theme, LocalizationService l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Transaction Type', style: theme.textTheme.titleMedium),
+        Text(
+          l10n.get(L10nKeys.ledgerTxEditorType),
+          style: theme.textTheme.titleMedium,
+        ),
         const SizedBox(height: 8),
-        SegmentedButton<TransactionType>(
-          segments: TransactionType.values
-              .map(
-                (type) => ButtonSegment(
-                  value: type,
-                  label: Text(type.displayName),
-                  icon: Icon(_getTypeIcon(type)),
-                ),
-              )
-              .toList(),
-          selected: {_type},
-          onSelectionChanged: (Set<TransactionType> selected) {
-            setState(() => _type = selected.first);
-          },
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: TransactionType.values.map((type) {
+            final isSelected = type == _type;
+            return ChoiceChip(
+              label: Text(l10n.get('ledger.tx_type.${type.name}')),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) setState(() => _type = type);
+              },
+            );
+          }).toList(),
         ),
       ],
     );
   }
 
-  IconData _getTypeIcon(TransactionType type) {
-    switch (type) {
-      case TransactionType.income:
-        return Icons.arrow_downward;
-      case TransactionType.expense:
-        return Icons.arrow_upward;
-      case TransactionType.transfer:
-        return Icons.swap_horiz;
-      case TransactionType.trade:
-        return Icons.currency_exchange;
-      case TransactionType.adjustment:
-        return Icons.tune;
-    }
-  }
-
-  Widget _buildDateTimePicker(ThemeData theme) {
+  Widget _buildDateTimePicker(ThemeData theme, LocalizationService l10n) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.calendar_today),
-      title: const Text('Date & Time'),
+      title: Text(l10n.get(L10nKeys.ledgerTxEditorDateTime)),
       subtitle: Text(_formatDateTime(_timestamp)),
       onTap: () async {
         final date = await showDatePicker(
@@ -516,86 +347,107 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     );
   }
 
-  Widget _buildDescriptionField() {
+  Widget _buildDescriptionField(LocalizationService l10n) {
     return TextFormField(
       controller: _descriptionController,
-      decoration: const InputDecoration(
-        labelText: 'Description',
-        hintText: 'Enter transaction description',
+      decoration: InputDecoration(
+        labelText: l10n.get(L10nKeys.ledgerTxEditorDescription),
+        hintText: l10n.get(L10nKeys.ledgerTxEditorDescriptionHint),
       ),
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
-          return 'Description is required';
+          return l10n.get(L10nKeys.ledgerTxEditorDescriptionRequired);
         }
         return null;
       },
     );
   }
 
-  List<Widget> _buildTypeSpecificFields(ThemeData theme) {
+  List<Widget> _buildTypeSpecificFields(
+    ThemeData theme,
+    LocalizationService l10n,
+  ) {
     switch (_type) {
       case TransactionType.income:
       case TransactionType.expense:
         return [
-          _buildAccountDropdown(),
+          _buildAccountDropdown(l10n),
           const SizedBox(height: 16),
-          _buildAssetDropdown(),
+          _buildAssetDropdown(l10n),
           const SizedBox(height: 16),
-          _buildAmountField('Amount'),
+          _buildAmountField(l10n, L10nKeys.ledgerTxEditorAmount),
           const SizedBox(height: 16),
           _buildCategoryDropdown(
+            l10n,
             _type == TransactionType.income ? 'income' : 'expense',
           ),
         ];
 
       case TransactionType.transfer:
         return [
-          _buildAccountDropdown(label: 'From Account'),
+          _buildAccountDropdown(
+            l10n,
+            label: L10nKeys.ledgerTxEditorFromAccount,
+          ),
           const SizedBox(height: 16),
-          _buildToAccountDropdown(),
+          _buildToAccountDropdown(l10n),
           const SizedBox(height: 16),
-          _buildAssetDropdown(),
+          _buildAssetDropdown(l10n),
           const SizedBox(height: 16),
-          _buildAmountField('Amount'),
+          _buildAmountField(l10n, L10nKeys.ledgerTxEditorAmount),
         ];
 
       case TransactionType.trade:
         return [
-          _buildAccountDropdown(),
+          _buildAccountDropdown(l10n),
           const SizedBox(height: 16),
-          _buildFromAssetDropdown(),
+          _buildFromAssetDropdown(l10n),
           const SizedBox(height: 16),
-          _buildAmountField('Amount Paid', controller: _amountController),
+          _buildAmountField(
+            l10n,
+            L10nKeys.ledgerTxEditorAmountPaid,
+            controller: _amountController,
+          ),
           const SizedBox(height: 16),
-          _buildToAssetDropdown(),
+          _buildToAssetDropdown(l10n),
           const SizedBox(height: 16),
-          _buildAmountField('Amount Received', controller: _toAmountController),
+          _buildAmountField(
+            l10n,
+            L10nKeys.ledgerTxEditorAmountReceived,
+            controller: _toAmountController,
+          ),
           const SizedBox(height: 16),
-          _buildFeeAssetDropdown(),
+          _buildFeeAssetDropdown(l10n),
           if (_feeAsset != null) ...[
             const SizedBox(height: 16),
-            _buildAmountField('Fee Amount', controller: _feeAmountController),
+            _buildAmountField(
+              l10n,
+              L10nKeys.ledgerTxEditorFeeAmount,
+              controller: _feeAmountController,
+            ),
           ],
         ];
 
       case TransactionType.adjustment:
         return [
-          _buildAccountDropdown(),
+          _buildAccountDropdown(l10n),
           const SizedBox(height: 16),
-          _buildAssetDropdown(),
+          _buildAssetDropdown(l10n),
           const SizedBox(height: 16),
           _buildAmountField(
-            'Amount',
-            helperText: 'Positive increases balance, negative decreases',
+            l10n,
+            L10nKeys.ledgerTxEditorAmount,
+            helperText: l10n.get(L10nKeys.ledgerTxEditorAdjustmentHelper),
           ),
         ];
     }
   }
 
-  Widget _buildAccountDropdown({String label = 'Account'}) {
+  Widget _buildAccountDropdown(LocalizationService l10n, {String label = ''}) {
+    final labelText = label.isEmpty ? L10nKeys.ledgerTxEditorAccount : label;
     return DropdownButtonFormField<Account>(
       initialValue: _selectedAccount,
-      decoration: InputDecoration(labelText: label),
+      decoration: InputDecoration(labelText: l10n.get(labelText)),
       items: _accounts
           .map(
             (account) =>
@@ -603,14 +455,18 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
           )
           .toList(),
       onChanged: (account) => setState(() => _selectedAccount = account),
-      validator: (value) => value == null ? 'Account is required' : null,
+      validator: (value) => value == null
+          ? l10n.get(L10nKeys.ledgerTxEditorAccountRequired)
+          : null,
     );
   }
 
-  Widget _buildToAccountDropdown() {
+  Widget _buildToAccountDropdown(LocalizationService l10n) {
     return DropdownButtonFormField<Account>(
       initialValue: _toAccount,
-      decoration: const InputDecoration(labelText: 'To Account'),
+      decoration: InputDecoration(
+        labelText: l10n.get(L10nKeys.ledgerTxEditorToAccount),
+      ),
       items: _accounts
           .where((a) => a.id != _selectedAccount?.id)
           .map(
@@ -619,14 +475,18 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
           )
           .toList(),
       onChanged: (account) => setState(() => _toAccount = account),
-      validator: (value) => value == null ? 'To account is required' : null,
+      validator: (value) => value == null
+          ? l10n.get(L10nKeys.ledgerTxEditorToAccountRequired)
+          : null,
     );
   }
 
-  Widget _buildAssetDropdown() {
+  Widget _buildAssetDropdown(LocalizationService l10n) {
     return DropdownButtonFormField<Asset>(
       initialValue: _selectedAsset,
-      decoration: const InputDecoration(labelText: 'Asset'),
+      decoration: InputDecoration(
+        labelText: l10n.get(L10nKeys.ledgerTxEditorAsset),
+      ),
       items: _assets
           .map(
             (asset) => DropdownMenuItem(
@@ -636,14 +496,17 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
           )
           .toList(),
       onChanged: (asset) => setState(() => _selectedAsset = asset),
-      validator: (value) => value == null ? 'Asset is required' : null,
+      validator: (value) =>
+          value == null ? l10n.get(L10nKeys.ledgerTxEditorAssetRequired) : null,
     );
   }
 
-  Widget _buildFromAssetDropdown() {
+  Widget _buildFromAssetDropdown(LocalizationService l10n) {
     return DropdownButtonFormField<Asset>(
       initialValue: _fromAsset,
-      decoration: const InputDecoration(labelText: 'From Asset (Paying)'),
+      decoration: InputDecoration(
+        labelText: l10n.get(L10nKeys.ledgerTxEditorFromAsset),
+      ),
       items: _assets
           .map(
             (asset) => DropdownMenuItem(
@@ -653,14 +516,18 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
           )
           .toList(),
       onChanged: (asset) => setState(() => _fromAsset = asset),
-      validator: (value) => value == null ? 'From asset is required' : null,
+      validator: (value) => value == null
+          ? l10n.get(L10nKeys.ledgerTxEditorFromAssetRequired)
+          : null,
     );
   }
 
-  Widget _buildToAssetDropdown() {
+  Widget _buildToAssetDropdown(LocalizationService l10n) {
     return DropdownButtonFormField<Asset>(
       initialValue: _toAsset,
-      decoration: const InputDecoration(labelText: 'To Asset (Receiving)'),
+      decoration: InputDecoration(
+        labelText: l10n.get(L10nKeys.ledgerTxEditorToAsset),
+      ),
       items: _assets
           .where((a) => a.id != _fromAsset?.id)
           .map(
@@ -671,19 +538,24 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
           )
           .toList(),
       onChanged: (asset) => setState(() => _toAsset = asset),
-      validator: (value) => value == null ? 'To asset is required' : null,
+      validator: (value) => value == null
+          ? l10n.get(L10nKeys.ledgerTxEditorToAssetRequired)
+          : null,
     );
   }
 
-  Widget _buildFeeAssetDropdown() {
+  Widget _buildFeeAssetDropdown(LocalizationService l10n) {
     return DropdownButtonFormField<Asset>(
       initialValue: _feeAsset,
-      decoration: const InputDecoration(
-        labelText: 'Fee Asset (Optional)',
-        hintText: 'Select if there was a fee',
+      decoration: InputDecoration(
+        labelText: l10n.get(L10nKeys.ledgerTxEditorFeeAsset),
+        hintText: l10n.get(L10nKeys.ledgerTxEditorFeeAssetHint),
       ),
       items: [
-        const DropdownMenuItem<Asset>(value: null, child: Text('No fee')),
+        DropdownMenuItem<Asset>(
+          value: null,
+          child: Text(l10n.get(L10nKeys.ledgerTxEditorNoFee)),
+        ),
         ..._assets.map(
           (asset) => DropdownMenuItem(
             value: asset,
@@ -695,14 +567,16 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
     );
   }
 
-  Widget _buildCategoryDropdown(String kind) {
+  Widget _buildCategoryDropdown(LocalizationService l10n, String kind) {
     final filteredCategories = _categories
         .where((c) => c.kind.name == kind || c.kind == CategoryKind.mixed)
         .toList();
 
     return DropdownButtonFormField<Category>(
       initialValue: _selectedCategory,
-      decoration: const InputDecoration(labelText: 'Category'),
+      decoration: InputDecoration(
+        labelText: l10n.get(L10nKeys.ledgerTxEditorCategory),
+      ),
       items: filteredCategories
           .map(
             (category) =>
@@ -712,7 +586,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
       onChanged: (category) => setState(() => _selectedCategory = category),
       validator: (value) {
         if (_type == TransactionType.expense && value == null) {
-          return 'Category is required for expenses';
+          return l10n.get(L10nKeys.ledgerTxEditorCategoryRequired);
         }
         return null;
       },
@@ -720,28 +594,29 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
   }
 
   Widget _buildAmountField(
-    String label, {
+    LocalizationService l10n,
+    String labelKey, {
     TextEditingController? controller,
     String? helperText,
   }) {
     return TextFormField(
       controller: controller ?? _amountController,
       decoration: InputDecoration(
-        labelText: label,
+        labelText: l10n.get(labelKey),
         helperText: helperText,
         prefixIcon: const Icon(Icons.attach_money),
       ),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+        FilteringTextInputFormatter.allow(RegExp(r'^\-?\d*\.?\d*')),
       ],
       validator: (value) {
         if (value == null || value.trim().isEmpty) {
-          return 'Amount is required';
+          return l10n.get(L10nKeys.ledgerTxEditorAmountRequired);
         }
         final amount = double.tryParse(value.trim());
         if (amount == null || amount == 0) {
-          return 'Enter a valid amount';
+          return l10n.get(L10nKeys.ledgerTxEditorAmountInvalid);
         }
         return null;
       },

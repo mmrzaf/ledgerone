@@ -1,5 +1,8 @@
 import '../domain/models.dart';
 import 'database.dart';
+import 'repositories_interfaces.dart';
+
+export 'repositories_interfaces.dart';
 
 class AssetRepositoryImpl implements AssetRepository {
   final LedgerDatabase _db;
@@ -27,6 +30,12 @@ class AssetRepositoryImpl implements AssetRepository {
     );
     if (maps.isEmpty) return null;
     return Asset.fromJson(maps.first);
+  }
+
+  @override
+  Future<Map<String, Asset>> getAllAsMap() async {
+    final assets = await getAll();
+    return {for (var asset in assets) asset.id: asset};
   }
 
   @override
@@ -80,6 +89,14 @@ class AccountRepositoryImpl implements AccountRepository {
     );
     if (maps.isEmpty) return null;
     return Account.fromJson(maps.first);
+  }
+
+  @override
+  Future<Map<String, Account>> getAllAsMap({
+    bool includeArchived = false,
+  }) async {
+    final accounts = await getAll(includeArchived: includeArchived);
+    return {for (var account in accounts) account.id: account};
   }
 
   @override
@@ -219,6 +236,11 @@ class TransactionRepositoryImpl implements TransactionRepository {
       for (final leg in legs) {
         await txn.insert('transaction_legs', leg.toJson());
       }
+
+      await _db.updateBalancesForTransaction(
+        txn,
+        legs.map((l) => l.toJson()).toList(),
+      );
     });
   }
 
@@ -229,6 +251,12 @@ class TransactionRepositoryImpl implements TransactionRepository {
   ) async {
     final db = await _db.database;
     await db.transaction((txn) async {
+      final oldLegs = await txn.query(
+        'transaction_legs',
+        where: 'transaction_id = ?',
+        whereArgs: [transaction.id],
+      );
+
       await txn.update(
         'transactions',
         transaction.toJson(),
@@ -236,7 +264,6 @@ class TransactionRepositoryImpl implements TransactionRepository {
         whereArgs: [transaction.id],
       );
 
-      // Delete old legs and insert new ones
       await txn.delete(
         'transaction_legs',
         where: 'transaction_id = ?',
@@ -246,14 +273,42 @@ class TransactionRepositoryImpl implements TransactionRepository {
       for (final leg in legs) {
         await txn.insert('transaction_legs', leg.toJson());
       }
+
+      final oldLegsNegated = oldLegs.map((l) {
+        final copy = Map<String, dynamic>.from(l);
+        copy['amount'] = -(copy['amount'] as num).toDouble();
+        return copy;
+      }).toList();
+
+      await _db.updateBalancesForTransaction(txn, oldLegsNegated);
+
+      await _db.updateBalancesForTransaction(
+        txn,
+        legs.map((l) => l.toJson()).toList(),
+      );
     });
   }
 
   @override
   Future<void> delete(String id) async {
     final db = await _db.database;
-    // Legs will be deleted automatically due to CASCADE
-    await db.delete('transactions', where: 'id = ?', whereArgs: [id]);
+    await db.transaction((txn) async {
+      final legs = await txn.query(
+        'transaction_legs',
+        where: 'transaction_id = ?',
+        whereArgs: [id],
+      );
+
+      await txn.delete('transactions', where: 'id = ?', whereArgs: [id]);
+
+      final legsNegated = legs.map((l) {
+        final copy = Map<String, dynamic>.from(l);
+        copy['amount'] = -(copy['amount'] as num).toDouble();
+        return copy;
+      }).toList();
+
+      await _db.updateBalancesForTransaction(txn, legsNegated);
+    });
   }
 
   @override
@@ -279,7 +334,6 @@ class PriceRepositoryImpl implements PriceRepository {
   Future<List<PriceSnapshot>> getLatestPrices() async {
     final db = await _db.database;
 
-    // Get latest price for each asset
     final List<Map<String, dynamic>> maps = await db.rawQuery('''
       SELECT p.* FROM price_snapshots p
       INNER JOIN (
@@ -332,185 +386,71 @@ class PriceRepositoryImpl implements PriceRepository {
     );
     return maps.map((map) => PriceSnapshot.fromJson(map)).toList();
   }
-}
-
-class BalanceServiceImpl implements BalanceService {
-  final LedgerDatabase _db;
-  final AssetRepository _assetRepo;
-  final AccountRepository _accountRepo;
-  final PriceRepository _priceRepo;
-
-  BalanceServiceImpl(
-    this._db,
-    this._assetRepo,
-    this._accountRepo,
-    this._priceRepo,
-  );
 
   @override
-  Future<double> getBalance(String assetId, String accountId) async {
-    final db = await _db.database;
-    final result = await db.rawQuery(
-      '''
-      SELECT SUM(amount) as balance
-      FROM transaction_legs
-      WHERE asset_id = ? AND account_id = ?
-    ''',
-      [assetId, accountId],
-    );
-
-    if (result.isEmpty || result.first['balance'] == null) {
-      return 0.0;
-    }
-    return (result.first['balance'] as num).toDouble();
-  }
-
-  @override
-  Future<double> getTotalBalance(String assetId) async {
-    final db = await _db.database;
-    final result = await db.rawQuery(
-      '''
-      SELECT SUM(amount) as balance
-      FROM transaction_legs
-      WHERE asset_id = ?
-    ''',
-      [assetId],
-    );
-
-    if (result.isEmpty || result.first['balance'] == null) {
-      return 0.0;
-    }
-    return (result.first['balance'] as num).toDouble();
-  }
-
-  @override
-  Future<List<AssetBalance>> getAccountBalances(String accountId) async {
-    final db = await _db.database;
-    final result = await db.rawQuery(
-      '''
-      SELECT 
-        l.asset_id,
-        l.account_id,
-        SUM(l.amount) as balance
-      FROM transaction_legs l
-      WHERE l.account_id = ?
-      GROUP BY l.asset_id, l.account_id
-      HAVING balance != 0
-    ''',
-      [accountId],
-    );
-
-    final balances = <AssetBalance>[];
-    final account = await _accountRepo.getById(accountId);
-    if (account == null) return balances;
-
-    for (final row in result) {
-      final asset = await _assetRepo.getById(row['asset_id'] as String);
-      if (asset != null) {
-        balances.add(
-          AssetBalance(
-            assetId: row['asset_id'] as String,
-            accountId: row['account_id'] as String,
-            balance: (row['balance'] as num).toDouble(),
-            asset: asset,
-            account: account,
-          ),
-        );
-      }
-    }
-
-    return balances;
-  }
-
-  @override
-  Future<List<TotalAssetBalance>> getAllBalances({
-    bool includeZero = false,
-  }) async {
+  Future<DateTime?> getLatestPriceTimestamp() async {
     final db = await _db.database;
     final result = await db.rawQuery('''
-      SELECT 
-        l.asset_id,
-        l.account_id,
-        SUM(l.amount) as balance
-      FROM transaction_legs l
-      GROUP BY l.asset_id, l.account_id
-      ${includeZero ? '' : 'HAVING balance != 0'}
+      SELECT MAX(timestamp) as latest FROM price_snapshots
     ''');
 
-    // Group by asset
-    final Map<String, List<Map<String, dynamic>>> byAsset = {};
-    for (final row in result) {
-      final assetId = row['asset_id'] as String;
-      byAsset.putIfAbsent(assetId, () => []);
-      byAsset[assetId]!.add(row);
+    if (result.isEmpty || result.first['latest'] == null) {
+      return null;
     }
 
-    final balances = <TotalAssetBalance>[];
-    final latestPrices = await _priceRepo.getLatestPrices();
-    final priceMap = {for (var p in latestPrices) p.assetId: p.price};
+    return DateTime.parse(result.first['latest'] as String);
+  }
+}
 
-    for (final entry in byAsset.entries) {
-      final assetId = entry.key;
-      final asset = await _assetRepo.getById(assetId);
-      if (asset == null) continue;
+class BalanceRepositoryImpl implements BalanceRepository {
+  final LedgerDatabase _db;
 
-      double totalBalance = 0;
-      final accountBalances = <AssetBalance>[];
+  BalanceRepositoryImpl(this._db);
 
-      for (final row in entry.value) {
-        final balance = (row['balance'] as num).toDouble();
-        totalBalance += balance;
+  @override
+  Future<double> getBalance(String accountId, String assetId) async {
+    final db = await _db.database;
+    final result = await db.query(
+      'account_balances',
+      where: 'account_id = ? AND asset_id = ?',
+      whereArgs: [accountId, assetId],
+      limit: 1,
+    );
 
-        final account = await _accountRepo.getById(row['account_id'] as String);
-        if (account != null) {
-          accountBalances.add(
-            AssetBalance(
-              assetId: assetId,
-              accountId: row['account_id'] as String,
-              balance: balance,
-              asset: asset,
-              account: account,
-            ),
-          );
-        }
-      }
-
-      final usdValue = priceMap[assetId] != null
-          ? totalBalance * priceMap[assetId]!
-          : null;
-
-      balances.add(
-        TotalAssetBalance(
-          asset: asset,
-          totalBalance: totalBalance,
-          usdValue: usdValue,
-          accountBalances: accountBalances,
-        ),
-      );
-    }
-
-    return balances;
+    if (result.isEmpty) return 0.0;
+    return (result.first['balance'] as num).toDouble();
   }
 
   @override
-  Future<Map<String, double>> getPortfolioValue() async {
-    final balances = await getAllBalances();
+  Future<Map<String, double>> getAccountBalances(String accountId) async {
+    final db = await _db.database;
+    final result = await db.query(
+      'account_balances',
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+    );
 
-    final portfolio = <String, double>{
-      'crypto': 0.0,
-      'fiat': 0.0,
-      'other': 0.0,
-      'total': 0.0,
+    return {
+      for (var row in result)
+        row['asset_id'] as String: (row['balance'] as num).toDouble(),
     };
+  }
 
-    for (final balance in balances) {
-      if (balance.usdValue != null) {
-        final type = balance.asset.type.name;
-        portfolio[type] = (portfolio[type] ?? 0.0) + balance.usdValue!;
-        portfolio['total'] = portfolio['total']! + balance.usdValue!;
-      }
+  @override
+  Future<Map<String, Map<String, double>>> getAllBalances() async {
+    final db = await _db.database;
+    final result = await db.query('account_balances');
+
+    final balances = <String, Map<String, double>>{};
+    for (var row in result) {
+      final accountId = row['account_id'] as String;
+      final assetId = row['asset_id'] as String;
+      final balance = (row['balance'] as num).toDouble();
+
+      balances.putIfAbsent(accountId, () => {});
+      balances[accountId]![assetId] = balance;
     }
 
-    return portfolio;
+    return balances;
   }
 }

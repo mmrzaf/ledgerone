@@ -29,7 +29,6 @@ class L10nKeys {
   static const String errorParseError = 'error.parse_error';
   static const String errorUnknown = 'error.unknown';
   static const String errorInlineTitle = 'error.inline_title';
-
   // Accessibility labels
   static const String a11yNavigationBack = 'a11y.navigation.back';
   static const String a11yNavigationMenu = 'a11y.navigation.menu';
@@ -49,6 +48,8 @@ class L10nKeys {
   // ------------------------------------------------------------
 
   static const String ledgerAppTitle = 'ledger.app_title';
+
+  static const String ledgerErrorStalePrice = 'ledger.error.stale_price';
 
   // LedgerOne – Onboarding
   static const String ledgerOnboardingWelcomeTitle =

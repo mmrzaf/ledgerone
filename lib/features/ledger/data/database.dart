@@ -3,12 +3,11 @@ import 'dart:async';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart' hide Transaction;
 import 'package:uuid/uuid.dart';
-import '../domain/models.dart';
 
 class LedgerDatabase {
   static const String _dbName = 'ledgerone.db';
-  static const int _dbVersion = 1;
-  static final _uuid = const Uuid();
+  static const int _dbVersion = 2;
+  static const _uuid = Uuid();
   Database? _database;
 
   Future<Database> get database async {
@@ -30,7 +29,6 @@ class LedgerDatabase {
   }
 
   Future<void> _onCreate(Database db, int version) async {
-    // Assets table
     await db.execute('''
       CREATE TABLE assets (
         id TEXT PRIMARY KEY,
@@ -44,7 +42,6 @@ class LedgerDatabase {
       )
     ''');
 
-    // Accounts table
     await db.execute('''
       CREATE TABLE accounts (
         id TEXT PRIMARY KEY,
@@ -57,7 +54,6 @@ class LedgerDatabase {
       )
     ''');
 
-    // Categories table
     await db.execute('''
       CREATE TABLE categories (
         id TEXT PRIMARY KEY,
@@ -70,7 +66,6 @@ class LedgerDatabase {
       )
     ''');
 
-    // Transactions table
     await db.execute('''
       CREATE TABLE transactions (
         id TEXT PRIMARY KEY,
@@ -82,7 +77,6 @@ class LedgerDatabase {
       )
     ''');
 
-    // Transaction legs table
     await db.execute('''
       CREATE TABLE transaction_legs (
         id TEXT PRIMARY KEY,
@@ -99,7 +93,6 @@ class LedgerDatabase {
       )
     ''');
 
-    // Price snapshots table
     await db.execute('''
       CREATE TABLE price_snapshots (
         id TEXT PRIMARY KEY,
@@ -112,7 +105,18 @@ class LedgerDatabase {
       )
     ''');
 
-    // Indexes for performance
+    await db.execute('''
+      CREATE TABLE account_balances (
+        account_id TEXT NOT NULL,
+        asset_id TEXT NOT NULL,
+        balance REAL NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (account_id, asset_id),
+        FOREIGN KEY (account_id) REFERENCES accounts (id),
+        FOREIGN KEY (asset_id) REFERENCES assets (id)
+      )
+    ''');
+
     await db.execute(
       'CREATE INDEX idx_legs_transaction ON transaction_legs(transaction_id)',
     );
@@ -131,11 +135,14 @@ class LedgerDatabase {
     await db.execute(
       'CREATE INDEX idx_transactions_timestamp ON transactions(timestamp DESC)',
     );
+    await db.execute(
+      'CREATE INDEX idx_balances_account ON account_balances(account_id)',
+    );
+    await db.execute(
+      'CREATE INDEX idx_balances_asset ON account_balances(asset_id)',
+    );
 
-    // Insert default assets (USD, EUR, BTC, ETH)
     await _insertDefaultAssets(db);
-
-    // Insert default categories
     await _insertDefaultCategories(db);
   }
 
@@ -233,7 +240,104 @@ class LedgerDatabase {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Handle migrations here when schema changes
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE account_balances (
+          account_id TEXT NOT NULL,
+          asset_id TEXT NOT NULL,
+          balance REAL NOT NULL,
+          updated_at TEXT NOT NULL,
+          PRIMARY KEY (account_id, asset_id),
+          FOREIGN KEY (account_id) REFERENCES accounts (id),
+          FOREIGN KEY (asset_id) REFERENCES assets (id)
+        )
+      ''');
+
+      await db.execute(
+        'CREATE INDEX idx_balances_account ON account_balances(account_id)',
+      );
+      await db.execute(
+        'CREATE INDEX idx_balances_asset ON account_balances(asset_id)',
+      );
+
+      await _rebuildBalances(db);
+    }
+  }
+
+  Future<void> _rebuildBalances(Database db) async {
+    await db.delete('account_balances');
+
+    final legs = await db.query('transaction_legs');
+    final balances = <String, double>{};
+
+    for (final leg in legs) {
+      final accountId = leg['account_id'] as String;
+      final assetId = leg['asset_id'] as String;
+      final amount = (leg['amount'] as num).toDouble();
+      final key = '$accountId:$assetId';
+
+      balances[key] = (balances[key] ?? 0.0) + amount;
+    }
+
+    final now = DateTime.now().toIso8601String();
+    for (final entry in balances.entries) {
+      final parts = entry.key.split(':');
+      await db.insert('account_balances', {
+        'account_id': parts[0],
+        'asset_id': parts[1],
+        'balance': entry.value,
+        'updated_at': now,
+      });
+    }
+  }
+
+  Future<void> updateBalancesForTransaction(
+      DatabaseExecutor txn,
+    List<Map<String, dynamic>> legs,
+  ) async {
+    final now = DateTime.now().toIso8601String();
+    final updates = <String, double>{};
+
+    for (final leg in legs) {
+      final accountId = leg['account_id'] as String;
+      final assetId = leg['asset_id'] as String;
+      final amount = (leg['amount'] as num).toDouble();
+      final key = '$accountId:$assetId';
+
+      updates[key] = (updates[key] ?? 0.0) + amount;
+    }
+
+    for (final entry in updates.entries) {
+      final parts = entry.key.split(':');
+      final accountId = parts[0];
+      final assetId = parts[1];
+
+      final existing = await txn.query(
+        'account_balances',
+        where: 'account_id = ? AND asset_id = ?',
+        whereArgs: [accountId, assetId],
+        limit: 1,
+      );
+
+      if (existing.isEmpty) {
+        await txn.insert('account_balances', {
+          'account_id': accountId,
+          'asset_id': assetId,
+          'balance': entry.value,
+          'updated_at': now,
+        });
+      } else {
+        final currentBalance = (existing.first['balance'] as num).toDouble();
+        final newBalance = currentBalance + entry.value;
+
+        await txn.update(
+          'account_balances',
+          {'balance': newBalance, 'updated_at': now},
+          where: 'account_id = ? AND asset_id = ?',
+          whereArgs: [accountId, assetId],
+        );
+      }
+    }
   }
 
   Future<void> close() async {
@@ -243,66 +347,4 @@ class LedgerDatabase {
   }
 
   String generateId() => _uuid.v4();
-}
-
-// Repository interfaces
-abstract class AssetRepository {
-  Future<List<Asset>> getAll({bool includeDeleted = false});
-  Future<Asset?> getById(String id);
-  Future<void> insert(Asset asset);
-  Future<void> update(Asset asset);
-  Future<void> delete(String id);
-}
-
-abstract class AccountRepository {
-  Future<List<Account>> getAll({bool includeArchived = false});
-  Future<Account?> getById(String id);
-  Future<void> insert(Account account);
-  Future<void> update(Account account);
-  Future<void> delete(String id);
-}
-
-abstract class CategoryRepository {
-  Future<List<Category>> getAll();
-  Future<Category?> getById(String id);
-  Future<void> insert(Category category);
-  Future<void> update(Category category);
-  Future<void> delete(String id);
-}
-
-abstract class TransactionRepository {
-  Future<List<Transaction>> getAll({
-    int? limit,
-    DateTime? before,
-    DateTime? after,
-  });
-  Future<Transaction?> getById(String id);
-  Future<void> insert(Transaction transaction, List<TransactionLeg> legs);
-  Future<void> update(Transaction transaction, List<TransactionLeg> legs);
-  Future<void> delete(String id);
-  Future<List<TransactionLeg>> getLegsForTransaction(String transactionId);
-}
-
-abstract class PriceRepository {
-  Future<List<PriceSnapshot>> getLatestPrices();
-  Future<PriceSnapshot?> getLatestPrice(
-    String assetId, {
-    String currency = 'USD',
-  });
-  Future<void> insert(PriceSnapshot snapshot);
-  Future<List<PriceSnapshot>> getHistory(
-    String assetId, {
-    String currency = 'USD',
-    int? limit,
-  });
-}
-
-// Balance calculation interface
-abstract class BalanceService {
-  Future<double> getBalance(String assetId, String accountId);
-  Future<double> getTotalBalance(String assetId);
-  Future<List<AssetBalance>> getAccountBalances(String accountId);
-  Future<List<TotalAssetBalance>> getAllBalances({bool includeZero = false});
-  Future<Map<String, double>>
-  getPortfolioValue(); // Returns {asset_type: usd_value}
 }
