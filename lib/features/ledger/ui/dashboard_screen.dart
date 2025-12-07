@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/presentation/error_presenter.dart';
+import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
+import '../../../core/errors/app_error.dart';
 import '../../../core/i18n/string_keys.dart';
-import '../data/database.dart';
-import '../domain/models.dart';
-import '../services/price_update_service.dart';
+import '../domain/services.dart';
 
 class DashboardScreen extends StatefulWidget {
   final NavigationService navigation;
-  final BalanceService balanceService;
+  final PortfolioValuationService portfolioService;
   final PriceUpdateService priceUpdateService;
+  final AnalyticsService analytics;
 
   const DashboardScreen({
     required this.navigation,
-    required this.balanceService,
+    required this.portfolioService,
     required this.priceUpdateService,
+    required this.analytics,
     super.key,
   });
 
@@ -24,16 +27,15 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  Map<String, double>? _portfolio;
-  List<TotalAssetBalance>? _topAssets;
+  PortfolioValuation? _portfolio;
   bool _loading = true;
   bool _updatingPrices = false;
-  String? _errorMessage;
-  DateTime? _lastPriceUpdate;
+  AppError? _error;
 
   @override
   void initState() {
     super.initState();
+    widget.analytics.logScreenView('dashboard');
     _loadData();
   }
 
@@ -42,35 +44,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     setState(() {
       _loading = true;
-      _errorMessage = null;
+      _error = null;
     });
 
     try {
-      final portfolio = await widget.balanceService.getPortfolioValue();
-      final allBalances = await widget.balanceService.getAllBalances();
-
-      allBalances.sort((a, b) {
-        if (a.usdValue != null && b.usdValue != null) {
-          return b.usdValue!.compareTo(a.usdValue!);
-        }
-        if (a.usdValue != null) return -1;
-        if (b.usdValue != null) return 1;
-        return a.asset.symbol.compareTo(b.asset.symbol);
-      });
+      final portfolio = await widget.portfolioService.getPortfolioValue();
 
       if (!mounted) return;
 
       setState(() {
         _portfolio = portfolio;
-        _topAssets = allBalances.take(5).toList();
         _loading = false;
+      });
+    } on AppError catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _loading = false;
+        _error = e;
       });
     } catch (e) {
       if (!mounted) return;
 
       setState(() {
         _loading = false;
-        _errorMessage = e.toString();
+        _error = AppError(
+          category: ErrorCategory.unknown,
+          message: e.toString(),
+          originalError: e,
+        );
       });
     }
   }
@@ -85,10 +87,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       if (!mounted) return;
 
-      setState(() {
-        _updatingPrices = false;
-        _lastPriceUpdate = DateTime.now();
-      });
+      setState(() => _updatingPrices = false);
 
       final l10n = context.l10n;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -114,12 +113,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       setState(() => _updatingPrices = false);
 
-      final l10n = context.l10n;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.get(L10nKeys.ledgerDashboardPriceUpdateFailed)),
-          backgroundColor: Colors.red,
-        ),
+      ErrorPresenter.showError(
+        context,
+        e is AppError
+            ? e
+            : AppError(
+                category: ErrorCategory.unknown,
+                message: e.toString(),
+                originalError: e,
+              ),
+        screen: 'dashboard',
       );
     }
   }
@@ -149,13 +152,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: const Icon(Icons.refresh),
               onPressed: _updatePrices,
               tooltip: l10n.get(L10nKeys.ledgerDashboardUpdatePrices),
-              // semanticLabel: l10n.get(L10nKeys.ledgera11yUpdatePrices),
             ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => widget.navigation.goToRoute('settings'),
             tooltip: l10n.get(L10nKeys.ledgerNavSettings),
-            // semanticLabel: l10n.get(L10nKeys.ledgerA11yOpenSettings),
           ),
         ],
       ),
@@ -166,50 +167,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildBody(ThemeData theme, LocalizationService l10n) {
     if (_loading) {
+      return LoadingIndicator(message: l10n.get(L10nKeys.ledgerCommonLoading));
+    }
+
+    if (_error != null) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(
-              l10n.get(L10nKeys.ledgerCommonLoading),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
-              ),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: ErrorCard(
+            error: _error!,
+            screen: 'dashboard',
+            onRetry: _loadData,
+          ),
         ),
       );
     }
 
-    if (_errorMessage != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: theme.colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: theme.colorScheme.error),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: _loadData,
-                icon: const Icon(Icons.refresh),
-                label: Text(l10n.get(L10nKeys.retry)),
-              ),
-            ],
-          ),
-        ),
+    if (_portfolio == null) {
+      return EmptyState(
+        message: l10n.get(L10nKeys.ledgerDashboardNoAssets),
+        icon: Icons.account_balance_wallet,
       );
     }
 
@@ -218,9 +195,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          if (_portfolio!.isPriceDataStale) _buildStaleWarning(theme, l10n),
           _buildPortfolioCard(theme, l10n),
-          const SizedBox(height: 24),
-          _buildTopAssetsCard(theme, l10n),
           const SizedBox(height: 24),
           _buildQuickActions(theme, l10n),
           const SizedBox(height: 16),
@@ -229,10 +205,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildStaleWarning(ThemeData theme, LocalizationService l10n) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        border: Border.all(color: Colors.orange),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber, color: Colors.orange),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              l10n.get(L10nKeys.ledgerErrorStalePrice),
+              style: TextStyle(color: Colors.orange.shade900),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPortfolioCard(ThemeData theme, LocalizationService l10n) {
-    final totalValue = _portfolio?['total'] ?? 0.0;
-    final cryptoValue = _portfolio?['crypto'] ?? 0.0;
-    final fiatValue = _portfolio?['fiat'] ?? 0.0;
+    final portfolio = _portfolio!;
+    final totalValue = portfolio.totalValue;
+    final cryptoValue = portfolio.cryptoValue;
+    final fiatValue = portfolio.fiatValue;
 
     return Card(
       elevation: 0,
@@ -248,11 +249,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   l10n.get(L10nKeys.ledgerDashboardTotalPortfolio),
                   style: theme.textTheme.titleMedium,
                 ),
-                if (_lastPriceUpdate != null)
+                if (portfolio.lastPriceUpdate != null)
                   Text(
                     l10n.get(
                       L10nKeys.ledgerDashboardLastUpdate,
-                      args: {'time': _formatTime(l10n, _lastPriceUpdate!)},
+                      args: {
+                        'time': _formatTime(l10n, portfolio.lastPriceUpdate!),
+                      },
                     ),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurface.withOpacity(0.6),
@@ -327,101 +330,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTopAssetsCard(ThemeData theme, LocalizationService l10n) {
-    return Card(
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.get(L10nKeys.ledgerDashboardTopHoldings),
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(height: 16),
-            if (_topAssets == null || _topAssets!.isEmpty)
-              Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.inbox_outlined,
-                        size: 64,
-                        color: theme.colorScheme.onSurface.withOpacity(0.3),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        l10n.get(L10nKeys.ledgerDashboardNoAssets),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            else
-              ..._topAssets!.map((balance) => _buildAssetRow(theme, balance)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAssetRow(ThemeData theme, TotalAssetBalance balance) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: theme.colorScheme.primaryContainer,
-            child: Text(
-              balance.asset.symbol.substring(0, 1).toUpperCase(),
-              style: TextStyle(
-                color: theme.colorScheme.onPrimaryContainer,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(balance.asset.symbol, style: theme.textTheme.titleSmall),
-                Text(
-                  balance.asset.name,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                _formatBalance(balance.totalBalance, balance.asset.decimals),
-                style: theme.textTheme.titleSmall,
-              ),
-              if (balance.usdValue != null)
-                Text(
-                  '\$${_formatCurrency(balance.usdValue!)}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
-                  ),
-                ),
-            ],
           ),
         ],
       ),
@@ -528,10 +436,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]},',
         );
-  }
-
-  String _formatBalance(double value, int decimals) {
-    return value.toStringAsFixed(decimals);
   }
 
   String _formatTime(LocalizationService l10n, DateTime time) {

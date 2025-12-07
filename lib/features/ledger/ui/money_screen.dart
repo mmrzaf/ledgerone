@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/presentation/error_presenter.dart';
+import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
+import '../../../core/errors/app_error.dart';
 import '../../../core/i18n/string_keys.dart';
-import '../data/database.dart';
 import '../domain/models.dart';
+import '../domain/services.dart';
 
 class MoneyScreen extends StatefulWidget {
   final NavigationService navigation;
   final BalanceService balanceService;
+  final AnalyticsService analytics;
 
   const MoneyScreen({
     required this.navigation,
     required this.balanceService,
+    required this.analytics,
     super.key,
   });
 
@@ -20,29 +25,25 @@ class MoneyScreen extends StatefulWidget {
   State<MoneyScreen> createState() => _MoneyScreenState();
 }
 
-class _MoneyScreenState extends State<MoneyScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _MoneyScreenState extends State<MoneyScreen> {
   List<TotalAssetBalance>? _fiatBalances;
   bool _loading = true;
+  AppError? _error;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    widget.analytics.logScreenView('money');
     _loadData();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadData() async {
     if (!mounted) return;
 
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     try {
       final allBalances = await widget.balanceService.getAllBalances();
@@ -56,10 +57,22 @@ class _MoneyScreenState extends State<MoneyScreen>
         _fiatBalances = fiatOnly;
         _loading = false;
       });
+    } on AppError catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e;
+      });
     } catch (e) {
       if (!mounted) return;
-
-      setState(() => _loading = false);
+      setState(() {
+        _loading = false;
+        _error = AppError(
+          category: ErrorCategory.unknown,
+          message: e.toString(),
+          originalError: e,
+        );
+      });
     }
   }
 
@@ -69,27 +82,8 @@ class _MoneyScreenState extends State<MoneyScreen>
     final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.get(L10nKeys.ledgerMoneyTitle)),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(text: l10n.get(L10nKeys.ledgerMoneyAccounts)),
-            Tab(text: l10n.get(L10nKeys.ledgerMoneyTransactions)),
-            Tab(text: l10n.get(L10nKeys.ledgerMoneyCategories)),
-          ],
-        ),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildAccountsView(theme, l10n),
-                _buildTransactionsView(theme, l10n),
-                _buildCategoriesView(theme, l10n),
-              ],
-            ),
+      appBar: AppBar(title: Text(l10n.get(L10nKeys.ledgerMoneyTitle))),
+      body: _buildBody(theme, l10n),
       bottomNavigationBar: _buildBottomNav(l10n),
       floatingActionButton: FloatingActionButton(
         onPressed: () => widget.navigation.goToRoute('transaction_editor'),
@@ -98,30 +92,24 @@ class _MoneyScreenState extends State<MoneyScreen>
     );
   }
 
-  Widget _buildAccountsView(ThemeData theme, LocalizationService l10n) {
-    if (_fiatBalances == null || _fiatBalances!.isEmpty) {
+  Widget _buildBody(ThemeData theme, LocalizationService l10n) {
+    if (_loading) {
+      return LoadingIndicator(message: l10n.get(L10nKeys.ledgerCommonLoading));
+    }
+
+    if (_error != null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.account_balance,
-                size: 64,
-                color: theme.colorScheme.onSurface.withOpacity(0.3),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.get(L10nKeys.ledgerMoneyNoAccounts),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
+          child: ErrorCard(error: _error!, screen: 'money', onRetry: _loadData),
         ),
+      );
+    }
+
+    if (_fiatBalances == null || _fiatBalances!.isEmpty) {
+      return EmptyState(
+        message: l10n.get(L10nKeys.ledgerMoneyNoAccounts),
+        icon: Icons.account_balance,
       );
     }
 
@@ -159,26 +147,6 @@ class _MoneyScreenState extends State<MoneyScreen>
             fontWeight: FontWeight.bold,
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildTransactionsView(ThemeData theme, LocalizationService l10n) {
-    return Center(
-      child: Text(
-        l10n.get(L10nKeys.ledgerMoneyNoTransactions),
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurface.withOpacity(0.6),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoriesView(ThemeData theme, LocalizationService l10n) {
-    return Center(
-      child: Text(
-        l10n.get(L10nKeys.ledgerMoneyCategories),
-        style: theme.textTheme.bodyLarge,
       ),
     );
   }

@@ -88,6 +88,9 @@ BEGIN
     BLOCK "StringFileInfo"
     BEGIN
         BLOCK "040904e4"
+	BEGIN
+	    VALUE "CompanyName", "com.ledgerone" "\0"
+	    VALUE "FileDescription", "ledgerone" "\0"
             VALUE "FileDescription", "ledgerone" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "ledgerone" "\0"

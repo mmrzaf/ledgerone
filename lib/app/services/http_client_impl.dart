@@ -128,14 +128,22 @@ class HttpClientImpl implements HttpClient {
   }
 
   Uri _buildUri(String path, Map<String, dynamic>? queryParams) {
-    // Make no assumptions about trailing slashes — just concatenate cleanly.
-    final base = _config.apiBaseUrl.endsWith('/')
-        ? _config.apiBaseUrl.substring(0, _config.apiBaseUrl.length - 1)
-        : _config.apiBaseUrl;
+    Uri uri;
 
-    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    final isAbsolute =
+        path.startsWith('http://') || path.startsWith('https://');
 
-    final uri = Uri.parse('$base$normalizedPath');
+    if (isAbsolute) {
+      uri = Uri.parse(path);
+    } else {
+      final base = _config.apiBaseUrl.endsWith('/')
+          ? _config.apiBaseUrl.substring(0, _config.apiBaseUrl.length - 1)
+          : _config.apiBaseUrl;
+
+      final normalizedPath = path.startsWith('/') ? path : '/$path';
+
+      uri = Uri.parse('$base$normalizedPath');
+    }
 
     if (queryParams == null || queryParams.isEmpty) {
       return uri;

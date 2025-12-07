@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 
+import '../../../app/presentation/error_presenter.dart';
+import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
+import '../../../core/errors/app_error.dart';
 import '../../../core/i18n/string_keys.dart';
-import '../data/database.dart';
 import '../domain/models.dart';
+import '../domain/services.dart';
 
 class CryptoScreen extends StatefulWidget {
   final NavigationService navigation;
   final BalanceService balanceService;
-  final AssetRepository assetRepo;
+  final AnalyticsService analytics;
 
   const CryptoScreen({
     required this.navigation,
     required this.balanceService,
-    required this.assetRepo,
+    required this.analytics,
     super.key,
   });
 
@@ -22,29 +25,25 @@ class CryptoScreen extends StatefulWidget {
   State<CryptoScreen> createState() => _CryptoScreenState();
 }
 
-class _CryptoScreenState extends State<CryptoScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _CryptoScreenState extends State<CryptoScreen> {
   List<TotalAssetBalance>? _cryptoBalances;
   bool _loading = true;
+  AppError? _error;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    widget.analytics.logScreenView('crypto');
     _loadData();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadData() async {
     if (!mounted) return;
 
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     try {
       final allBalances = await widget.balanceService.getAllBalances();
@@ -58,10 +57,22 @@ class _CryptoScreenState extends State<CryptoScreen>
         _cryptoBalances = cryptoOnly;
         _loading = false;
       });
+    } on AppError catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = e;
+      });
     } catch (e) {
       if (!mounted) return;
-
-      setState(() => _loading = false);
+      setState(() {
+        _loading = false;
+        _error = AppError(
+          category: ErrorCategory.unknown,
+          message: e.toString(),
+          originalError: e,
+        );
+      });
     }
   }
 
@@ -71,25 +82,8 @@ class _CryptoScreenState extends State<CryptoScreen>
     final l10n = context.l10n;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.get(L10nKeys.ledgerCryptoTitle)),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: [
-            Tab(text: l10n.get(L10nKeys.ledgerCryptoByAsset)),
-            Tab(text: l10n.get(L10nKeys.ledgerCryptoByAccount)),
-          ],
-        ),
-      ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                _buildAssetView(theme, l10n),
-                _buildAccountView(theme, l10n),
-              ],
-            ),
+      appBar: AppBar(title: Text(l10n.get(L10nKeys.ledgerCryptoTitle))),
+      body: _buildBody(theme, l10n),
       bottomNavigationBar: _buildBottomNav(l10n),
       floatingActionButton: FloatingActionButton(
         onPressed: () => widget.navigation.goToRoute('transaction_editor'),
@@ -98,30 +92,28 @@ class _CryptoScreenState extends State<CryptoScreen>
     );
   }
 
-  Widget _buildAssetView(ThemeData theme, LocalizationService l10n) {
-    if (_cryptoBalances == null || _cryptoBalances!.isEmpty) {
+  Widget _buildBody(ThemeData theme, LocalizationService l10n) {
+    if (_loading) {
+      return LoadingIndicator(message: l10n.get(L10nKeys.ledgerCommonLoading));
+    }
+
+    if (_error != null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.currency_bitcoin,
-                size: 64,
-                color: theme.colorScheme.onSurface.withOpacity(0.3),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.get(L10nKeys.ledgerCryptoNoAssets),
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+          child: ErrorCard(
+            error: _error!,
+            screen: 'crypto',
+            onRetry: _loadData,
           ),
         ),
+      );
+    }
+
+    if (_cryptoBalances == null || _cryptoBalances!.isEmpty) {
+      return EmptyState(
+        message: l10n.get(L10nKeys.ledgerCryptoNoAssets),
+        icon: Icons.currency_bitcoin,
       );
     }
 
@@ -208,15 +200,6 @@ class _CryptoScreenState extends State<CryptoScreen>
               ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildAccountView(ThemeData theme, LocalizationService l10n) {
-    return Center(
-      child: Text(
-        l10n.get(L10nKeys.ledgerCryptoByAccount),
-        style: theme.textTheme.bodyLarge,
       ),
     );
   }

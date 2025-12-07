@@ -257,7 +257,8 @@ jobs:
           mkdir -p dist
 
           APP="${APP_NAME:-LedgerOne}"
-          V="${VERSION:-dev}"
+          RAW_VERSION="${VERSION:-dev}"
+          V="${RAW_VERSION//\//-}"
 
           echo "Packaging ${APP} ${V}"
 

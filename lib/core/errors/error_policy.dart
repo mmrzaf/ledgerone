@@ -1,33 +1,9 @@
 import 'app_error.dart';
 
-/// How an error should be presented to the user
-enum ErrorPresentation {
-  /// Show error inline where it occurred (e.g., in a card on the screen)
-  inline,
+enum ErrorPresentation { inline, banner, toast, silent }
 
-  /// Show as a non-blocking banner (e.g., at top of screen)
-  banner,
+enum RetryStrategy { never, manual, automatic }
 
-  /// Show as a temporary toast notification
-  toast,
-
-  /// Don't show to user (log only)
-  silent,
-}
-
-/// How an error should be retried
-enum RetryStrategy {
-  /// Never retry automatically or manually
-  never,
-
-  /// Allow manual retry via user action
-  manual,
-
-  /// Retry automatically with backoff
-  automatic,
-}
-
-/// Policy for handling a specific error category
 class ErrorPolicy {
   final ErrorCategory category;
   final ErrorPresentation presentation;
@@ -50,11 +26,8 @@ class ErrorPolicy {
   });
 }
 
-/// Central registry of error policies
-/// This is the single source of truth for error handling behavior
 class ErrorPolicyRegistry {
   static const Map<ErrorCategory, ErrorPolicy> _policies = {
-    // Network errors - retry automatically
     ErrorCategory.networkOffline: ErrorPolicy(
       category: ErrorCategory.networkOffline,
       presentation: ErrorPresentation.banner,
@@ -75,7 +48,6 @@ class ErrorPolicyRegistry {
       userMessageKey: 'error.timeout',
     ),
 
-    // Server errors - retry with caution
     ErrorCategory.server5xx: ErrorPolicy(
       category: ErrorCategory.server5xx,
       presentation: ErrorPresentation.inline,
@@ -86,7 +58,6 @@ class ErrorPolicyRegistry {
       userMessageKey: 'error.server_error',
     ),
 
-    // Client errors - don't retry
     ErrorCategory.badRequest: ErrorPolicy(
       category: ErrorCategory.badRequest,
       presentation: ErrorPresentation.inline,
@@ -124,10 +95,9 @@ class ErrorPolicyRegistry {
       maxRetries: 0,
       initialDelay: Duration.zero,
       maxDelay: Duration.zero,
-      userMessageKey: 'error.not_found',
+      userMessageKey: 'ledger.error.asset_not_found',
     ),
 
-    // Auth errors - never retry
     ErrorCategory.invalidCredentials: ErrorPolicy(
       category: ErrorCategory.invalidCredentials,
       presentation: ErrorPresentation.inline,
@@ -148,7 +118,6 @@ class ErrorPolicyRegistry {
       userMessageKey: 'error.session_expired',
     ),
 
-    // Parse errors - manual retry
     ErrorCategory.parseError: ErrorPolicy(
       category: ErrorCategory.parseError,
       presentation: ErrorPresentation.inline,
@@ -159,7 +128,6 @@ class ErrorPolicyRegistry {
       userMessageKey: 'error.parse_error',
     ),
 
-    // Unknown errors - allow manual retry
     ErrorCategory.unknown: ErrorPolicy(
       category: ErrorCategory.unknown,
       presentation: ErrorPresentation.inline,
@@ -171,23 +139,19 @@ class ErrorPolicyRegistry {
     ),
   };
 
-  /// Get policy for an error category
   static ErrorPolicy getPolicy(ErrorCategory category) {
     return _policies[category] ?? _policies[ErrorCategory.unknown]!;
   }
 
-  /// Get user-facing message key for an error
   static String getUserMessageKey(AppError error) {
     return getPolicy(error.category).userMessageKey;
   }
 
-  /// Check if an error should be retried
   static bool shouldRetry(ErrorCategory category) {
     final policy = getPolicy(category);
     return policy.retryStrategy != RetryStrategy.never;
   }
 
-  /// Check if an error allows automatic retry
   static bool allowsAutomaticRetry(ErrorCategory category) {
     final policy = getPolicy(category);
     return policy.retryStrategy == RetryStrategy.automatic;

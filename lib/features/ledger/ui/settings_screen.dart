@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../app/di.dart';
+import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
 import '../../../core/contracts/theme_contract.dart';
@@ -7,8 +8,13 @@ import '../../../core/i18n/string_keys.dart';
 
 class SettingsScreen extends StatefulWidget {
   final NavigationService navigation;
+  final AnalyticsService analytics;
 
-  const SettingsScreen({required this.navigation, super.key});
+  const SettingsScreen({
+    required this.navigation,
+    required this.analytics,
+    super.key,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -22,6 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    widget.analytics.logScreenView('settings');
     _initServices();
   }
 
@@ -42,14 +49,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await _localization.setLocale(languageCode);
 
     if (mounted) {
-      setState(() {}); // Rebuild to show new language
+      setState(() {});
 
-      // Show confirmation
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_localization.get(L10nKeys.ledgerSettingsLanguage)),
           duration: const Duration(seconds: 1),
         ),
+      );
+
+      widget.analytics.logEvent(
+        'settings_language_changed',
+        parameters: {'language': languageCode},
       );
     }
   }
@@ -58,7 +69,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await _themeService.toggleBrightness();
 
     if (mounted) {
-      setState(() {}); // Rebuild with new theme
+      setState(() {});
+
+      widget.analytics.logEvent(
+        'settings_theme_toggled',
+        parameters: {'theme': _themeService.currentTheme.name},
+      );
     }
   }
 
@@ -73,7 +89,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => widget.navigation.goBack(),
-          // semanticLabel: l10n.get(L10nKeys.ledgera11yNavigateBack),
         ),
       ),
       body: _loading
@@ -196,7 +211,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: Text(l10n.get(L10nKeys.ledgerSettingsBackup)),
       subtitle: const Text('Export all data'),
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: () => _showComingSoon(l10n),
+      onTap: () {
+        widget.analytics.logEvent('backup_export_clicked');
+        _showComingSoon(l10n);
+      },
     );
   }
 
