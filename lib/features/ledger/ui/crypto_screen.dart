@@ -5,10 +5,10 @@ import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/i18n/string_keys.dart';
+import '../../../shared/utils/money_formatting.dart';
 import '../domain/models.dart';
 import '../domain/services.dart';
-
-enum CryptoViewMode { byAsset, byAccount }
+import 'widgets/ledger_bottom_nav.dart';
 
 class CryptoScreen extends StatefulWidget {
   final NavigationService navigation;
@@ -32,22 +32,12 @@ class _CryptoScreenState extends State<CryptoScreen>
   Map<String, List<AssetBalance>>? _accountBalances;
   bool _loading = true;
   AppError? _error;
-  // CryptoViewMode _viewMode = CryptoViewMode.byAsset;
   late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      // if (!_tabController.indexIsChanging) {
-      //   setState(() {
-      //     _viewMode = _tabController.index == 0
-      //         ? CryptoViewMode.byAsset
-      //         : CryptoViewMode.byAccount;
-      //   });
-      // }
-    });
     widget.analytics.logScreenView('crypto');
     _loadData();
   }
@@ -72,7 +62,6 @@ class _CryptoScreenState extends State<CryptoScreen>
           .where((b) => b.asset.type == AssetType.crypto)
           .toList();
 
-      // Group by account
       final Map<String, List<AssetBalance>> byAccount = {};
       for (final balance in cryptoOnly) {
         for (final accountBalance in balance.accountBalances) {
@@ -126,7 +115,10 @@ class _CryptoScreenState extends State<CryptoScreen>
         ),
       ),
       body: _buildBody(theme, l10n),
-      bottomNavigationBar: _buildBottomNav(l10n),
+      bottomNavigationBar: LedgerBottomNav(
+        currentTab: LedgerTab.crypto,
+        navigation: widget.navigation,
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => widget.navigation.goToRoute('transaction_editor'),
         tooltip: l10n.get(L10nKeys.ledgerActionAddTransaction),
@@ -174,7 +166,7 @@ class _CryptoScreenState extends State<CryptoScreen>
               onPressed: () =>
                   widget.navigation.goToRoute('transaction_editor'),
               icon: const Icon(Icons.add),
-              label: const Text('Add Transaction'),
+              label: Text(l10n.get(L10nKeys.ledgerActionAddTransaction)),
             ),
           ],
         ),
@@ -202,7 +194,7 @@ class _CryptoScreenState extends State<CryptoScreen>
               ),
               const SizedBox(height: 8),
               Text(
-                '\$${_formatCurrency(totalValue)}',
+                '\$${MoneyFormatting.formatCurrency(totalValue)}',
                 style: theme.textTheme.displaySmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.primary,
@@ -222,7 +214,7 @@ class _CryptoScreenState extends State<CryptoScreen>
               padding: const EdgeInsets.all(16),
               itemCount: _cryptoBalances!.length,
               itemBuilder: (context, index) {
-                return _buildAssetCard(theme, _cryptoBalances![index]);
+                return _buildAssetCard(theme, l10n, _cryptoBalances![index]);
               },
             ),
           ),
@@ -266,7 +258,11 @@ class _CryptoScreenState extends State<CryptoScreen>
     );
   }
 
-  Widget _buildAssetCard(ThemeData theme, TotalAssetBalance balance) {
+  Widget _buildAssetCard(
+    ThemeData theme,
+    LocalizationService l10n,
+    TotalAssetBalance balance,
+  ) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -312,7 +308,7 @@ class _CryptoScreenState extends State<CryptoScreen>
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        _formatBalance(
+                        MoneyFormatting.formatBalance(
                           balance.totalBalance,
                           balance.asset.decimals,
                         ),
@@ -320,7 +316,7 @@ class _CryptoScreenState extends State<CryptoScreen>
                       ),
                       if (balance.usdValue != null)
                         Text(
-                          '\$${_formatCurrency(balance.usdValue!)}',
+                          '\$${MoneyFormatting.formatCurrency(balance.usdValue!)}',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurface.withValues(
                               alpha: 0.6,
@@ -343,7 +339,10 @@ class _CryptoScreenState extends State<CryptoScreen>
                       children: [
                         Text(ab.account.name, style: theme.textTheme.bodySmall),
                         Text(
-                          _formatBalance(ab.balance, balance.asset.decimals),
+                          MoneyFormatting.formatBalance(
+                            ab.balance,
+                            balance.asset.decimals,
+                          ),
                           style: theme.textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.w500,
                           ),
@@ -377,13 +376,6 @@ class _CryptoScreenState extends State<CryptoScreen>
     List<AssetBalance> balances,
   ) {
     final account = balances.first.account;
-    // const double totalValue = 0;
-
-    // for (final balance in balances) {
-    // final asset = balance.asset;
-    // Would need price lookup here for accurate total
-    // For now just show asset count
-    // }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -435,7 +427,7 @@ class _CryptoScreenState extends State<CryptoScreen>
                 children: balances.take(5).map((balance) {
                   return Chip(
                     label: Text(
-                      '${balance.asset.symbol}: ${_formatBalance(balance.balance, balance.asset.decimals)}',
+                      '${balance.asset.symbol}: ${MoneyFormatting.formatBalance(balance.balance, balance.asset.decimals)}',
                       style: theme.textTheme.bodySmall,
                     ),
                     padding: EdgeInsets.zero,
@@ -451,7 +443,6 @@ class _CryptoScreenState extends State<CryptoScreen>
 
   void _showAssetDetail(TotalAssetBalance balance) {
     final theme = Theme.of(context);
-    // final l10n = context.l10n;
 
     showModalBottomSheet<void>(
       context: context,
@@ -531,7 +522,7 @@ class _CryptoScreenState extends State<CryptoScreen>
                               style: theme.textTheme.titleMedium,
                             ),
                             Text(
-                              _formatBalance(
+                              MoneyFormatting.formatBalance(
                                 balance.totalBalance,
                                 balance.asset.decimals,
                               ),
@@ -551,7 +542,7 @@ class _CryptoScreenState extends State<CryptoScreen>
                                 style: theme.textTheme.bodyMedium,
                               ),
                               Text(
-                                '\$${_formatCurrency(balance.usdValue!)}',
+                                '\$${MoneyFormatting.formatCurrency(balance.usdValue!)}',
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   color: theme.colorScheme.primary,
                                 ),
@@ -580,7 +571,10 @@ class _CryptoScreenState extends State<CryptoScreen>
                           leading: Icon(_iconForAccountType(ab.account.type)),
                           title: Text(ab.account.name),
                           trailing: Text(
-                            _formatBalance(ab.balance, balance.asset.decimals),
+                            MoneyFormatting.formatBalance(
+                              ab.balance,
+                              balance.asset.decimals,
+                            ),
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
@@ -599,49 +593,7 @@ class _CryptoScreenState extends State<CryptoScreen>
   }
 
   void _showAccountDetail(Account account, List<AssetBalance> balances) {
-    // Similar modal for account details
-    // Implementation would be similar to _showAssetDetail
-  }
-
-  Widget _buildBottomNav(LocalizationService l10n) {
-    return BottomNavigationBar(
-      currentIndex: 1,
-      type: BottomNavigationBarType.fixed,
-      items: [
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.dashboard),
-          label: l10n.get(L10nKeys.ledgerNavDashboard),
-        ),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.currency_bitcoin),
-          label: l10n.get(L10nKeys.ledgerNavCrypto),
-        ),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.account_balance_wallet),
-          label: l10n.get(L10nKeys.ledgerNavMoney),
-        ),
-      ],
-      onTap: (index) {
-        if (index == 0) {
-          widget.navigation.goToRoute('dashboard');
-        } else if (index == 2) {
-          widget.navigation.goToRoute('money');
-        }
-      },
-    );
-  }
-
-  String _formatCurrency(double value) {
-    return value
-        .toStringAsFixed(2)
-        .replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
-        );
-  }
-
-  String _formatBalance(double value, int decimals) {
-    return value.toStringAsFixed(decimals);
+    // Implementation similar to asset detail
   }
 
   IconData _iconForAccountType(AccountType type) {
