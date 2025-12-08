@@ -105,11 +105,23 @@ class _MoneyScreenState extends State<MoneyScreen> {
         ),
       );
     }
-
-    if (_fiatBalances == null || _fiatBalances!.isEmpty) {
-      return EmptyState(
-        message: l10n.get(L10nKeys.ledgerMoneyNoAccounts),
-        icon: Icons.account_balance,
+    if (_fiatBalances?.isEmpty ?? true) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n.get(L10nKeys.ledgerMoneyNoAccounts),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () => widget.navigation.goToRoute('accounts'),
+              icon: const Icon(Icons.add),
+              label: Text(l10n.get(L10nKeys.ledgerCommonAccounts)),
+            ),
+          ],
+        ),
       );
     }
 
