@@ -10,9 +10,9 @@ abstract class AssetRepository {
 }
 
 abstract class AccountRepository {
-  Future<List<Account>> getAll({bool includeArchived = false});
+  Future<List<Account>> getAll();
   Future<Account?> getById(String id);
-  Future<Map<String, Account>> getAllAsMap({bool includeArchived = false});
+  Future<Map<String, Account>> getAllAsMap();
   Future<void> insert(Account account);
   Future<void> update(Account account);
   Future<void> delete(String id);
@@ -52,10 +52,4 @@ abstract class PriceRepository {
     int? limit,
   });
   Future<DateTime?> getLatestPriceTimestamp();
-}
-
-abstract class BalanceRepository {
-  Future<double> getBalance(String accountId, String assetId);
-  Future<Map<String, double>> getAccountBalances(String accountId);
-  Future<Map<String, Map<String, double>>> getAllBalances();
 }
