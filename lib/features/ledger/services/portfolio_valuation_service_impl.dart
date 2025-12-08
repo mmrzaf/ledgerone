@@ -56,7 +56,7 @@ class PortfolioValuationServiceImpl implements PortfolioValuationService {
   @override
   Future<bool> isPriceDataStale() async {
     final lastUpdate = await getLastPriceUpdate();
-    if (lastUpdate == null) return true;
+    if (lastUpdate == null) return false;
 
     final now = DateTime.now();
     final difference = now.difference(lastUpdate);
