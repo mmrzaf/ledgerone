@@ -111,9 +111,22 @@ class _CryptoScreenState extends State<CryptoScreen> {
     }
 
     if (_cryptoBalances == null || _cryptoBalances!.isEmpty) {
-      return EmptyState(
-        message: l10n.get(L10nKeys.ledgerCryptoNoAssets),
-        icon: Icons.currency_bitcoin,
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n.get(L10nKeys.ledgerMoneyNoAccounts),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () => widget.navigation.goToRoute('accounts'),
+              icon: const Icon(Icons.add),
+              label: Text(l10n.get(L10nKeys.ledgerCommonAccounts)),
+            ),
+          ],
+        ),
       );
     }
 
