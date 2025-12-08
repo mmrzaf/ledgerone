@@ -183,9 +183,7 @@ class RouterFactory {
           name: 'money',
           builder: (context, state) => MoneyScreen(
             navigation: navigationService,
-            balanceService: locator.get<BalanceService>(),
-            transactionRepo: locator.get<TransactionRepository>(),
-            categoryRepo: locator.get<CategoryRepository>(),
+            summaryService: locator.get<MoneySummaryService>(),
             analytics: locator.get<AnalyticsService>(),
           ),
         ),
