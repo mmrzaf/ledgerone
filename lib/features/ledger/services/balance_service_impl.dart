@@ -17,15 +17,12 @@ class BalanceServiceImpl implements BalanceService {
 
   @override
   Future<double> getBalance(String assetId, String accountId) async {
-    final legs = await transactionRepo.getAll();
+    final legs = await transactionRepo.getAllLegs();
     double balance = 0.0;
 
-    for (final tx in legs) {
-      final txLegs = await transactionRepo.getLegsForTransaction(tx.id);
-      for (final leg in txLegs) {
-        if (leg.assetId == assetId && leg.accountId == accountId) {
-          balance += leg.amount;
-        }
+    for (final leg in legs) {
+      if (leg.assetId == assetId && leg.accountId == accountId) {
+        balance += leg.amount;
       }
     }
 
@@ -34,15 +31,12 @@ class BalanceServiceImpl implements BalanceService {
 
   @override
   Future<double> getTotalBalance(String assetId) async {
-    final legs = await transactionRepo.getAll();
+    final legs = await transactionRepo.getAllLegs();
     double balance = 0.0;
 
-    for (final tx in legs) {
-      final txLegs = await transactionRepo.getLegsForTransaction(tx.id);
-      for (final leg in txLegs) {
-        if (leg.assetId == assetId) {
-          balance += leg.amount;
-        }
+    for (final leg in legs) {
+      if (leg.assetId == assetId) {
+        balance += leg.amount;
       }
     }
 
@@ -53,39 +47,33 @@ class BalanceServiceImpl implements BalanceService {
   Future<List<AssetBalance>> getAccountBalances(String accountId) async {
     final assetMap = await assetRepo.getAllAsMap();
     final accountMap = await accountRepo.getAllAsMap();
-
     final account = accountMap[accountId];
     if (account == null) return [];
 
+    final legs = await transactionRepo.getAllLegs();
     final balanceMap = <String, double>{};
-    final legs = await transactionRepo.getAll();
 
-    for (final tx in legs) {
-      final txLegs = await transactionRepo.getLegsForTransaction(tx.id);
-      for (final leg in txLegs) {
-        if (leg.accountId == accountId) {
-          balanceMap[leg.assetId] =
-              (balanceMap[leg.assetId] ?? 0.0) + leg.amount;
-        }
+    for (final leg in legs) {
+      if (leg.accountId == accountId) {
+        balanceMap[leg.assetId] = (balanceMap[leg.assetId] ?? 0.0) + leg.amount;
       }
     }
 
     final result = <AssetBalance>[];
     for (final entry in balanceMap.entries) {
-      if (entry.value != 0.0) {
-        final asset = assetMap[entry.key];
-        if (asset != null) {
-          result.add(
-            AssetBalance(
-              assetId: entry.key,
-              accountId: accountId,
-              balance: entry.value,
-              asset: asset,
-              account: account,
-            ),
-          );
-        }
-      }
+      if (entry.value == 0.0) continue;
+      final asset = assetMap[entry.key];
+      if (asset == null) continue;
+
+      result.add(
+        AssetBalance(
+          assetId: entry.key,
+          accountId: accountId,
+          balance: entry.value,
+          asset: asset,
+          account: account,
+        ),
+      );
     }
 
     return result;
@@ -100,19 +88,22 @@ class BalanceServiceImpl implements BalanceService {
     final latestPrices = await priceRepo.getLatestPrices();
     final priceMap = {for (var p in latestPrices) p.assetId: p.price};
 
-    final balanceMap = <String, Map<String, double>>{};
-    final legs = await transactionRepo.getAll();
+    final legs = await transactionRepo.getAllLegs();
 
-    for (final tx in legs) {
-      final txLegs = await transactionRepo.getLegsForTransaction(tx.id);
-      for (final leg in txLegs) {
-        balanceMap.putIfAbsent(leg.assetId, () => {});
-        final current = balanceMap[leg.assetId]![leg.accountId] ?? 0.0;
-        balanceMap[leg.assetId]![leg.accountId] = current + leg.amount;
-      }
+    // assetId -> (accountId -> balance)
+    final balanceMap = <String, Map<String, double>>{};
+
+    for (final leg in legs) {
+      final assetBalances = balanceMap.putIfAbsent(
+        leg.assetId,
+        () => <String, double>{},
+      );
+      assetBalances[leg.accountId] =
+          (assetBalances[leg.accountId] ?? 0.0) + leg.amount;
     }
 
     final result = <TotalAssetBalance>[];
+
     for (final assetEntry in balanceMap.entries) {
       final assetId = assetEntry.key;
       final asset = assetMap[assetId];
