@@ -32,7 +32,7 @@ class _CryptoScreenState extends State<CryptoScreen>
   Map<String, List<AssetBalance>>? _accountBalances;
   bool _loading = true;
   AppError? _error;
-  CryptoViewMode _viewMode = CryptoViewMode.byAsset;
+  // CryptoViewMode _viewMode = CryptoViewMode.byAsset;
   late TabController _tabController;
 
   @override
@@ -40,13 +40,13 @@ class _CryptoScreenState extends State<CryptoScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
-        setState(() {
-          _viewMode = _tabController.index == 0
-              ? CryptoViewMode.byAsset
-              : CryptoViewMode.byAccount;
-        });
-      }
+      // if (!_tabController.indexIsChanging) {
+      //   setState(() {
+      //     _viewMode = _tabController.index == 0
+      //         ? CryptoViewMode.byAsset
+      //         : CryptoViewMode.byAccount;
+      //   });
+      // }
     });
     widget.analytics.logScreenView('crypto');
     _loadData();
@@ -193,7 +193,7 @@ class _CryptoScreenState extends State<CryptoScreen>
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(20),
-          color: theme.colorScheme.primaryContainer.withOpacity(0.3),
+          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
           child: Column(
             children: [
               Text(
@@ -322,7 +322,9 @@ class _CryptoScreenState extends State<CryptoScreen>
                         Text(
                           '\$${_formatCurrency(balance.usdValue!)}',
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
                           ),
                         ),
                     ],
@@ -375,13 +377,13 @@ class _CryptoScreenState extends State<CryptoScreen>
     List<AssetBalance> balances,
   ) {
     final account = balances.first.account;
-    const double totalValue = 0;
+    // const double totalValue = 0;
 
-    for (final balance in balances) {
-      final asset = balance.asset;
-      // Would need price lookup here for accurate total
-      // For now just show asset count
-    }
+    // for (final balance in balances) {
+    // final asset = balance.asset;
+    // Would need price lookup here for accurate total
+    // For now just show asset count
+    // }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -449,9 +451,9 @@ class _CryptoScreenState extends State<CryptoScreen>
 
   void _showAssetDetail(TotalAssetBalance balance) {
     final theme = Theme.of(context);
-    final l10n = context.l10n;
+    // final l10n = context.l10n;
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (ctx) {
@@ -516,7 +518,7 @@ class _CryptoScreenState extends State<CryptoScreen>
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerHighest
-                          .withOpacity(0.5),
+                          .withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(

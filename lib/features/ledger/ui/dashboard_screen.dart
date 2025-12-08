@@ -145,10 +145,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _showUpdateDetails(BulkPriceUpdateResult result) {
-    final l10n = context.l10n;
+    // final l10n = context.l10n;
     final theme = Theme.of(context);
 
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       builder: (ctx) {
         return Container(
@@ -318,7 +318,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       },
                     ),
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
               ],
@@ -374,7 +374,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Column(
@@ -397,7 +397,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Text(
             '${percentage.toStringAsFixed(1)}%',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
           ),
         ],
