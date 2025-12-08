@@ -169,10 +169,17 @@ class _AccountsScreenState extends State<AccountsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
+    // final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.get(L10nKeys.ledgerCommonAccounts))),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          tooltip: l10n.get(L10nKeys.ledgerCommonClose),
+          onPressed: () => widget.navigation.goBack(),
+        ),
+        title: Text(l10n.get(L10nKeys.ledgerCommonAccounts)),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -181,7 +188,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
           ? Center(child: Text(l10n.get(L10nKeys.ledgerMoneyNoAccounts)))
           : ListView.separated(
               itemCount: _accounts.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (ctx, index) {
                 final account = _accounts[index];
                 return ListTile(

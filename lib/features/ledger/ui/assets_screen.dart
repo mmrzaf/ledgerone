@@ -198,7 +198,14 @@ class _AssetsScreenState extends State<AssetsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.get(L10nKeys.ledgerCommonAssets))),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          tooltip: l10n.get(L10nKeys.ledgerCommonClose),
+          onPressed: () => widget.navigation.goBack(),
+        ),
+        title: Text(l10n.get(L10nKeys.ledgerCommonAssets)),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -207,7 +214,7 @@ class _AssetsScreenState extends State<AssetsScreen> {
           ? Center(child: Text(l10n.get(L10nKeys.ledgerCommonNoData)))
           : ListView.separated(
               itemCount: _assets.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, _) => const Divider(height: 1),
               itemBuilder: (ctx, index) {
                 final asset = _assets[index];
                 return ListTile(
