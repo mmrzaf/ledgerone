@@ -58,7 +58,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       );
 
-      widget.analytics.logEvent(
+      await widget.analytics.logEvent(
         'settings_language_changed',
         parameters: {'language': languageCode},
       );
@@ -71,7 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (mounted) {
       setState(() {});
 
-      widget.analytics.logEvent(
+      await widget.analytics.logEvent(
         'settings_theme_toggled',
         parameters: {'theme': _themeService.currentTheme.name},
       );
@@ -242,7 +242,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ListTile(
       leading: const Icon(Icons.info_outline),
       title: Text(l10n.get(L10nKeys.ledgerSettingsVersion)),
-      subtitle: const Text('0.8.0'),
+      subtitle: const Text('0.9.3'),
     );
   }
 
