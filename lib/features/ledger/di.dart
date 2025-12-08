@@ -1,5 +1,6 @@
-import '../../app/di.dart';
+import '../../app/di.dart'; // ServiceLocator
 import '../../core/contracts/analytics_contract.dart';
+import '../../core/data/database_contract.dart';
 import '../../core/network/http_client_contract.dart';
 import '../../core/observability/performance_tracker.dart';
 import 'data/database.dart';
@@ -10,55 +11,116 @@ import 'services/portfolio_valuation_service_impl.dart';
 import 'services/price_update_service_impl.dart';
 import 'services/transaction_service_impl.dart';
 
+/// Dependency injection module for the Ledger feature
+///
+/// This module registers all ledger-specific dependencies in three layers:
+/// 1. Database - Data persistence
+/// 2. Repositories - Data access layer
+/// 3. Services - Business logic layer
 class LedgerModule {
+  /// Register all ledger dependencies
   static Future<void> register(ServiceLocator locator) async {
-    // Database
+    // Layer 1: Database
+    await _registerDatabase(locator);
+
+    // Layer 2: Repositories
+    _registerRepositories(locator);
+
+    // Layer 3: Services
+    _registerServices(locator);
+  }
+
+  /// Register the ledger database
+  ///
+  /// The database is registered both as:
+  /// - LedgerDatabase (concrete type for feature-specific use)
+  /// - DatabaseService (interface for generic use)
+  static Future<void> _registerDatabase(ServiceLocator locator) async {
     final db = LedgerDatabase();
+
+    // Warm up the database connection
+    await db.database;
+
     locator.register<LedgerDatabase>(db);
+    locator.register<DatabaseService>(db);
+  }
 
-    // Repositories
+  /// Register all data repositories
+  ///
+  /// Repositories provide clean access to persisted data.
+  /// Each repository is registered both as its concrete type
+  /// and its interface for maximum flexibility.
+  static void _registerRepositories(ServiceLocator locator) {
+    final db = locator.get<LedgerDatabase>();
+
+    // Asset repository
     final assetRepo = AssetRepositoryImpl(db);
-    final accountRepo = AccountRepositoryImpl(db);
-    final categoryRepo = CategoryRepositoryImpl(db);
-    final transactionRepo = TransactionRepositoryImpl(db);
-    final priceRepo = PriceRepositoryImpl(db);
-
     locator.register<AssetRepository>(assetRepo);
-    locator.register<AccountRepository>(accountRepo);
-    locator.register<CategoryRepository>(categoryRepo);
-    locator.register<TransactionRepository>(transactionRepo);
-    locator.register<PriceRepository>(priceRepo);
+    locator.register<AssetRepositoryImpl>(assetRepo);
 
-    // Services
+    // Account repository
+    final accountRepo = AccountRepositoryImpl(db);
+    locator.register<AccountRepository>(accountRepo);
+    locator.register<AccountRepositoryImpl>(accountRepo);
+
+    // Category repository
+    final categoryRepo = CategoryRepositoryImpl(db);
+    locator.register<CategoryRepository>(categoryRepo);
+    locator.register<CategoryRepositoryImpl>(categoryRepo);
+
+    // Transaction repository
+    final transactionRepo = TransactionRepositoryImpl(db);
+    locator.register<TransactionRepository>(transactionRepo);
+    locator.register<TransactionRepositoryImpl>(transactionRepo);
+
+    // Price repository
+    final priceRepo = PriceRepositoryImpl(db);
+    locator.register<PriceRepository>(priceRepo);
+    locator.register<PriceRepositoryImpl>(priceRepo);
+  }
+
+  /// Register all domain services
+  ///
+  /// Services implement business logic and orchestrate repositories.
+  /// They are registered as interfaces only to encourage loose coupling.
+  static void _registerServices(ServiceLocator locator) {
+    // Balance Service
+    // Computes asset balances from transaction legs
     final balanceService = BalanceServiceImpl(
-      assetRepo: assetRepo,
-      accountRepo: accountRepo,
-      priceRepo: priceRepo,
-      transactionRepo: transactionRepo,
+      assetRepo: locator.get<AssetRepository>(),
+      accountRepo: locator.get<AccountRepository>(),
+      priceRepo: locator.get<PriceRepository>(),
+      transactionRepo: locator.get<TransactionRepository>(),
     );
     locator.register<BalanceService>(balanceService);
 
+    // Portfolio Valuation Service
+    // Computes total portfolio value in USD
     final portfolioService = PortfolioValuationServiceImpl(
       balanceService: balanceService,
-      priceRepo: priceRepo,
+      priceRepo: locator.get<PriceRepository>(),
     );
     locator.register<PortfolioValuationService>(portfolioService);
 
+    // Transaction Service
+    // Handles transaction creation, validation, and persistence
     final transactionService = TransactionServiceImpl(
-      db: db,
-      transactionRepo: transactionRepo,
-      assetRepo: assetRepo,
-      accountRepo: accountRepo,
+      db: locator.get<LedgerDatabase>(),
+      transactionRepo: locator.get<TransactionRepository>(),
+      assetRepo: locator.get<AssetRepository>(),
+      accountRepo: locator.get<AccountRepository>(),
       analytics: locator.get<AnalyticsService>(),
       performance: PerformanceTracker(),
     );
     locator.register<TransactionService>(transactionService);
 
+    // Price Update Service
+    // Fetches and stores asset prices from external sources
     final priceUpdateService = PriceUpdateServiceImpl(
       httpClient: locator.get<HttpClient>(),
-      assetRepo: assetRepo,
-      priceRepo: priceRepo,
-      db: db,
+      assetRepo: locator.get<AssetRepository>(),
+      priceRepo: locator.get<PriceRepository>(),
+      db: locator.get<LedgerDatabase>(),
       analytics: locator.get<AnalyticsService>(),
       performance: PerformanceTracker(),
     );
