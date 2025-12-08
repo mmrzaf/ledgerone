@@ -162,6 +162,7 @@ class RouterFactory {
               navigation: navigationService,
               portfolioService: locator.get<PortfolioValuationService>(),
               priceUpdateService: locator.get<PriceUpdateService>(),
+              balanceService: locator.get<BalanceService>(),
               analytics: locator.get<AnalyticsService>(),
             );
           },

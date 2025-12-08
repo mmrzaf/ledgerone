@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
-
 import '../../../app/presentation/error_presenter.dart';
 import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/i18n/string_keys.dart';
+import '../domain/models.dart';
 import '../domain/services.dart';
 
 class DashboardScreen extends StatefulWidget {
   final NavigationService navigation;
   final PortfolioValuationService portfolioService;
   final PriceUpdateService priceUpdateService;
+  final BalanceService balanceService;
   final AnalyticsService analytics;
 
   const DashboardScreen({
     required this.navigation,
     required this.portfolioService,
     required this.priceUpdateService,
+    required this.balanceService,
     required this.analytics,
     super.key,
   });
@@ -28,6 +30,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   PortfolioValuation? _portfolio;
+  List<TotalAssetBalance>? _topHoldings;
   bool _loading = true;
   bool _updatingPrices = false;
   AppError? _error;
@@ -49,23 +52,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     try {
       final portfolio = await widget.portfolioService.getPortfolioValue();
+      final allBalances = await widget.balanceService.getAllBalances();
+
+      // Sort by USD value and take top 5
+      allBalances.sort((a, b) {
+        final aValue = a.usdValue ?? 0;
+        final bValue = b.usdValue ?? 0;
+        return bValue.compareTo(aValue);
+      });
+      final topHoldings = allBalances.take(5).toList();
 
       if (!mounted) return;
 
       setState(() {
         _portfolio = portfolio;
+        _topHoldings = topHoldings;
         _loading = false;
       });
     } on AppError catch (e) {
       if (!mounted) return;
-
       setState(() {
         _loading = false;
         _error = e;
       });
     } catch (e) {
       if (!mounted) return;
-
       setState(() {
         _loading = false;
         _error = AppError(
@@ -104,6 +115,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           backgroundColor: result.failureCount == 0
               ? Colors.green
               : Colors.orange,
+          action: result.failureCount > 0
+              ? SnackBarAction(
+                  label: 'Details',
+                  onPressed: () => _showUpdateDetails(result),
+                )
+              : null,
         ),
       );
 
@@ -125,6 +142,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
         screen: 'dashboard',
       );
     }
+  }
+
+  void _showUpdateDetails(BulkPriceUpdateResult result) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Price Update Results', style: theme.textTheme.titleLarge),
+              const SizedBox(height: 16),
+              ...result.results.map((r) {
+                return ListTile(
+                  leading: Icon(
+                    r.success ? Icons.check_circle : Icons.error,
+                    color: r.success ? Colors.green : Colors.red,
+                  ),
+                  title: Text(r.asset.symbol),
+                  subtitle: r.success
+                      ? Text('\$${r.price?.toStringAsFixed(2)}')
+                      : Text(r.error?.message ?? 'Unknown error'),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -162,6 +213,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: _buildBody(theme, l10n),
       bottomNavigationBar: _buildBottomNav(l10n),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => widget.navigation.goToRoute('transaction_editor'),
+        tooltip: l10n.get(L10nKeys.ledgerActionAddTransaction),
+        child: const Icon(Icons.add),
+      ),
     );
   }
 
@@ -198,6 +254,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (_portfolio!.isPriceDataStale) _buildStaleWarning(theme, l10n),
           _buildPortfolioCard(theme, l10n),
           const SizedBox(height: 24),
+          if (_topHoldings != null && _topHoldings!.isNotEmpty)
+            _buildTopHoldings(theme, l10n),
+          const SizedBox(height: 24),
           _buildQuickActions(theme, l10n),
           const SizedBox(height: 16),
         ],
@@ -224,6 +283,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               style: TextStyle(color: Colors.orange.shade900),
             ),
           ),
+          TextButton(onPressed: _updatePrices, child: const Text('Update')),
         ],
       ),
     );
@@ -281,6 +341,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     L10nKeys.ledgerDashboardCrypto,
                     cryptoValue,
                     Icons.currency_bitcoin,
+                    totalValue > 0 ? (cryptoValue / totalValue * 100) : 0,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -291,6 +352,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     L10nKeys.ledgerDashboardFiat,
                     fiatValue,
                     Icons.account_balance,
+                    totalValue > 0 ? (fiatValue / totalValue * 100) : 0,
                   ),
                 ),
               ],
@@ -307,6 +369,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String labelKey,
     double value,
     IconData icon,
+    double percentage,
   ) {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -331,8 +394,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
+          Text(
+            '${percentage.toStringAsFixed(1)}%',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.6),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTopHoldings(ThemeData theme, LocalizationService l10n) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.get(L10nKeys.ledgerDashboardTopHoldings),
+          style: theme.textTheme.titleMedium,
+        ),
+        const SizedBox(height: 12),
+        ..._topHoldings!.map((balance) {
+          return Card(
+            margin: const EdgeInsets.only(bottom: 8),
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Text(
+                  balance.asset.symbol.substring(0, 1).toUpperCase(),
+                  style: TextStyle(color: theme.colorScheme.onPrimaryContainer),
+                ),
+              ),
+              title: Text(balance.asset.symbol),
+              subtitle: Text(
+                '${_formatBalance(balance.totalBalance, balance.asset.decimals)} ${balance.asset.symbol}',
+              ),
+              trailing: balance.usdValue != null
+                  ? Text(
+                      '\$${_formatCurrency(balance.usdValue!)}',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : null,
+              onTap: () {
+                // Navigate to asset detail view
+                widget.navigation.goToRoute(
+                  'asset_detail',
+                  params: {'assetId': balance.asset.id},
+                );
+              },
+            ),
+          );
+        }),
+      ],
     );
   }
 
@@ -436,6 +551,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]},',
         );
+  }
+
+  String _formatBalance(double value, int decimals) {
+    return value.toStringAsFixed(decimals);
   }
 
   String _formatTime(LocalizationService l10n, DateTime time) {
