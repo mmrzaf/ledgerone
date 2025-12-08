@@ -180,31 +180,22 @@ class LedgerDatabase extends SqliteDatabaseBase {
         'updated_at': now,
       },
       {
-        'id': 'eur',
-        'symbol': 'EUR',
-        'name': 'Euro',
-        'type': 'fiat',
-        'decimals': 2,
-        'created_at': now,
-        'updated_at': now,
-      },
-      {
-        'id': 'btc',
+        'id': 'asset_btc',
         'symbol': 'BTC',
         'name': 'Bitcoin',
         'type': 'crypto',
         'decimals': 8,
-        'created_at': now,
-        'updated_at': now,
+        'price_source_config':
+            '{ "method": "GET", "url": "https://api.coingecko.com/api/v3/simple/price", "query_params": { "ids": "bitcoin", "vs_currencies": "usd" }, "headers": {}, "response_path": "bitcoin.usd", "multiplier": 1.0 }',
       },
       {
-        'id': 'eth',
+        'id': 'asset_eth',
         'symbol': 'ETH',
         'name': 'Ethereum',
         'type': 'crypto',
         'decimals': 8,
-        'created_at': now,
-        'updated_at': now,
+        'price_source_config':
+            '{ "method": "GET", "url": "https://api.coingecko.com/api/v3/simple/price", "query_params": { "ids": "ethereum", "vs_currencies": "usd" }, "headers": {}, "response_path": "ethereum.usd", "multiplier": 1.0 }',
       },
     ];
 
