@@ -1,5 +1,3 @@
-// lib/core/observability/analytics_allowlist.dart
-
 /// Event parameter definition
 class EventParameter {
   final String name;
@@ -431,10 +429,55 @@ class AnalyticsAllowlist {
     ],
   );
 
+  static const settingsLanguageChanged = EventDefinition(
+    name: 'settings_language_changed',
+    description: 'User changed language',
+    parameters: [
+      EventParameter(
+        name: 'language',
+        type: String,
+        description: 'Language code selected',
+        required: true,
+      ),
+    ],
+  );
+
+  static const settingsThemeToggled = EventDefinition(
+    name: 'settings_theme_toggled',
+    description: 'User toggled theme',
+    parameters: [
+      EventParameter(
+        name: 'theme',
+        type: String,
+        description: 'Theme name (light/dark)',
+        required: true,
+      ),
+    ],
+  );
+
+  static const backupExportClicked = EventDefinition(
+    name: 'backup_export_clicked',
+    description: 'User clicked backup export button',
+  );
+
   // ------------------------------------------------------------
-  // All allowed events (frozen list)
+  // Money screen events
   // ------------------------------------------------------------
 
+  static const moneyPeriodChanged = EventDefinition(
+    name: 'money_period_changed',
+    description: 'User changed money view period',
+    parameters: [
+      EventParameter(
+        name: 'period',
+        type: String,
+        description: 'Period selected (thisMonth/lastMonth/allTime)',
+        required: true,
+      ),
+    ],
+  );
+
+  // Add to allowedEvents list:
   static const List<EventDefinition> allowedEvents = [
     // Core app
     appLaunch,
@@ -465,6 +508,14 @@ class AnalyticsAllowlist {
     priceUpdateFinished,
     priceUpdateFailed,
     priceUpdateSuccess,
+
+    // Settings
+    settingsLanguageChanged,
+    settingsThemeToggled,
+    backupExportClicked,
+
+    // Money
+    moneyPeriodChanged,
   ];
 
   /// Get event definition by name
