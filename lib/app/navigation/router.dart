@@ -2,7 +2,10 @@ import 'package:go_router/go_router.dart';
 import 'package:ledgerone/app/di.dart';
 import 'package:ledgerone/core/contracts/analytics_contract.dart';
 import 'package:ledgerone/core/contracts/i18n_contract.dart';
+import 'package:ledgerone/features/ledger/data/repositories_interfaces.dart';
 import 'package:ledgerone/features/ledger/domain/services.dart';
+import 'package:ledgerone/features/ledger/ui/accounts_screen.dart';
+import 'package:ledgerone/features/ledger/ui/assets_screen.dart';
 import 'package:ledgerone/features/ledger/ui/crypto_screen.dart';
 import 'package:ledgerone/features/ledger/ui/dashboard_screen.dart';
 import 'package:ledgerone/features/ledger/ui/money_screen.dart';
@@ -191,6 +194,28 @@ class RouterFactory {
             return TransactionEditorScreen(
               navigation: navigationService,
               transactionService: locator.get<TransactionService>(),
+              analytics: locator.get<AnalyticsService>(),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/assets',
+          builder: (context, state) {
+            final locator = ServiceLocator();
+            return AssetsScreen(
+              navigation: navigationService,
+              assetRepo: locator.get<AssetRepository>(),
+              analytics: locator.get<AnalyticsService>(),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/accounts',
+          builder: (context, state) {
+            final locator = ServiceLocator();
+            return AccountsScreen(
+              navigation: navigationService,
+              accountRepo: locator.get<AccountRepository>(),
               analytics: locator.get<AnalyticsService>(),
             );
           },
