@@ -74,8 +74,8 @@ class Asset {
     required this.createdAt,
     required this.updatedAt,
   });
-
   Asset copyWith({
+    String? id,
     String? symbol,
     String? name,
     AssetType? type,
@@ -84,7 +84,7 @@ class Asset {
     DateTime? updatedAt,
   }) {
     return Asset(
-      id: id,
+      id: id ?? this.id,
       symbol: symbol ?? this.symbol,
       name: name ?? this.name,
       type: type ?? this.type,
@@ -136,15 +136,15 @@ class Account {
     required this.createdAt,
     required this.updatedAt,
   });
-
   Account copyWith({
+    String? id,
     String? name,
     AccountType? type,
     String? notes,
     DateTime? updatedAt,
   }) {
     return Account(
-      id: id,
+      id: id ?? this.id,
       name: name ?? this.name,
       type: type ?? this.type,
       notes: notes ?? this.notes,

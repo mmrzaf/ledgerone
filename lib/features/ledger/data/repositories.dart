@@ -41,7 +41,12 @@ class AssetRepositoryImpl implements AssetRepository {
   @override
   Future<void> insert(Asset asset) async {
     final db = await _db.database;
-    await db.insert('assets', asset.toJson());
+
+    final assetToInsert = asset.id.isEmpty
+        ? asset.copyWith(id: _db.generateId())
+        : asset;
+
+    await db.insert('assets', assetToInsert.toJson());
   }
 
   @override
@@ -91,15 +96,15 @@ class AccountRepositoryImpl implements AccountRepository {
   }
 
   @override
-  Future<Map<String, Account>> getAllAsMap() async {
-    final accounts = await getAll();
-    return {for (var account in accounts) account.id: account};
-  }
-
-  @override
   Future<void> insert(Account account) async {
     final db = await _db.database;
-    await db.insert('accounts', account.toJson());
+
+    // Generate ID if not provided
+    final accountToInsert = account.id.isEmpty
+        ? account.copyWith(id: _db.generateId())
+        : account;
+
+    await db.insert('accounts', accountToInsert.toJson());
   }
 
   @override
@@ -117,6 +122,12 @@ class AccountRepositoryImpl implements AccountRepository {
   Future<void> delete(String id) async {
     final db = await _db.database;
     await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
+  }
+
+  @override
+  Future<Map<String, Account>> getAllAsMap() async {
+    final accounts = await getAll();
+    return {for (final account in accounts) account.id: account};
   }
 }
 
