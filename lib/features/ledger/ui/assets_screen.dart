@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
-
 import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
@@ -82,67 +80,84 @@ class _AssetsScreenState extends State<AssetsScreen> {
             right: 16,
             top: 16,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                asset == null
-                    ? l10n.get(L10nKeys.ledgerCommonAdd)
-                    : l10n.get(L10nKeys.ledgerCommonEdit),
-                style: theme.textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-              TextField(
-                controller: symbolController,
-                decoration: const InputDecoration(labelText: 'Symbol'),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<AssetType>(
-                initialValue: type,
-                decoration: const InputDecoration(labelText: 'Type'),
-                items: AssetType.values
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t.name)))
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      type = value;
-                    });
-                  }
-                },
-              ),
-              TextField(
-                controller: decimalsController,
-                decoration: const InputDecoration(labelText: 'Decimals'),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: priceConfigController,
-                decoration: const InputDecoration(
-                  labelText: 'Price source config (JSON, optional)',
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  asset == null ? 'Add Asset' : 'Edit Asset',
+                  style: theme.textTheme.titleLarge,
                 ),
-                maxLines: 4,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: Text(l10n.get(L10nKeys.ledgerCommonCancel)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    hintText: 'Bitcoin, Euro, etc.',
                   ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: Text(l10n.get(L10nKeys.ledgerCommonSave)),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: symbolController,
+                  decoration: const InputDecoration(
+                    labelText: 'Symbol',
+                    hintText: 'BTC, EUR, etc.',
                   ),
-                ],
-              ),
-            ],
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<AssetType>(
+                  initialValue: type,
+                  decoration: const InputDecoration(labelText: 'Type'),
+                  items: AssetType.values
+                      .map(
+                        (t) => DropdownMenuItem(
+                          value: t,
+                          child: Text(t.displayName),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) {
+                      type = value;
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: decimalsController,
+                  decoration: const InputDecoration(
+                    labelText: 'Decimals',
+                    hintText: '8 for crypto, 2 for fiat',
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: priceConfigController,
+                  decoration: const InputDecoration(
+                    labelText: 'Price Config (optional)',
+                    hintText: 'JSON configuration for price fetching',
+                  ),
+                  maxLines: 4,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: Text(l10n.get(L10nKeys.ledgerCommonCancel)),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: Text(l10n.get(L10nKeys.ledgerCommonSave)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -162,21 +177,30 @@ class _AssetsScreenState extends State<AssetsScreen> {
     setState(() => _saving = true);
     try {
       final now = DateTime.now();
-      final newAsset = Asset(
-        id: asset?.id ?? const Uuid().v4(),
-        symbol: symbol,
-        name: name,
-        type: type,
-        decimals: decimals,
-        priceSourceConfig: priceConfig,
-        createdAt: now,
-        updatedAt: now,
-      );
 
       if (asset == null) {
+        // Repository will generate ID
+        final newAsset = Asset(
+          id: '', // Empty ID signals repository to generate
+          symbol: symbol,
+          name: name,
+          type: type,
+          decimals: decimals,
+          priceSourceConfig: priceConfig,
+          createdAt: now,
+          updatedAt: now,
+        );
         await widget.assetRepo.insert(newAsset);
       } else {
-        await widget.assetRepo.update(newAsset);
+        final updatedAsset = asset.copyWith(
+          symbol: symbol,
+          name: name,
+          type: type,
+          decimals: decimals,
+          priceSourceConfig: priceConfig,
+          updatedAt: now,
+        );
+        await widget.assetRepo.update(updatedAsset);
       }
 
       await _loadAssets();
@@ -188,6 +212,31 @@ class _AssetsScreenState extends State<AssetsScreen> {
   }
 
   Future<void> _deleteAsset(Asset asset) async {
+    final l10n = context.l10n;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Asset'),
+        content: Text('Delete ${asset.name}? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.get(L10nKeys.ledgerCommonCancel)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(l10n.get(L10nKeys.ledgerCommonDelete)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
     await widget.assetRepo.delete(asset.id);
     await _loadAssets();
   }
@@ -218,8 +267,11 @@ class _AssetsScreenState extends State<AssetsScreen> {
               itemBuilder: (ctx, index) {
                 final asset = _assets[index];
                 return ListTile(
+                  leading: CircleAvatar(
+                    child: Text(asset.symbol.substring(0, 1).toUpperCase()),
+                  ),
                   title: Text('${asset.symbol} • ${asset.name}'),
-                  subtitle: Text(asset.type.name),
+                  subtitle: Text(asset.type.displayName),
                   trailing: PopupMenuButton<String>(
                     onSelected: (value) {
                       if (value == 'edit') {
