@@ -37,6 +37,7 @@ abstract class TransactionRepository {
   Future<void> update(Transaction transaction, List<TransactionLeg> legs);
   Future<void> delete(String id);
   Future<List<TransactionLeg>> getLegsForTransaction(String transactionId);
+  Future<List<TransactionLeg>> getAllLegs();
 }
 
 abstract class PriceRepository {

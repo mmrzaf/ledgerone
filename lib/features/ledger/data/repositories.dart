@@ -243,11 +243,11 @@ class TransactionRepositoryImpl implements TransactionRepository {
   ) async {
     final db = await _db.database;
     await db.transaction((txn) async {
-      final oldLegs = await txn.query(
-        'transaction_legs',
-        where: 'transaction_id = ?',
-        whereArgs: [transaction.id],
-      );
+      // final oldLegs = await txn.query(
+      //   'transaction_legs',
+      //   where: 'transaction_id = ?',
+      //   whereArgs: [transaction.id],
+      // );
 
       await txn.update(
         'transactions',
@@ -266,11 +266,11 @@ class TransactionRepositoryImpl implements TransactionRepository {
         await txn.insert('transaction_legs', leg.toJson());
       }
 
-      final oldLegsNegated = oldLegs.map((l) {
-        final copy = Map<String, dynamic>.from(l);
-        copy['amount'] = -(copy['amount'] as num).toDouble();
-        return copy;
-      }).toList();
+      // final oldLegsNegated = oldLegs.map((l) {
+      //   final copy = Map<String, dynamic>.from(l);
+      //   copy['amount'] = -(copy['amount'] as num).toDouble();
+      //   return copy;
+      // }).toList();
     });
   }
 
@@ -278,19 +278,19 @@ class TransactionRepositoryImpl implements TransactionRepository {
   Future<void> delete(String id) async {
     final db = await _db.database;
     await db.transaction((txn) async {
-      final legs = await txn.query(
-        'transaction_legs',
-        where: 'transaction_id = ?',
-        whereArgs: [id],
-      );
+      // final legs = await txn.query(
+      //   'transaction_legs',
+      //   where: 'transaction_id = ?',
+      //   whereArgs: [id],
+      // );
 
       await txn.delete('transactions', where: 'id = ?', whereArgs: [id]);
 
-      final legsNegated = legs.map((l) {
-        final copy = Map<String, dynamic>.from(l);
-        copy['amount'] = -(copy['amount'] as num).toDouble();
-        return copy;
-      }).toList();
+      // final legsNegated = legs.map((l) {
+      //   final copy = Map<String, dynamic>.from(l);
+      //   copy['amount'] = -(copy['amount'] as num).toDouble();
+      //   return copy;
+      // }).toList();
     });
   }
 
@@ -305,6 +305,13 @@ class TransactionRepositoryImpl implements TransactionRepository {
       whereArgs: [transactionId],
     );
     return maps.map((map) => TransactionLeg.fromJson(map)).toList();
+  }
+
+  @override
+  Future<List<TransactionLeg>> getAllLegs() async {
+    final db = await _db.database;
+    final maps = await db.query('transaction_legs');
+    return maps.map((m) => TransactionLeg.fromJson(m)).toList();
   }
 }
 
