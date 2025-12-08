@@ -5,8 +5,10 @@ import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/i18n/string_keys.dart';
+import '../../../shared/utils/money_formatting.dart';
 import '../domain/models.dart';
 import '../domain/services.dart';
+import 'widgets/ledger_bottom_nav.dart';
 
 class DashboardScreen extends StatefulWidget {
   final NavigationService navigation;
@@ -54,7 +56,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final portfolio = await widget.portfolioService.getPortfolioValue();
       final allBalances = await widget.balanceService.getAllBalances();
 
-      // Sort by USD value and take top 5
       allBalances.sort((a, b) {
         final aValue = a.usdValue ?? 0;
         final bValue = b.usdValue ?? 0;
@@ -145,7 +146,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _showUpdateDetails(BulkPriceUpdateResult result) {
-    // final l10n = context.l10n;
     final theme = Theme.of(context);
 
     showModalBottomSheet<void>(
@@ -167,7 +167,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   title: Text(r.asset.symbol),
                   subtitle: r.success
-                      ? Text('\$${r.price?.toStringAsFixed(2)}')
+                      ? Text('\$${MoneyFormatting.formatCurrency(r.price!)}')
                       : Text(r.error?.message ?? 'Unknown error'),
                 );
               }),
@@ -212,7 +212,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: _buildBody(theme, l10n),
-      bottomNavigationBar: _buildBottomNav(l10n),
+      bottomNavigationBar: LedgerBottomNav(
+        currentTab: LedgerTab.dashboard,
+        navigation: widget.navigation,
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => widget.navigation.goToRoute('transaction_editor'),
         tooltip: l10n.get(L10nKeys.ledgerActionAddTransaction),
@@ -278,9 +281,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const Icon(Icons.warning_amber, color: Colors.orange),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              l10n.get(L10nKeys.ledgerErrorStalePrice),
-              style: TextStyle(color: Colors.orange.shade900),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.get(L10nKeys.ledgerErrorStalePrice),
+                  style: TextStyle(
+                    color: Colors.orange.shade900,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (_portfolio!.lastPriceUpdate != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.get(
+                      L10nKeys.ledgerDashboardLastUpdate,
+                      args: {
+                        'time': MoneyFormatting.formatRelativeTime(
+                          _portfolio!.lastPriceUpdate!,
+                          l10n.get,
+                        ),
+                      },
+                    ),
+                    style: TextStyle(
+                      color: Colors.orange.shade800,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           TextButton(onPressed: _updatePrices, child: const Text('Update')),
@@ -309,12 +338,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   l10n.get(L10nKeys.ledgerDashboardTotalPortfolio),
                   style: theme.textTheme.titleMedium,
                 ),
-                if (portfolio.lastPriceUpdate != null)
+                if (portfolio.lastPriceUpdate != null &&
+                    !portfolio.isPriceDataStale)
                   Text(
                     l10n.get(
                       L10nKeys.ledgerDashboardLastUpdate,
                       args: {
-                        'time': _formatTime(l10n, portfolio.lastPriceUpdate!),
+                        'time': MoneyFormatting.formatRelativeTime(
+                          portfolio.lastPriceUpdate!,
+                          l10n.get,
+                        ),
                       },
                     ),
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -325,7 +358,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              '\$${_formatCurrency(totalValue)}',
+              '\$${MoneyFormatting.formatCurrency(totalValue)}',
               style: theme.textTheme.displaySmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.primary,
@@ -341,7 +374,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     L10nKeys.ledgerDashboardCrypto,
                     cryptoValue,
                     Icons.currency_bitcoin,
-                    totalValue > 0 ? (cryptoValue / totalValue * 100) : 0,
+                    totalValue > 0 ? (cryptoValue / totalValue) : 0,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -352,7 +385,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     L10nKeys.ledgerDashboardFiat,
                     fiatValue,
                     Icons.account_balance,
-                    totalValue > 0 ? (fiatValue / totalValue * 100) : 0,
+                    totalValue > 0 ? (fiatValue / totalValue) : 0,
                   ),
                 ),
               ],
@@ -389,13 +422,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 4),
           Text(
-            '\$${_formatCurrency(value)}',
+            '\$${MoneyFormatting.formatCurrency(value)}',
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           Text(
-            '${percentage.toStringAsFixed(1)}%',
+            MoneyFormatting.formatPercentage(percentage),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
             ),
@@ -427,23 +460,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               title: Text(balance.asset.symbol),
               subtitle: Text(
-                '${_formatBalance(balance.totalBalance, balance.asset.decimals)} ${balance.asset.symbol}',
+                MoneyFormatting.formatBalanceWithAsset(
+                  balance.totalBalance,
+                  balance.asset,
+                ),
               ),
               trailing: balance.usdValue != null
                   ? Text(
-                      '\$${_formatCurrency(balance.usdValue!)}',
+                      '\$${MoneyFormatting.formatCurrency(balance.usdValue!)}',
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     )
                   : null,
-              onTap: () {
-                // Navigate to asset detail view
-                widget.navigation.goToRoute(
-                  'asset_detail',
-                  params: {'assetId': balance.asset.id},
-                );
-              },
             ),
           );
         }),
@@ -513,72 +542,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildBottomNav(LocalizationService l10n) {
-    return BottomNavigationBar(
-      currentIndex: 0,
-      type: BottomNavigationBarType.fixed,
-      items: [
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.dashboard),
-          label: l10n.get(L10nKeys.ledgerNavDashboard),
-        ),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.currency_bitcoin),
-          label: l10n.get(L10nKeys.ledgerNavCrypto),
-        ),
-        BottomNavigationBarItem(
-          icon: const Icon(Icons.account_balance_wallet),
-          label: l10n.get(L10nKeys.ledgerNavMoney),
-        ),
-      ],
-      onTap: (index) {
-        if (index == 1) {
-          widget.navigation.goToRoute('crypto');
-        } else if (index == 2) {
-          widget.navigation.goToRoute('money');
-        }
-      },
-    );
-  }
-
-  String _formatCurrency(double value) {
-    return value
-        .toStringAsFixed(2)
-        .replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
-        );
-  }
-
-  String _formatBalance(double value, int decimals) {
-    return value.toStringAsFixed(decimals);
-  }
-
-  String _formatTime(LocalizationService l10n, DateTime time) {
-    final now = DateTime.now();
-    final diff = now.difference(time);
-
-    if (diff.inMinutes < 1) {
-      return l10n.get(L10nKeys.ledgerDashboardJustNow);
-    }
-    if (diff.inMinutes < 60) {
-      return l10n.get(
-        L10nKeys.ledgerDashboardMinutesAgo,
-        args: {'minutes': diff.inMinutes.toString()},
-      );
-    }
-    if (diff.inHours < 24) {
-      return l10n.get(
-        L10nKeys.ledgerDashboardHoursAgo,
-        args: {'hours': diff.inHours.toString()},
-      );
-    }
-    return l10n.get(
-      L10nKeys.ledgerDashboardDaysAgo,
-      args: {'days': diff.inDays.toString()},
     );
   }
 }
