@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
-
 import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
@@ -69,66 +67,81 @@ class _AccountsScreenState extends State<AccountsScreen> {
       isScrollControlled: true,
       builder: (ctx) {
         final theme = Theme.of(ctx);
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-            left: 16,
-            right: 16,
-            top: 16,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                account == null
-                    ? l10n.get(L10nKeys.ledgerCommonAdd)
-                    : l10n.get(L10nKeys.ledgerCommonEdit),
-                style: theme.textTheme.titleLarge,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+                left: 16,
+                right: 16,
+                top: 16,
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<AccountType>(
-                initialValue: type,
-                decoration: const InputDecoration(labelText: 'Type'),
-                items: AccountType.values
-                    .map((t) => DropdownMenuItem(value: t, child: Text(t.name)))
-                    .toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      type = value;
-                    });
-                  }
-                },
-              ),
-              TextField(
-                controller: notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Notes (optional)',
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      account == null ? 'Add Account' : 'Edit Account',
+                      style: theme.textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Name',
+                        hintText: 'Binance, ING Bank, etc.',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<AccountType>(
+                      initialValue: type,
+                      decoration: const InputDecoration(labelText: 'Type'),
+                      items: AccountType.values
+                          .map(
+                            (t) => DropdownMenuItem(
+                              value: t,
+                              child: Text(t.displayName),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setModalState(() {
+                            type = value;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: notesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes (optional)',
+                        hintText: 'Additional information',
+                      ),
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: Text(l10n.get(L10nKeys.ledgerCommonCancel)),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          child: Text(l10n.get(L10nKeys.ledgerCommonSave)),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                maxLines: 2,
               ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: Text(l10n.get(L10nKeys.ledgerCommonCancel)),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(ctx, true),
-                    child: Text(l10n.get(L10nKeys.ledgerCommonSave)),
-                  ),
-                ],
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -143,19 +156,26 @@ class _AccountsScreenState extends State<AccountsScreen> {
     setState(() => _saving = true);
     try {
       final now = DateTime.now();
-      final newAccount = Account(
-        id: account?.id ?? const Uuid().v4(),
-        name: name,
-        type: type,
-        notes: notes.isEmpty ? null : notes,
-        createdAt: now,
-        updatedAt: now,
-      );
 
       if (account == null) {
+        // Repository will generate ID
+        final newAccount = Account(
+          id: '', // Empty ID signals repository to generate
+          name: name,
+          type: type,
+          notes: notes.isEmpty ? null : notes,
+          createdAt: now,
+          updatedAt: now,
+        );
         await widget.accountRepo.insert(newAccount);
       } else {
-        await widget.accountRepo.update(newAccount);
+        final updatedAccount = account.copyWith(
+          name: name,
+          type: type,
+          notes: notes.isEmpty ? null : notes,
+          updatedAt: now,
+        );
+        await widget.accountRepo.update(updatedAccount);
       }
 
       await _loadAccounts();
@@ -166,10 +186,40 @@ class _AccountsScreenState extends State<AccountsScreen> {
     }
   }
 
+  Future<void> _deleteAccount(Account account) async {
+    final l10n = context.l10n;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: Text('Delete ${account.name}? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.get(L10nKeys.ledgerCommonCancel)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(l10n.get(L10nKeys.ledgerCommonDelete)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    await widget.accountRepo.delete(account.id);
+    await _loadAccounts();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    // final theme = Theme.of(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -194,17 +244,38 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 return ListTile(
                   leading: Icon(_iconForAccountType(account.type)),
                   title: Text(account.name),
-                  subtitle: account.notes != null ? Text(account.notes!) : null,
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(account.type.displayName),
+                      if (account.notes != null)
+                        Text(
+                          account.notes!,
+                          style: theme.textTheme.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
                   trailing: PopupMenuButton<String>(
                     onSelected: (value) {
                       if (value == 'edit') {
                         _showEditor(account: account);
+                      } else if (value == 'delete') {
+                        _deleteAccount(account);
                       }
                     },
                     itemBuilder: (ctx) => [
                       PopupMenuItem(
                         value: 'edit',
                         child: Text(l10n.get(L10nKeys.ledgerCommonEdit)),
+                      ),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text(
+                          l10n.get(L10nKeys.ledgerCommonDelete),
+                          style: TextStyle(color: theme.colorScheme.error),
+                        ),
                       ),
                     ],
                   ),
