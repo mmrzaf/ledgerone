@@ -1,9 +1,9 @@
 name: ledgerone
 description: "Tracks all assets you own, Knows Where the live, Lets you manually log what happens and can optionally compute a usd portfollo"
 
-publish_to: 'none'
+publish_to: "none"
 
-version: 0.8.0
+version: 0.9.3
 
 environment:
   sdk: ^3.9.2
