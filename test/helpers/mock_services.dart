@@ -4,6 +4,9 @@ import 'package:ledgerone/core/contracts/crash_contract.dart';
 import 'package:ledgerone/core/contracts/navigation_contract.dart';
 import 'package:ledgerone/core/contracts/storage_contract.dart';
 
+import 'package:ledgerone/features/ledger/domain/models.dart';
+import 'package:ledgerone/features/ledger/domain/services.dart';
+
 class MockConfigService implements ConfigService {
   final Map<String, dynamic> _flags = {};
   bool _initialized = false;
@@ -148,4 +151,68 @@ class MockNavigationService implements NavigationService {
       ..clear()
       ..add(routeId);
   }
+}
+
+class FakePortfolioValuationService implements PortfolioValuationService {
+  @override
+  Future<PortfolioValuation> getPortfolioValue() async {
+    return const PortfolioValuation(
+      totalValue: 0,
+      cryptoValue: 0,
+      fiatValue: 0,
+      otherValue: 0,
+      lastPriceUpdate: null,
+      isPriceDataStale: false,
+    );
+  }
+
+  @override
+  Future<bool> isPriceDataStale() async => false;
+
+  @override
+  Future<DateTime?> getLastPriceUpdate() async => null;
+}
+
+class FakeBalanceService implements BalanceService {
+  @override
+  Future<List<TotalAssetBalance>> getAllBalances({
+    bool includeZero = false,
+  }) async => [];
+
+  @override
+  Future<double> getBalance(String assetId, String accountId) async => 0;
+
+  @override
+  Future<double> getTotalBalance(String assetId) async => 0;
+
+  @override
+  Future<List<AssetBalance>> getAccountBalances(String accountId) async => [];
+}
+
+class FakePriceUpdateService implements PriceUpdateService {
+  @override
+  Future<BulkPriceUpdateResult> updateAllPrices() async {
+    final now = DateTime.fromMillisecondsSinceEpoch(0);
+    return BulkPriceUpdateResult(
+      results: const [],
+      successCount: 0,
+      failureCount: 0,
+      startedAt: now,
+      completedAt: now,
+    );
+  }
+
+  @override
+  Future<PriceUpdateResult> updatePrice(Asset asset) async {
+    return PriceUpdateResult(
+      asset: asset,
+      success: true,
+      price: 0,
+      error: null,
+      timestamp: DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+
+  @override
+  Future<double> testPriceSource(PriceSourceConfig config) async => 0.0;
 }

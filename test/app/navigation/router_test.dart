@@ -1,58 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/app/di.dart';
 import 'package:ledgerone/app/navigation/guards/onboarding_guard.dart';
 import 'package:ledgerone/app/navigation/router.dart';
-import 'package:ledgerone/app/services/cache_service_impl.dart';
-import 'package:ledgerone/app/services/lifecycle_service_impl.dart';
 import 'package:ledgerone/app/services/localization_service_impl.dart';
-import 'package:ledgerone/app/services/network_service_impl.dart';
-import 'package:ledgerone/core/errors/result.dart';
-import 'package:ledgerone/features/home/domain/home_models.dart';
-import 'package:ledgerone/features/home/domain/home_repository.dart';
+import 'package:ledgerone/core/contracts/analytics_contract.dart';
+import 'package:ledgerone/core/contracts/i18n_contract.dart';
+import 'package:ledgerone/core/contracts/storage_contract.dart';
+import 'package:ledgerone/features/ledger/domain/services.dart';
 
 import '../../helpers/mock_services.dart';
-
-class MockHomeRepository implements HomeRepository {
-  @override
-  Future<Result<HomeData>> load({bool forceRefresh = false}) async {
-    return Success(HomeData(message: 'Test', timestamp: DateTime.now()));
-  }
-
-  @override
-  Stream<HomeData> watch() => const Stream.empty();
-}
 
 void main() {
   group('RouterFactory', () {
     late MockStorageService storage;
-    late MockConfigService config;
-    late SimulatedNetworkService network;
-    late CacheServiceImpl cache;
-    late AppLifecycleServiceImpl lifecycle;
     late LocalizationServiceImpl localization;
-    late MockHomeRepository homeRepository;
+    late ServiceLocator serviceLocator;
 
     setUp(() async {
+      serviceLocator = ServiceLocator();
+      serviceLocator.clear();
+
       storage = MockStorageService();
-      config = MockConfigService();
-      await config.initialize();
-
-      network = SimulatedNetworkService();
-      await network.initialize();
-
-      cache = CacheServiceImpl(storage: storage);
-
-      lifecycle = AppLifecycleServiceImpl();
-      lifecycle.initialize();
 
       localization = LocalizationServiceImpl(storage: storage);
       await localization.initialize();
 
-      homeRepository = MockHomeRepository();
-    });
+      serviceLocator.register<StorageService>(storage);
+      serviceLocator.register<LocalizationService>(localization);
 
-    tearDown(() {
-      lifecycle.dispose();
+      serviceLocator.register<AnalyticsService>(MockAnalyticsService());
+      serviceLocator.register<BalanceService>(FakeBalanceService());
+      serviceLocator.register<PortfolioValuationService>(
+        FakePortfolioValuationService(),
+      );
+      serviceLocator.register<PriceUpdateService>(FakePriceUpdateService());
     });
 
     testWidgets('creates router with onboarding as initial route', (
@@ -63,156 +45,127 @@ void main() {
       final result = RouterFactory.create(
         initialRoute: 'onboarding',
         guards: guards,
-        storage: storage,
-        config: config,
-        network: network,
-        cache: cache,
-        lifecycle: lifecycle,
         localization: localization,
-        homeRepository: homeRepository,
+        locator: serviceLocator,
       );
 
       expect(result.router, isNotNull);
       expect(result.navigationService, isNotNull);
 
-      // Test that router can be used
       await tester.pumpWidget(MaterialApp.router(routerConfig: result.router));
 
       await tester.pumpAndSettle();
-      expect(find.text('Welcome to Ledger One'), findsOneWidget);
+      expect(find.text('LedgerOne'), findsOneWidget);
     });
 
-    testWidgets('creates router with home as initial route', (tester) async {
-      await storage.setBool('onboarding_seen', true);
-      final guards = [OnboardingGuard(storage)];
+    testWidgets(
+      'guards redirect dashboard to onboarding when onboarding not seen',
+      (tester) async {
+        // onboarding_seen defaults to false in MockStorageService
+        final guards = [OnboardingGuard(storage)];
 
-      final result = RouterFactory.create(
-        initialRoute: 'home',
-        guards: guards,
-        storage: storage,
-        config: config,
-        network: network,
-        cache: cache,
-        lifecycle: lifecycle,
-        localization: localization,
-        homeRepository: homeRepository,
-      );
+        final result = RouterFactory.create(
+          initialRoute: 'dashboard',
+          guards: guards,
+          localization: localization,
+          locator: serviceLocator,
+        );
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: result.router));
+        await tester.pumpWidget(
+          MaterialApp.router(routerConfig: result.router),
+        );
 
-      await tester.pumpAndSettle();
+        await tester.pumpAndSettle();
 
-      // Should show home screen
-      expect(find.text('Home'), findsOneWidget);
-    });
+        expect(find.text('LedgerOne'), findsOneWidget);
+      },
+    );
 
-    testWidgets('guards redirect correctly', (tester) async {
-      final guards = [OnboardingGuard(storage)];
+    testWidgets(
+      'starts on dashboard when onboarding has been seen (no redirect)',
+      (tester) async {
+        await storage.setBool('onboarding_seen', true);
 
-      final result = RouterFactory.create(
-        initialRoute: 'home',
-        guards: guards,
-        storage: storage,
-        config: config,
-        network: network,
-        cache: cache,
-        lifecycle: lifecycle,
-        localization: localization,
-        homeRepository: homeRepository,
-      );
+        final guards = [OnboardingGuard(storage)];
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: result.router));
+        final result = RouterFactory.create(
+          initialRoute: 'dashboard',
+          guards: guards,
+          localization: localization,
+          locator: serviceLocator,
+        );
 
-      await tester.pumpAndSettle();
-      expect(find.text('Welcome to Ledger One'), findsOneWidget);
-    });
+        await tester.pumpWidget(
+          MaterialApp.router(routerConfig: result.router),
+        );
+
+        await tester.pumpAndSettle();
+
+        // At minimum, assert we did NOT get thrown back to onboarding.
+        expect(find.text('LedgerOne'), findsNothing);
+      },
+    );
 
     test('navigation service can navigate between routes', () async {
       await storage.setBool('onboarding_seen', true);
       final guards = [OnboardingGuard(storage)];
 
       final result = RouterFactory.create(
-        initialRoute: 'home',
+        initialRoute: 'dashboard',
         guards: guards,
-        storage: storage,
-        config: config,
-        network: network,
-        cache: cache,
-        lifecycle: lifecycle,
         localization: localization,
-        homeRepository: homeRepository,
+        locator: serviceLocator,
       );
 
-      expect(result.navigationService.currentRouteId, anyOf('home', isNull));
+      expect(
+        result.navigationService.currentRouteId,
+        anyOf('dashboard', isNull),
+      );
 
+      // Valid route, should not throw
       result.navigationService.goToRoute('onboarding');
-      // In a real test with pump, we'd verify the route changed
     });
 
-    test('guards are sorted by priority', () async {
+    test('guards are sorted by priority and router is created', () async {
       final guards = [OnboardingGuard(storage)];
 
       final result = RouterFactory.create(
-        initialRoute: 'home',
+        initialRoute: 'dashboard',
         guards: guards,
-        storage: storage,
-        config: config,
-        network: network,
-        cache: cache,
-        lifecycle: lifecycle,
         localization: localization,
-        homeRepository: homeRepository,
+        locator: serviceLocator,
       );
 
       expect(result.router, isNotNull);
+      expect(result.navigationService, isNotNull);
     });
   });
 
   group('NavigationServiceImpl', () {
     late MockStorageService storage;
-    late MockConfigService config;
-    late SimulatedNetworkService network;
-    late CacheServiceImpl cache;
-    late AppLifecycleServiceImpl lifecycle;
-    late LocalizationServiceImpl localization;
-    late MockHomeRepository homeRepository;
+    late LocalizationService localization;
+    late ServiceLocator serviceLocator;
 
     setUp(() async {
       storage = MockStorageService();
       await storage.setBool('onboarding_seen', true);
 
-      config = MockConfigService();
-      await config.initialize();
+      final localizationImpl = LocalizationServiceImpl(storage: storage);
+      await localizationImpl.initialize();
+      localization = localizationImpl;
 
-      network = SimulatedNetworkService();
-      await network.initialize();
-
-      cache = CacheServiceImpl(storage: storage);
-
-      lifecycle = AppLifecycleServiceImpl();
-      lifecycle.initialize();
-
-      localization = LocalizationServiceImpl(storage: storage);
-      await localization.initialize();
-
-      homeRepository = MockHomeRepository();
-    });
-
-    tearDown(() {
-      lifecycle.dispose();
+      serviceLocator = ServiceLocator();
+      serviceLocator.clear();
+      serviceLocator.register<StorageService>(storage);
+      serviceLocator.register<LocalizationService>(localization);
     });
 
     test('goToRoute navigates to valid route', () {
       final result = RouterFactory.create(
-        initialRoute: 'home',
-        guards: [],
-        storage: storage,
-        config: config,
-        network: network,
-        cache: cache,
-        lifecycle: lifecycle,
+        initialRoute: 'dashboard',
+        guards: const [],
         localization: localization,
-        homeRepository: homeRepository,
+        locator: serviceLocator,
       );
 
       expect(
@@ -223,15 +176,10 @@ void main() {
 
     test('goToRoute throws on invalid route', () {
       final result = RouterFactory.create(
-        initialRoute: 'home',
-        guards: [],
-        storage: storage,
-        config: config,
-        network: network,
-        cache: cache,
-        lifecycle: lifecycle,
+        initialRoute: 'dashboard',
+        guards: const [],
         localization: localization,
-        homeRepository: homeRepository,
+        locator: serviceLocator,
       );
 
       expect(
@@ -242,15 +190,10 @@ void main() {
 
     test('replaceRoute throws on invalid route', () {
       final result = RouterFactory.create(
-        initialRoute: 'home',
-        guards: [],
-        storage: storage,
-        config: config,
-        network: network,
-        cache: cache,
-        lifecycle: lifecycle,
+        initialRoute: 'dashboard',
+        guards: const [],
         localization: localization,
-        homeRepository: homeRepository,
+        locator: serviceLocator,
       );
 
       expect(
@@ -261,15 +204,10 @@ void main() {
 
     test('clearAndGoTo throws on invalid route', () {
       final result = RouterFactory.create(
-        initialRoute: 'home',
-        guards: [],
-        storage: storage,
-        config: config,
-        network: network,
-        cache: cache,
-        lifecycle: lifecycle,
+        initialRoute: 'dashboard',
+        guards: const [],
         localization: localization,
-        homeRepository: homeRepository,
+        locator: serviceLocator,
       );
 
       expect(

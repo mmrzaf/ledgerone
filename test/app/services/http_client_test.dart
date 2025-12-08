@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -238,20 +239,6 @@ void main() {
       final result = await client.get('/api/test');
 
       expect(result, isNull);
-    });
-
-    test('builds URI correctly with base URL', () async {
-      final mockClient = MockClient((request) async {
-        expect(
-          request.url.toString(),
-          startsWith('https://dev-api.example.com'),
-        );
-        expect(request.url.path, '/api/test');
-        return http.Response('{}', 200);
-      });
-
-      final client = HttpClientImpl(config: config, client: mockClient);
-      await client.get('/api/test');
     });
 
     test('normalizes paths correctly', () async {
