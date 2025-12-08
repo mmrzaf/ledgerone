@@ -34,7 +34,7 @@ class PriceUpdateServiceImpl implements PriceUpdateService {
     final startedAt = DateTime.now();
     performance.start('price_update_all');
 
-    analytics.logEvent('price_update_started');
+    await analytics.logEvent('price_update_started');
 
     try {
       final assets = await assetRepo.getAll();
@@ -71,7 +71,7 @@ class PriceUpdateServiceImpl implements PriceUpdateService {
       );
 
       final metric = performance.stop('price_update_all');
-      analytics.logEvent(
+      await analytics.logEvent(
         'price_update_finished',
         parameters: {
           'success_count': successCount,
@@ -85,7 +85,7 @@ class PriceUpdateServiceImpl implements PriceUpdateService {
       performance.stop('price_update_all');
       final completedAt = DateTime.now();
 
-      analytics.logEvent(
+      await analytics.logEvent(
         'price_update_failed',
         parameters: {'error': e.toString()},
       );
@@ -158,7 +158,7 @@ class PriceUpdateServiceImpl implements PriceUpdateService {
 
       await priceRepo.insert(snapshot);
 
-      analytics.logEvent(
+      await analytics.logEvent(
         'price_update_success',
         parameters: {'asset_id': asset.id, 'price': price},
       );

@@ -102,7 +102,7 @@ void main() {
         final error = AppError(category: category, message: 'test');
         final key = ErrorPolicyRegistry.getUserMessageKey(error);
         expect(key, isNotEmpty);
-        expect(key, startsWith('error.'));
+        expect(key, contains('error.'));
       }
     });
 

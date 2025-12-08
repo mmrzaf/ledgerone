@@ -74,8 +74,8 @@ class Asset {
     required this.createdAt,
     required this.updatedAt,
   });
-
   Asset copyWith({
+    String? id,
     String? symbol,
     String? name,
     AssetType? type,
@@ -84,7 +84,7 @@ class Asset {
     DateTime? updatedAt,
   }) {
     return Asset(
-      id: id,
+      id: id ?? this.id,
       symbol: symbol ?? this.symbol,
       name: name ?? this.name,
       type: type ?? this.type,
@@ -124,7 +124,6 @@ class Account {
   final String id;
   final String name;
   final AccountType type;
-  final bool archived;
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -133,24 +132,21 @@ class Account {
     required this.id,
     required this.name,
     required this.type,
-    this.archived = false,
     this.notes,
     required this.createdAt,
     required this.updatedAt,
   });
-
   Account copyWith({
+    String? id,
     String? name,
     AccountType? type,
-    bool? archived,
     String? notes,
     DateTime? updatedAt,
   }) {
     return Account(
-      id: id,
+      id: id ?? this.id,
       name: name ?? this.name,
       type: type ?? this.type,
-      archived: archived ?? this.archived,
       notes: notes ?? this.notes,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -161,7 +157,6 @@ class Account {
     'id': id,
     'name': name,
     'type': type.name,
-    'archived': archived ? 1 : 0,
     'notes': notes,
     'created_at': createdAt.toIso8601String(),
     'updated_at': updatedAt.toIso8601String(),
@@ -171,7 +166,6 @@ class Account {
     id: json['id'] as String,
     name: json['name'] as String,
     type: AccountType.values.byName(json['type'] as String),
-    archived: (json['archived'] as int) == 1,
     notes: json['notes'] as String?,
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),

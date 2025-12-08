@@ -2,7 +2,10 @@ import 'package:go_router/go_router.dart';
 import 'package:ledgerone/app/di.dart';
 import 'package:ledgerone/core/contracts/analytics_contract.dart';
 import 'package:ledgerone/core/contracts/i18n_contract.dart';
+import 'package:ledgerone/features/ledger/data/repositories_interfaces.dart';
 import 'package:ledgerone/features/ledger/domain/services.dart';
+import 'package:ledgerone/features/ledger/ui/accounts_screen.dart';
+import 'package:ledgerone/features/ledger/ui/assets_screen.dart';
 import 'package:ledgerone/features/ledger/ui/crypto_screen.dart';
 import 'package:ledgerone/features/ledger/ui/dashboard_screen.dart';
 import 'package:ledgerone/features/ledger/ui/money_screen.dart';
@@ -159,6 +162,7 @@ class RouterFactory {
               navigation: navigationService,
               portfolioService: locator.get<PortfolioValuationService>(),
               priceUpdateService: locator.get<PriceUpdateService>(),
+              balanceService: locator.get<BalanceService>(),
               analytics: locator.get<AnalyticsService>(),
             );
           },
@@ -174,23 +178,46 @@ class RouterFactory {
             );
           },
         ),
-
         GoRoute(
           path: '/money',
+          name: 'money',
+          builder: (context, state) => MoneyScreen(
+            navigation: navigationService,
+            summaryService: locator.get<MoneySummaryService>(),
+            analytics: locator.get<AnalyticsService>(),
+          ),
+        ),
+        GoRoute(
+          path: '/transaction',
+          name: 'transaction_editor',
+          builder: (context, state) => TransactionEditorScreen(
+            navigation: navigationService,
+            transactionService: locator.get<TransactionService>(),
+            assetRepo: locator.get<AssetRepository>(),
+            accountRepo: locator.get<AccountRepository>(),
+            categoryRepo: locator.get<CategoryRepository>(),
+            analytics: locator.get<AnalyticsService>(),
+          ),
+        ),
+
+        GoRoute(
+          path: '/assets',
           builder: (context, state) {
-            return MoneyScreen(
+            final locator = ServiceLocator();
+            return AssetsScreen(
               navigation: navigationService,
-              balanceService: locator.get<BalanceService>(),
+              assetRepo: locator.get<AssetRepository>(),
               analytics: locator.get<AnalyticsService>(),
             );
           },
         ),
         GoRoute(
-          path: '/transaction',
+          path: '/accounts',
           builder: (context, state) {
-            return TransactionEditorScreen(
+            final locator = ServiceLocator();
+            return AccountsScreen(
               navigation: navigationService,
-              transactionService: locator.get<TransactionService>(),
+              accountRepo: locator.get<AccountRepository>(),
               analytics: locator.get<AnalyticsService>(),
             );
           },

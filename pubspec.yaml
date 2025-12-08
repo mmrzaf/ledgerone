@@ -1,9 +1,9 @@
 name: ledgerone
 description: "Tracks all assets you own, Knows Where the live, Lets you manually log what happens and can optionally compute a usd portfollo"
 
-publish_to: 'none'
+publish_to: "none"
 
-version: 0.8.0
+version: 0.9.3
 
 environment:
   sdk: ^3.9.2
@@ -27,6 +27,7 @@ dependencies:
   sqflite_common_ffi: ^2.3.6
 
 dev_dependencies:
+  flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
 
@@ -37,3 +38,20 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/icon.png"
+  web:
+    generate: true
+    image_path: "assets/icon/icon.png"
+    background_color: "#hexcode"
+    theme_color: "#hexcode"
+  windows:
+    generate: true
+    image_path: "assets/icon/icon.png"
+    icon_size: 48 # min:48, max:256, default: 48
+  macos:
+    generate: true
+    image_path: "assets/icon/icon.png"

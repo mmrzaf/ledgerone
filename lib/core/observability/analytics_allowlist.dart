@@ -65,7 +65,10 @@ class EventDefinition {
 /// Central registry of allowed analytics events
 /// Events not in this list will be rejected
 class AnalyticsAllowlist {
+  // ------------------------------------------------------------
   // App lifecycle events
+  // ------------------------------------------------------------
+
   static const appLaunch = EventDefinition(
     name: 'app_launch',
     description: 'App started',
@@ -94,7 +97,10 @@ class AnalyticsAllowlist {
     description: 'App moved to background',
   );
 
+  // ------------------------------------------------------------
   // Config events
+  // ------------------------------------------------------------
+
   static const configLoaded = EventDefinition(
     name: 'config_loaded',
     description: 'Configuration loaded successfully',
@@ -127,7 +133,10 @@ class AnalyticsAllowlist {
     ],
   );
 
+  // ------------------------------------------------------------
   // Onboarding events
+  // ------------------------------------------------------------
+
   static const onboardingView = EventDefinition(
     name: 'onboarding_view',
     description: 'Onboarding screen viewed',
@@ -143,7 +152,10 @@ class AnalyticsAllowlist {
     description: 'User skipped onboarding',
   );
 
-  // Login events
+  // ------------------------------------------------------------
+  // Login/Auth events
+  // ------------------------------------------------------------
+
   static const loginView = EventDefinition(
     name: 'login_view',
     description: 'Login screen viewed',
@@ -184,7 +196,10 @@ class AnalyticsAllowlist {
     description: 'User logged out successfully',
   );
 
+  // ------------------------------------------------------------
   // Home events
+  // ------------------------------------------------------------
+
   static const homeView = EventDefinition(
     name: 'home_view',
     description: 'Home screen viewed',
@@ -198,6 +213,7 @@ class AnalyticsAllowlist {
       ),
     ],
   );
+
   static const homeRefresh = EventDefinition(
     name: 'home_refresh',
     description: 'User refreshed home content',
@@ -224,7 +240,10 @@ class AnalyticsAllowlist {
     ],
   );
 
+  // ------------------------------------------------------------
   // Error events
+  // ------------------------------------------------------------
+
   static const errorShown = EventDefinition(
     name: 'error_shown',
     description: 'Error displayed to user',
@@ -262,8 +281,205 @@ class AnalyticsAllowlist {
     ],
   );
 
-  // All allowed events (frozen list)
+  // ------------------------------------------------------------
+  // Ledger – transaction events
+  // ------------------------------------------------------------
+
+  static const transactionCreated = EventDefinition(
+    name: 'transaction_created',
+    description: 'A new transaction was created',
+    parameters: [
+      EventParameter(
+        name: 'type',
+        type: String,
+        description:
+            'Transaction type (income|expense|transfer|trade|adjustment)',
+        required: true,
+      ),
+      // For income/expense/transfer
+      EventParameter(
+        name: 'asset_id',
+        type: String,
+        description: 'Primary asset identifier',
+      ),
+      EventParameter(
+        name: 'amount',
+        type: double,
+        description: 'Primary amount for the transaction',
+      ),
+      // For trades
+      EventParameter(
+        name: 'from_asset',
+        type: String,
+        description: 'Sold asset for a trade',
+      ),
+      EventParameter(
+        name: 'to_asset',
+        type: String,
+        description: 'Bought asset for a trade',
+      ),
+    ],
+  );
+
+  static const transactionSaved = EventDefinition(
+    name: 'transaction_saved',
+    description: 'Transaction persisted successfully',
+    parameters: [
+      EventParameter(
+        name: 'type',
+        type: String,
+        description: 'Transaction type',
+        required: true,
+      ),
+      EventParameter(
+        name: 'duration_ms',
+        type: int,
+        description: 'Latency from user submit to DB commit',
+      ),
+    ],
+  );
+
+  static const transactionFailed = EventDefinition(
+    name: 'transaction_failed',
+    description: 'Transaction creation or update failed',
+    parameters: [
+      EventParameter(
+        name: 'type',
+        type: String,
+        description: 'Transaction type',
+      ),
+      EventParameter(
+        name: 'error',
+        type: String,
+        description: 'Error description',
+      ),
+    ],
+  );
+
+  static const transactionDeleted = EventDefinition(
+    name: 'transaction_deleted',
+    description: 'Transaction deleted',
+    parameters: [
+      EventParameter(
+        name: 'transaction_id',
+        type: String,
+        description: 'ID of deleted transaction',
+        required: true,
+      ),
+    ],
+  );
+
+  // ------------------------------------------------------------
+  // Ledger – price update events
+  // ------------------------------------------------------------
+
+  static const priceUpdateStarted = EventDefinition(
+    name: 'price_update_started',
+    description: 'Bulk price update started',
+  );
+
+  static const priceUpdateFinished = EventDefinition(
+    name: 'price_update_finished',
+    description: 'Bulk price update completed',
+    parameters: [
+      EventParameter(
+        name: 'success_count',
+        type: int,
+        description: 'Number of assets updated successfully',
+        required: true,
+      ),
+      EventParameter(
+        name: 'failure_count',
+        type: int,
+        description: 'Number of assets that failed to update',
+        required: true,
+      ),
+      EventParameter(
+        name: 'duration_ms',
+        type: int,
+        description: 'Total duration of the bulk update',
+      ),
+    ],
+  );
+
+  static const priceUpdateFailed = EventDefinition(
+    name: 'price_update_failed',
+    description: 'Single-asset price update failed',
+    parameters: [
+      EventParameter(name: 'error', type: String, description: 'Error message'),
+    ],
+  );
+
+  static const priceUpdateSuccess = EventDefinition(
+    name: 'price_update_success',
+    description: 'Single-asset price update succeeded',
+    parameters: [
+      EventParameter(
+        name: 'asset_id',
+        type: String,
+        description: 'Asset identifier',
+        required: true,
+      ),
+      EventParameter(
+        name: 'price',
+        type: double,
+        description: 'Updated price in quote currency',
+        required: true,
+      ),
+    ],
+  );
+
+  static const settingsLanguageChanged = EventDefinition(
+    name: 'settings_language_changed',
+    description: 'User changed language',
+    parameters: [
+      EventParameter(
+        name: 'language',
+        type: String,
+        description: 'Language code selected',
+        required: true,
+      ),
+    ],
+  );
+
+  static const settingsThemeToggled = EventDefinition(
+    name: 'settings_theme_toggled',
+    description: 'User toggled theme',
+    parameters: [
+      EventParameter(
+        name: 'theme',
+        type: String,
+        description: 'Theme name (light/dark)',
+        required: true,
+      ),
+    ],
+  );
+
+  static const backupExportClicked = EventDefinition(
+    name: 'backup_export_clicked',
+    description: 'User clicked backup export button',
+  );
+
+  // ------------------------------------------------------------
+  // Money screen events
+  // ------------------------------------------------------------
+
+  static const moneyPeriodChanged = EventDefinition(
+    name: 'money_period_changed',
+    description: 'User changed money view period',
+    parameters: [
+      EventParameter(
+        name: 'period',
+        type: String,
+        description: 'Period selected (thisMonth/lastMonth/allTime)',
+        required: true,
+      ),
+    ],
+  );
+
+  // Add to allowedEvents list:
   static const List<EventDefinition> allowedEvents = [
+    // Core app
     appLaunch,
     appResumed,
     appPaused,
@@ -282,6 +498,24 @@ class AnalyticsAllowlist {
     homeError,
     errorShown,
     errorRetry,
+
+    // Ledger
+    transactionCreated,
+    transactionSaved,
+    transactionFailed,
+    transactionDeleted,
+    priceUpdateStarted,
+    priceUpdateFinished,
+    priceUpdateFailed,
+    priceUpdateSuccess,
+
+    // Settings
+    settingsLanguageChanged,
+    settingsThemeToggled,
+    backupExportClicked,
+
+    // Money
+    moneyPeriodChanged,
   ];
 
   /// Get event definition by name

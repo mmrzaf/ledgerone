@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../app/di.dart';
 import '../../../app/presentation/error_presenter.dart';
 import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/i18n_contract.dart';
@@ -15,11 +14,17 @@ import '../domain/services.dart';
 class TransactionEditorScreen extends StatefulWidget {
   final NavigationService navigation;
   final TransactionService transactionService;
+  final AssetRepository assetRepo;
+  final AccountRepository accountRepo;
+  final CategoryRepository categoryRepo;
   final AnalyticsService analytics;
 
   const TransactionEditorScreen({
     required this.navigation,
     required this.transactionService,
+    required this.assetRepo,
+    required this.accountRepo,
+    required this.categoryRepo,
     required this.analytics,
     super.key,
   });
@@ -73,37 +78,24 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
 
   Future<void> _loadData() async {
     try {
-      final assetRepo = ServiceLocator().get<AssetRepository>();
-      final accountRepo = ServiceLocator().get<AccountRepository>();
-      final categoryRepo = ServiceLocator().get<CategoryRepository>();
+      final assets = await widget.assetRepo.getAll();
+      final accounts = await widget.accountRepo.getAll();
+      final categories = await widget.categoryRepo.getAll();
 
-      final assets = await assetRepo.getAll();
-      final accounts = await accountRepo.getAll();
-      final categories = await categoryRepo.getAll();
+      if (!mounted) return;
 
-      if (mounted) {
-        setState(() {
-          _assets = assets;
-          _accounts = accounts;
-          _categories = categories;
-          _loading = false;
-        });
-      }
+      setState(() {
+        _assets = assets;
+        _accounts = accounts;
+        _categories = categories;
+        _loading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() => _loading = false);
-        ErrorPresenter.showError(
-          context,
-          e is AppError
-              ? e
-              : AppError(
-                  category: ErrorCategory.unknown,
-                  message: e.toString(),
-                  originalError: e,
-                ),
-          screen: 'transaction_editor',
-        );
-      }
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _saving = false;
+      });
     }
   }
 
@@ -234,6 +226,11 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          tooltip: l10n.get(L10nKeys.ledgerCommonClose),
+          onPressed: () => widget.navigation.goBack(),
+        ),
         title: Text(l10n.get(L10nKeys.ledgerTxEditorTitle)),
         actions: [
           if (_saving)
@@ -608,7 +605,7 @@ class _TransactionEditorScreenState extends State<TransactionEditorScreen> {
       ),
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
-        FilteringTextInputFormatter.allow(RegExp(r'^\-?\d*\.?\d*')),
+        FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d*')),
       ],
       validator: (value) {
         if (value == null || value.trim().isEmpty) {

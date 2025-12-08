@@ -84,7 +84,6 @@ Attributes:
 * Identifier
 * Name (e.g. Binance Spot, Metamask, ING Main)
 * Type: exchange, bank, wallet, cash, other
-* Archived flag (for closed/unused accounts)
 * Notes
 
 ---
@@ -517,7 +516,6 @@ Fields:
 * Name.
 * Type.
 * Notes.
-* Archive toggle (to hide old accounts from normal lists but keep their history).
 
 ---
 
@@ -563,5 +561,3 @@ Even though v1 will not implement these, the design should allow them later with
   * Ability to add a separate module that imports transactions from real APIs into the same data model.
 
 The chosen model (assets, accounts, transactions, legs, price snapshots) already supports these naturally; the builder just needs to avoid hardcoding assumptions that block extensions.
-
-

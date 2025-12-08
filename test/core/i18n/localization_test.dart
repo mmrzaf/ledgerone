@@ -7,16 +7,15 @@ import 'package:ledgerone/core/i18n/string_keys.dart';
 import '../../helpers/mock_services.dart';
 
 void main() {
+  late MockStorageService storage;
+  late LocalizationServiceImpl localization;
+  setUp(() async {
+    storage = MockStorageService();
+    localization = LocalizationServiceImpl(storage: storage);
+    await localization.initialize();
+  });
+
   group('LocalizationServiceImpl – locales & persistence', () {
-    late MockStorageService storage;
-    late LocalizationServiceImpl localization;
-
-    setUp(() async {
-      storage = MockStorageService();
-      localization = LocalizationServiceImpl(storage: storage);
-      await localization.initialize();
-    });
-
     test('exposes expected supported locales', () {
       final locales = localization.supportedLocales;
 
@@ -31,17 +30,19 @@ void main() {
       expect(fa.textDirection, TextDirection.rtl);
     });
 
-    expect(localization.get(L10nKeys.appName), 'Ledger One');
+    test('resolves app name key', () {
+      expect(localization.get(L10nKeys.appName), 'LedgerOne');
+    });
   });
 
   test('switches locale and returns proper translations', () async {
     await localization.setLocale('de');
     expect(localization.currentLocale.languageCode, 'de');
-    expect(localization.get(L10nKeys.loginTitle), 'Anmelden');
+    expect(localization.get(L10nKeys.success), 'Erfolg');
 
     await localization.setLocale('fa');
     expect(localization.currentLocale.languageCode, 'fa');
-    expect(localization.get(L10nKeys.loginTitle), 'ورود');
+    expect(localization.get(L10nKeys.success), 'موفقیت');
   });
 
   test('persists locale across restarts', () async {
@@ -81,15 +82,15 @@ void main() {
     });
 
     test('tr() uses English by default', () {
-      final value = L10nKeys.loginTitle.tr();
-      expect(value, 'Sign In');
+      final value = L10nKeys.success.tr();
+      expect(value, 'Success');
     });
 
     test('tr() respects current locale', () async {
-      await localization.setLocale('de');
+      await localization.setLocale('fa');
 
-      final value = L10nKeys.loginTitle.tr();
-      expect(value, 'Anmelden');
+      final value = L10nKeys.success.tr();
+      expect(value, 'موفقیت');
     });
   });
 
@@ -101,11 +102,8 @@ void main() {
 
       const keys = <String>[
         L10nKeys.appName,
-        L10nKeys.loginTitle,
-        L10nKeys.homeTitle,
-        L10nKeys.homeDemoContent,
-        L10nKeys.homeLoadedAt,
-        L10nKeys.homeOfflineWarning,
+        L10nKeys.onboardingSkip,
+        L10nKeys.a11yErrorIcon,
         L10nKeys.errorNetworkOffline,
         L10nKeys.errorTimeout,
         L10nKeys.networkOffline,
