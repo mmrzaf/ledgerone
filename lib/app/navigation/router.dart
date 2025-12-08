@@ -178,27 +178,30 @@ class RouterFactory {
             );
           },
         ),
-
         GoRoute(
           path: '/money',
-          builder: (context, state) {
-            return MoneyScreen(
-              navigation: navigationService,
-              balanceService: locator.get<BalanceService>(),
-              analytics: locator.get<AnalyticsService>(),
-            );
-          },
+          name: 'money',
+          builder: (context, state) => MoneyScreen(
+            navigation: navigationService,
+            balanceService: locator.get<BalanceService>(),
+            transactionRepo: locator.get<TransactionRepository>(),
+            categoryRepo: locator.get<CategoryRepository>(),
+            analytics: locator.get<AnalyticsService>(),
+          ),
         ),
         GoRoute(
           path: '/transaction',
-          builder: (context, state) {
-            return TransactionEditorScreen(
-              navigation: navigationService,
-              transactionService: locator.get<TransactionService>(),
-              analytics: locator.get<AnalyticsService>(),
-            );
-          },
+          name: 'transaction_editor',
+          builder: (context, state) => TransactionEditorScreen(
+            navigation: navigationService,
+            transactionService: locator.get<TransactionService>(),
+            assetRepo: locator.get<AssetRepository>(),
+            accountRepo: locator.get<AccountRepository>(),
+            categoryRepo: locator.get<CategoryRepository>(),
+            analytics: locator.get<AnalyticsService>(),
+          ),
         ),
+
         GoRoute(
           path: '/assets',
           builder: (context, state) {

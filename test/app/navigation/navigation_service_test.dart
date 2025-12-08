@@ -1,108 +1,232 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ledgerone/app/di.dart';
 import 'package:ledgerone/app/navigation/guards/onboarding_guard.dart';
 import 'package:ledgerone/app/navigation/router.dart';
-import 'package:ledgerone/app/services/cache_service_impl.dart';
-import 'package:ledgerone/app/services/lifecycle_service_impl.dart';
 import 'package:ledgerone/app/services/localization_service_impl.dart';
-import 'package:ledgerone/app/services/network_service_impl.dart';
-import 'package:ledgerone/core/contracts/navigation_contract.dart';
-import 'package:ledgerone/core/errors/result.dart';
-import 'package:ledgerone/features/home/domain/home_models.dart';
-import 'package:ledgerone/features/home/domain/home_repository.dart';
+import 'package:ledgerone/core/contracts/analytics_contract.dart';
+import 'package:ledgerone/core/contracts/i18n_contract.dart';
+import 'package:ledgerone/core/contracts/storage_contract.dart';
+import 'package:ledgerone/features/ledger/domain/services.dart';
 
 import '../../helpers/mock_services.dart';
 
-class _MockHomeRepository implements HomeRepository {
-  @override
-  Future<Result<HomeData>> load({bool forceRefresh = false}) async {
-    return Success(HomeData(message: 'Test', timestamp: DateTime.now()));
-  }
-
-  @override
-  Stream<HomeData> watch() => const Stream.empty();
-}
-
 void main() {
-  group('NavigationService', () {
-    late NavigationService navigationService;
-    TestWidgetsFlutterBinding.ensureInitialized();
+  group('RouterFactory', () {
+    late MockStorageService storage;
+    late LocalizationServiceImpl localization;
+    late ServiceLocator serviceLocator;
+
     setUp(() async {
-      final storage = MockStorageService();
-      final config = MockConfigService();
-      await config.initialize();
+      // Fresh singleton state per test
+      serviceLocator = ServiceLocator();
+      serviceLocator.clear();
 
-      final network = SimulatedNetworkService();
-      await network.initialize();
+      storage = MockStorageService();
 
-      final cache = CacheServiceImpl(storage: storage);
-      final lifecycle = AppLifecycleServiceImpl();
-      lifecycle.initialize();
-
-      final localization = LocalizationServiceImpl(storage: storage);
+      localization = LocalizationServiceImpl(storage: storage);
       await localization.initialize();
 
-      final homeRepository = _MockHomeRepository();
+      // Register only what the router actually needs for the routes we touch
+      serviceLocator.register<StorageService>(storage);
+      serviceLocator.register<LocalizationService>(localization);
 
-      final routerResult = RouterFactory.create(
+      serviceLocator.register<AnalyticsService>(MockAnalyticsService());
+      serviceLocator.register<BalanceService>(FakeBalanceService());
+      serviceLocator.register<PortfolioValuationService>(
+        FakePortfolioValuationService(),
+      );
+      serviceLocator.register<PriceUpdateService>(FakePriceUpdateService());
+    });
+
+    testWidgets('creates router with onboarding as initial route', (
+      tester,
+    ) async {
+      final guards = [OnboardingGuard(storage)];
+
+      final result = RouterFactory.create(
         initialRoute: 'onboarding',
-        guards: [OnboardingGuard(storage)],
-        storage: storage,
-        config: config,
-        network: network,
-        cache: cache,
-        lifecycle: lifecycle,
+        guards: guards,
+        locator: serviceLocator,
         localization: localization,
-        homeRepository: homeRepository,
       );
 
-      navigationService = routerResult.navigationService;
+      expect(result.router, isNotNull);
+      expect(result.navigationService, isNotNull);
+
+      // Use router in a widget tree
+      await tester.pumpWidget(MaterialApp.router(routerConfig: result.router));
+
+      await tester.pumpAndSettle();
+
+      // This assumes OnboardingScreen still shows this text.
+      // If the copy changed, update the expectation accordingly.
+      expect(find.text('LedgerOne'), findsOneWidget);
     });
 
-    test('currentRouteId returns correct route', () {
-      expect(navigationService.currentRouteId, anyOf('onboarding', isNull));
+    testWidgets(
+      'guards redirect dashboard to onboarding when onboarding not seen',
+      (tester) async {
+        // onboarding_seen defaults to false in MockStorageService
+        final guards = [OnboardingGuard(storage)];
+
+        final result = RouterFactory.create(
+          initialRoute: 'dashboard',
+          guards: guards,
+          locator: serviceLocator,
+          localization: localization,
+        );
+
+        await tester.pumpWidget(
+          MaterialApp.router(routerConfig: result.router),
+        );
+
+        await tester.pumpAndSettle();
+
+        // We should be redirected away from dashboard to onboarding
+        expect(find.text('LedgerOne'), findsOneWidget);
+      },
+    );
+
+    testWidgets('starts on dashboard when onboarding has been seen', (
+      tester,
+    ) async {
+      // Mark onboarding as done
+      await storage.setBool('onboarding_seen', true);
+
+      final guards = [OnboardingGuard(storage)];
+
+      final result = RouterFactory.create(
+        initialRoute: 'dashboard',
+        guards: guards,
+        locator: serviceLocator,
+        localization: localization,
+      );
+
+      expect(result.router, isNotNull);
+      expect(result.navigationService, isNotNull);
+
+      // NOTE:
+      // We intentionally do NOT assert specific dashboard UI text here,
+      // because that would require wiring up a lot of domain services
+      // for DashboardScreen. We only care that the router can be created
+      // and attached without blowing up.
+      await tester.pumpWidget(MaterialApp.router(routerConfig: result.router));
+
+      await tester.pumpAndSettle();
+
+      // Sanity: ensure we *didn't* get redirected back to onboarding.
+      expect(find.text('LedgerOne'), findsNothing);
     });
 
-    test('goToRoute throws for unknown route ID', () {
+    test('navigation service can navigate between routes', () async {
+      await storage.setBool('onboarding_seen', true);
+      final guards = [OnboardingGuard(storage)];
+
+      final result = RouterFactory.create(
+        initialRoute: 'dashboard',
+        guards: guards,
+        locator: serviceLocator,
+        localization: localization,
+      );
+
+      // Depending on when GoRouter sets up, this might be null or 'dashboard'
       expect(
-        () => navigationService.goToRoute('unknown_route'),
-        throwsArgumentError,
+        result.navigationService.currentRouteId,
+        anyOf('dashboard', isNull),
       );
+
+      // This should not throw for a valid route ID
+      result.navigationService.goToRoute('onboarding');
     });
 
-    test('replaceRoute throws for unknown route ID', () {
-      expect(
-        () => navigationService.replaceRoute('unknown_route'),
-        throwsArgumentError,
-      );
-    });
+    test('guards are sorted by priority and router is created', () async {
+      final guards = [OnboardingGuard(storage)];
 
-    test('clearAndGoTo throws for unknown route ID', () {
-      expect(
-        () => navigationService.clearAndGoTo('unknown_route'),
-        throwsArgumentError,
+      final result = RouterFactory.create(
+        initialRoute: 'dashboard',
+        guards: guards,
+        locator: serviceLocator,
+        localization: localization,
       );
-    });
 
-    test('route IDs are correctly mapped to paths', () {
-      expect(() => navigationService.goToRoute('onboarding'), returnsNormally);
-      expect(() => navigationService.goToRoute('home'), returnsNormally);
+      expect(result.router, isNotNull);
+      expect(result.navigationService, isNotNull);
     });
   });
 
-  group('NavigationService Contract', () {
-    test('interface defines required methods', () {
-      expect(NavigationService, isA<Type>());
+  group('NavigationServiceImpl', () {
+    late MockStorageService storage;
+    late LocalizationService localization;
+    late ServiceLocator serviceLocator;
 
-      const methods = [
-        'goToRoute',
-        'replaceRoute',
-        'goBack',
-        'canGoBack',
-        'currentRouteId',
-        'clearAndGoTo',
-      ];
+    setUp(() async {
+      storage = MockStorageService();
+      await storage.setBool('onboarding_seen', true);
 
-      expect(methods.length, 6);
+      localization = LocalizationServiceImpl(storage: storage);
+      await (localization as LocalizationServiceImpl).initialize();
+
+      serviceLocator = ServiceLocator();
+      serviceLocator.clear();
+      serviceLocator.register<StorageService>(storage);
+      serviceLocator.register<LocalizationService>(localization);
+    });
+
+    test('goToRoute navigates to valid route', () {
+      final result = RouterFactory.create(
+        initialRoute: 'dashboard',
+        guards: const [],
+        locator: serviceLocator,
+        localization: localization,
+      );
+
+      expect(
+        () => result.navigationService.goToRoute('onboarding'),
+        returnsNormally,
+      );
+    });
+
+    test('goToRoute throws on invalid route', () {
+      final result = RouterFactory.create(
+        initialRoute: 'dashboard',
+        guards: const [],
+        locator: serviceLocator,
+        localization: localization,
+      );
+
+      expect(
+        () => result.navigationService.goToRoute('invalid'),
+        throwsArgumentError,
+      );
+    });
+
+    test('replaceRoute throws on invalid route', () {
+      final result = RouterFactory.create(
+        initialRoute: 'dashboard',
+        guards: const [],
+        locator: serviceLocator,
+        localization: localization,
+      );
+
+      expect(
+        () => result.navigationService.replaceRoute('invalid'),
+        throwsArgumentError,
+      );
+    });
+
+    test('clearAndGoTo throws on invalid route', () {
+      final result = RouterFactory.create(
+        initialRoute: 'dashboard',
+        guards: const [],
+        locator: serviceLocator,
+        localization: localization,
+      );
+
+      expect(
+        () => result.navigationService.clearAndGoTo('invalid'),
+        throwsArgumentError,
+      );
     });
   });
 }

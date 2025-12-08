@@ -25,7 +25,7 @@ void main() {
       () {
         const state = LaunchState(onboardingSeen: true);
 
-        expect(state.determineInitialRoute(), 'home');
+        expect(state.determineInitialRoute(), 'dashboard');
       },
     );
 
@@ -89,7 +89,7 @@ void main() {
       final state = await stateMachine.resolve();
 
       expect(state.onboardingSeen, true);
-      expect(state.determineInitialRoute(), 'home');
+      expect(state.determineInitialRoute(), 'dashboard');
     });
 
     test('handles missing onboarding flag as false', () async {
