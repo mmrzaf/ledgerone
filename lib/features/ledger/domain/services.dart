@@ -139,3 +139,36 @@ class BulkPriceUpdateResult {
 
   Duration get duration => completedAt.difference(startedAt);
 }
+
+enum MoneyPeriod { thisMonth, lastMonth, allTime }
+
+class MoneySummary {
+  final List<TotalAssetBalance> fiatBalances;
+  final List<Transaction> recentTransactions;
+  final Map<String, double> categoryTotals;
+  final double totalIncome;
+  final double totalExpenses;
+  final double netIncome;
+  final MoneyPeriod period;
+
+  const MoneySummary({
+    required this.fiatBalances,
+    required this.recentTransactions,
+    required this.categoryTotals,
+    required this.totalIncome,
+    required this.totalExpenses,
+    required this.netIncome,
+    required this.period,
+  });
+
+  double get totalBalance {
+    return fiatBalances.fold<double>(
+      0,
+      (sum, balance) => sum + (balance.usdValue ?? balance.totalBalance),
+    );
+  }
+}
+
+abstract class MoneySummaryService {
+  Future<MoneySummary> getSummary(MoneyPeriod period);
+}

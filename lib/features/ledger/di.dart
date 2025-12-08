@@ -1,3 +1,5 @@
+import 'package:ledgerone/features/ledger/services/money_summary_service_impl.dart';
+
 import '../../app/di.dart'; // ServiceLocator
 import '../../core/contracts/analytics_contract.dart';
 import '../../core/data/database_contract.dart';
@@ -79,13 +81,8 @@ class LedgerModule {
     locator.register<PriceRepositoryImpl>(priceRepo);
   }
 
-  /// Register all domain services
-  ///
-  /// Services implement business logic and orchestrate repositories.
-  /// They are registered as interfaces only to encourage loose coupling.
   static void _registerServices(ServiceLocator locator) {
     // Balance Service
-    // Computes asset balances from transaction legs
     final balanceService = BalanceServiceImpl(
       assetRepo: locator.get<AssetRepository>(),
       accountRepo: locator.get<AccountRepository>(),
@@ -95,15 +92,21 @@ class LedgerModule {
     locator.register<BalanceService>(balanceService);
 
     // Portfolio Valuation Service
-    // Computes total portfolio value in USD
     final portfolioService = PortfolioValuationServiceImpl(
       balanceService: balanceService,
       priceRepo: locator.get<PriceRepository>(),
     );
     locator.register<PortfolioValuationService>(portfolioService);
 
+    // Money Summary Service
+    final moneySummaryService = MoneySummaryServiceImpl(
+      balanceService: balanceService,
+      transactionRepo: locator.get<TransactionRepository>(),
+      categoryRepo: locator.get<CategoryRepository>(),
+    );
+    locator.register<MoneySummaryService>(moneySummaryService);
+
     // Transaction Service
-    // Handles transaction creation, validation, and persistence
     final transactionService = TransactionServiceImpl(
       db: locator.get<LedgerDatabase>(),
       transactionRepo: locator.get<TransactionRepository>(),
@@ -115,7 +118,6 @@ class LedgerModule {
     locator.register<TransactionService>(transactionService);
 
     // Price Update Service
-    // Fetches and stores asset prices from external sources
     final priceUpdateService = PriceUpdateServiceImpl(
       httpClient: locator.get<HttpClient>(),
       assetRepo: locator.get<AssetRepository>(),
