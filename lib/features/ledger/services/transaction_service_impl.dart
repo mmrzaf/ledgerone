@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/errors/app_error.dart';
 import '../../../core/observability/performance_tracker.dart';
@@ -45,9 +47,9 @@ class TransactionServiceImpl implements TransactionService {
     required this.performance,
   });
 
-  double _roundAmount(double amount, int decimals) {
-    final multiplier = 1.0 * (10 * decimals);
-    return (amount * multiplier).roundToDouble() / multiplier;
+  double _roundAmount(double value, int decimals) {
+    final multiplier = math.pow(10, decimals).toDouble();
+    return (value * multiplier).round() / multiplier;
   }
 
   void _validateAmount(double amount) {
