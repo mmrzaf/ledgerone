@@ -116,7 +116,7 @@ class TransactionServiceImpl implements TransactionService {
 
       await transactionRepo.insert(transaction, legs);
 
-      analytics.logEvent(
+      await analytics.logEvent(
         'transaction_created',
         parameters: {
           'type': 'income',
@@ -127,7 +127,7 @@ class TransactionServiceImpl implements TransactionService {
 
       final metric = performance.stop('transaction_create_income');
       if (metric != null) {
-        analytics.logEvent(
+        await analytics.logEvent(
           'transaction_saved',
           parameters: {'type': 'income', 'duration_ms': metric.durationMs},
         );
@@ -136,7 +136,7 @@ class TransactionServiceImpl implements TransactionService {
       return transaction;
     } catch (e) {
       performance.stop('transaction_create_income');
-      analytics.logEvent(
+      await analytics.logEvent(
         'transaction_failed',
         parameters: {'type': 'income', 'error': e.toString()},
       );
@@ -191,7 +191,7 @@ class TransactionServiceImpl implements TransactionService {
 
       await transactionRepo.insert(transaction, legs);
 
-      analytics.logEvent(
+      await analytics.logEvent(
         'transaction_created',
         parameters: {
           'type': 'expense',
@@ -202,7 +202,7 @@ class TransactionServiceImpl implements TransactionService {
 
       final metric = performance.stop('transaction_create_expense');
       if (metric != null) {
-        analytics.logEvent(
+        await analytics.logEvent(
           'transaction_saved',
           parameters: {'type': 'expense', 'duration_ms': metric.durationMs},
         );
@@ -211,7 +211,7 @@ class TransactionServiceImpl implements TransactionService {
       return transaction;
     } catch (e) {
       performance.stop('transaction_create_expense');
-      analytics.logEvent(
+      await analytics.logEvent(
         'transaction_failed',
         parameters: {'type': 'expense', 'error': e.toString()},
       );
@@ -280,7 +280,7 @@ class TransactionServiceImpl implements TransactionService {
 
       await transactionRepo.insert(transaction, legs);
 
-      analytics.logEvent(
+      await analytics.logEvent(
         'transaction_created',
         parameters: {
           'type': 'transfer',
@@ -293,7 +293,7 @@ class TransactionServiceImpl implements TransactionService {
       return transaction;
     } catch (e) {
       performance.stop('transaction_create_transfer');
-      analytics.logEvent(
+      await analytics.logEvent(
         'transaction_failed',
         parameters: {'type': 'transfer', 'error': e.toString()},
       );
@@ -389,7 +389,7 @@ class TransactionServiceImpl implements TransactionService {
 
       await transactionRepo.insert(transaction, legs);
 
-      analytics.logEvent(
+      await analytics.logEvent(
         'transaction_created',
         parameters: {
           'type': 'trade',
@@ -402,7 +402,7 @@ class TransactionServiceImpl implements TransactionService {
       return transaction;
     } catch (e) {
       performance.stop('transaction_create_trade');
-      analytics.logEvent(
+      await analytics.logEvent(
         'transaction_failed',
         parameters: {'type': 'trade', 'error': e.toString()},
       );
@@ -464,7 +464,7 @@ class TransactionServiceImpl implements TransactionService {
   @override
   Future<void> deleteTransaction(String transactionId) async {
     await transactionRepo.delete(transactionId);
-    analytics.logEvent(
+    await analytics.logEvent(
       'transaction_deleted',
       parameters: {'transaction_id': transactionId},
     );
