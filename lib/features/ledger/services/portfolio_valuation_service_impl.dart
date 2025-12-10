@@ -3,43 +3,44 @@ import '../domain/models.dart';
 import '../domain/services.dart';
 
 class PortfolioValuationServiceImpl implements PortfolioValuationService {
-  final BalanceService balanceService;
-  final PriceRepository priceRepo;
+  final BalanceService _balanceService;
+  final PriceRepository _priceRepo;
 
   static const Duration staleThreshold = Duration(hours: 24);
 
   PortfolioValuationServiceImpl({
-    required this.balanceService,
-    required this.priceRepo,
-  });
+    required BalanceService balanceService,
+    required PriceRepository priceRepo,
+  }) : _balanceService = balanceService,
+       _priceRepo = priceRepo;
 
   @override
   Future<PortfolioValuation> getPortfolioValue() async {
-    final balances = await balanceService.getAllBalances();
+    final balances = await _balanceService.getAllBalances();
     final lastUpdate = await getLastPriceUpdate();
     final isStale = await isPriceDataStale();
 
     double totalValue = 0.0;
     double cryptoValue = 0.0;
     double fiatValue = 0.0;
-    double otherValue = 0.0;
+
+    // We still use priceRepo here – this *is* the portfolio valuation layer
+    final latestPrices = await _priceRepo.getLatestPrices();
+    final priceMap = {for (final p in latestPrices) p.assetId: p.price};
 
     for (final balance in balances) {
-      if (balance.usdValue != null) {
-        final value = balance.usdValue!;
-        totalValue += value;
+      final asset = balance.asset;
+      final price = priceMap[asset.id];
 
-        switch (balance.asset.type) {
-          case AssetType.crypto:
-            cryptoValue += value;
-            break;
-          case AssetType.fiat:
-            fiatValue += value;
-            break;
-          case AssetType.other:
-            otherValue += value;
-            break;
-        }
+      if (price == null) continue;
+
+      final value = balance.totalBalance * price;
+      totalValue += value;
+
+      if (asset.type == AssetType.crypto) {
+        cryptoValue += value;
+      } else if (asset.type == AssetType.fiat) {
+        fiatValue += value;
       }
     }
 
@@ -47,8 +48,9 @@ class PortfolioValuationServiceImpl implements PortfolioValuationService {
       totalValue: totalValue,
       cryptoValue: cryptoValue,
       fiatValue: fiatValue,
-      otherValue: otherValue,
       lastPriceUpdate: lastUpdate,
+      // TODO check what is other value
+      otherValue: 0,
       isPriceDataStale: isStale,
     );
   }
@@ -56,15 +58,13 @@ class PortfolioValuationServiceImpl implements PortfolioValuationService {
   @override
   Future<bool> isPriceDataStale() async {
     final lastUpdate = await getLastPriceUpdate();
-    if (lastUpdate == null) return false;
-
-    final now = DateTime.now();
-    final difference = now.difference(lastUpdate);
-    return difference > staleThreshold;
+    if (lastUpdate == null) return true;
+    final age = DateTime.now().difference(lastUpdate);
+    return age > staleThreshold;
   }
 
   @override
   Future<DateTime?> getLastPriceUpdate() async {
-    return await priceRepo.getLatestPriceTimestamp();
+    return _priceRepo.getLatestPriceTimestamp();
   }
 }

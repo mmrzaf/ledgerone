@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../app/presentation/error_presenter.dart';
 import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
@@ -15,6 +14,7 @@ class DashboardScreen extends StatefulWidget {
   final PortfolioValuationService portfolioService;
   final PriceUpdateService priceUpdateService;
   final BalanceService balanceService;
+  final BalanceValuationService valuationService;
   final AnalyticsService analytics;
 
   const DashboardScreen({
@@ -22,6 +22,7 @@ class DashboardScreen extends StatefulWidget {
     required this.portfolioService,
     required this.priceUpdateService,
     required this.balanceService,
+    required this.valuationService,
     required this.analytics,
     super.key,
   });
@@ -32,7 +33,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   PortfolioValuation? _portfolio;
-  List<TotalAssetBalance>? _topHoldings;
+  List<ValuatedAssetBalance> _topHoldings = [];
   bool _loading = true;
   bool _updatingPrices = false;
   AppError? _error;
@@ -46,7 +47,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadData() async {
     if (!mounted) return;
-
     setState(() {
       _loading = true;
       _error = null;
@@ -55,19 +55,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final portfolio = await widget.portfolioService.getPortfolioValue();
       final allBalances = await widget.balanceService.getAllBalances();
+      final valuatedBalances = await widget.valuationService.valuate(
+        allBalances,
+      );
 
-      allBalances.sort((a, b) {
-        final aValue = a.usdValue ?? 0;
-        final bValue = b.usdValue ?? 0;
-        return bValue.compareTo(aValue);
+      // Sort by USD value and take top 5
+      valuatedBalances.sort((a, b) {
+        final aVal = a.usdValue ?? 0;
+        final bVal = b.usdValue ?? 0;
+        return bVal.compareTo(aVal);
       });
-      final topHoldings = allBalances.take(5).toList();
 
       if (!mounted) return;
-
       setState(() {
         _portfolio = portfolio;
-        _topHoldings = topHoldings;
+        _topHoldings = valuatedBalances.take(5).toList();
         _loading = false;
       });
     } on AppError catch (e) {
@@ -90,107 +92,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _updatePrices() async {
-    if (!mounted) return;
+    if (_updatingPrices) return;
 
     setState(() => _updatingPrices = true);
+    final l10n = context.l10n;
 
     try {
       final result = await widget.priceUpdateService.updateAllPrices();
 
       if (!mounted) return;
-
       setState(() => _updatingPrices = false);
 
-      final l10n = context.l10n;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            l10n.get(
-              L10nKeys.ledgerDashboardPricesUpdated,
-              args: {
-                'success': result.successCount.toString(),
-                'failed': result.failureCount.toString(),
-              },
-            ),
+      final msg = result.failureCount == 0
+          ? l10n
+                .get(L10nKeys.ledgerDashboardPricesUpdated)
+                .replaceAll('{success}', '${result.successCount}')
+                .replaceAll('{failed}', '0')
+          : l10n
+                .get(L10nKeys.ledgerDashboardPricesUpdated)
+                .replaceAll('{success}', '${result.successCount}')
+                .replaceAll('{failed}', '${result.failureCount}');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: result.failureCount == 0
+                ? Colors.green
+                : Colors.orange,
+            behavior: SnackBarBehavior.floating,
           ),
-          backgroundColor: result.failureCount == 0
-              ? Colors.green
-              : Colors.orange,
-          action: result.failureCount > 0
-              ? SnackBarAction(
-                  label: 'Details',
-                  onPressed: () => _showUpdateDetails(result),
-                )
-              : null,
-        ),
-      );
+        );
+      }
 
       await _loadData();
     } catch (e) {
       if (!mounted) return;
-
       setState(() => _updatingPrices = false);
 
-      ErrorPresenter.showError(
-        context,
-        e is AppError
-            ? e
-            : AppError(
-                category: ErrorCategory.unknown,
-                message: e.toString(),
-                originalError: e,
-              ),
-        screen: 'dashboard',
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.get(L10nKeys.ledgerDashboardPriceUpdateFailed)),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
 
-  void _showUpdateDetails(BulkPriceUpdateResult result) {
-    final theme = Theme.of(context);
-
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (ctx) {
-        return Container(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Price Update Results', style: theme.textTheme.titleLarge),
-              const SizedBox(height: 16),
-              ...result.results.map((r) {
-                return ListTile(
-                  leading: Icon(
-                    r.success ? Icons.check_circle : Icons.error,
-                    color: r.success ? Colors.green : Colors.red,
-                  ),
-                  title: Text(r.asset.symbol),
-                  subtitle: r.success
-                      ? Text('\$${MoneyFormatting.formatCurrency(r.price!)}')
-                      : Text(r.error?.message ?? 'Unknown error'),
-                );
-              }),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final l10n = context.l10n;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.get(L10nKeys.ledgerDashboardTitle)),
         actions: [
           if (_updatingPrices)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Center(
                 child: SizedBox(
                   width: 20,
                   height: 20,
@@ -205,9 +167,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               tooltip: l10n.get(L10nKeys.ledgerDashboardUpdatePrices),
             ),
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.settings_outlined),
             onPressed: () => widget.navigation.goToRoute('settings'),
-            tooltip: l10n.get(L10nKeys.ledgerNavSettings),
+            tooltip: l10n.get(L10nKeys.ledgerSettingsTitle),
           ),
         ],
       ),
@@ -216,36 +178,93 @@ class _DashboardScreenState extends State<DashboardScreen> {
         currentTab: LedgerTab.dashboard,
         navigation: widget.navigation,
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => widget.navigation.goToRoute('transaction_editor'),
-        tooltip: l10n.get(L10nKeys.ledgerActionAddTransaction),
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: Text(l10n.get(L10nKeys.ledgerActionAddTransaction)),
       ),
     );
   }
 
   Widget _buildBody(ThemeData theme, LocalizationService l10n) {
     if (_loading) {
-      return LoadingIndicator(message: l10n.get(L10nKeys.ledgerCommonLoading));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              l10n.get(L10nKeys.ledgerCommonLoadingData),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     if (_error != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: ErrorCard(
-            error: _error!,
-            screen: 'dashboard',
-            onRetry: _loadData,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: theme.colorScheme.error.withValues(alpha: 0.7),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _error!.message,
+                style: theme.textTheme.bodyLarge,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _loadData,
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.get(L10nKeys.retry)),
+              ),
+            ],
           ),
         ),
       );
     }
 
     if (_portfolio == null) {
-      return EmptyState(
-        message: l10n.get(L10nKeys.ledgerDashboardNoAssets),
-        icon: Icons.account_balance_wallet,
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.account_balance_wallet_outlined,
+                size: 64,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.get(L10nKeys.ledgerDashboardNoAssets),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () =>
+                    widget.navigation.goToRoute('transaction_editor'),
+                icon: const Icon(Icons.add),
+                label: Text(l10n.get(L10nKeys.ledgerActionAddTransaction)),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -257,11 +276,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (_portfolio!.isPriceDataStale) _buildStaleWarning(theme, l10n),
           _buildPortfolioCard(theme, l10n),
           const SizedBox(height: 24),
-          if (_topHoldings != null && _topHoldings!.isNotEmpty)
+          _buildBreakdown(theme, l10n),
+          if (_topHoldings.isNotEmpty) ...[
+            const SizedBox(height: 24),
             _buildTopHoldings(theme, l10n),
+          ],
           const SizedBox(height: 24),
           _buildQuickActions(theme, l10n),
-          const SizedBox(height: 16),
+          const SizedBox(height: 80), // FAB clearance
         ],
       ),
     );
@@ -270,49 +292,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildStaleWarning(ThemeData theme, LocalizationService l10n) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.orange.shade50,
-        border: Border.all(color: Colors.orange),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.shade200),
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber, color: Colors.orange),
+          Icon(Icons.warning_amber_rounded, color: Colors.orange.shade700),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.get(L10nKeys.ledgerErrorStalePrice),
-                  style: TextStyle(
-                    color: Colors.orange.shade900,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (_portfolio!.lastPriceUpdate != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    l10n.get(
-                      L10nKeys.ledgerDashboardLastUpdate,
-                      args: {
-                        'time': MoneyFormatting.formatRelativeTime(
-                          _portfolio!.lastPriceUpdate!,
-                          l10n.get,
-                        ),
-                      },
-                    ),
-                    style: TextStyle(
-                      color: Colors.orange.shade800,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ],
+            child: Text(
+              l10n.get(L10nKeys.ledgerErrorStalePrice),
+              style: TextStyle(
+                color: Colors.orange.shade900,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
-          TextButton(onPressed: _updatePrices, child: const Text('Update')),
+          TextButton(
+            onPressed: _updatingPrices ? null : _updatePrices,
+            child: Text(l10n.get(L10nKeys.ledgerDashboardUpdatePrices)),
+          ),
         ],
       ),
     );
@@ -320,121 +322,120 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildPortfolioCard(ThemeData theme, LocalizationService l10n) {
     final portfolio = _portfolio!;
-    final totalValue = portfolio.totalValue;
-    final cryptoValue = portfolio.cryptoValue;
-    final fiatValue = portfolio.fiatValue;
 
     return Card(
       elevation: 0,
+      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  l10n.get(L10nKeys.ledgerDashboardTotalPortfolio),
-                  style: theme.textTheme.titleMedium,
-                ),
-                if (portfolio.lastPriceUpdate != null &&
-                    !portfolio.isPriceDataStale)
-                  Text(
-                    l10n.get(
-                      L10nKeys.ledgerDashboardLastUpdate,
-                      args: {
-                        'time': MoneyFormatting.formatRelativeTime(
-                          portfolio.lastPriceUpdate!,
-                          l10n.get,
-                        ),
-                      },
-                    ),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
             Text(
-              '\$${MoneyFormatting.formatCurrency(totalValue)}',
-              style: theme.textTheme.displaySmall?.copyWith(
+              l10n.get(L10nKeys.ledgerDashboardTotalPortfolio),
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '\$${MoneyFormatting.formatCurrency(portfolio.totalValue)}',
+              style: theme.textTheme.displayMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.primary,
               ),
             ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildPortfolioMetric(
-                    theme,
-                    l10n,
-                    L10nKeys.ledgerDashboardCrypto,
-                    cryptoValue,
-                    Icons.currency_bitcoin,
-                    totalValue > 0 ? (cryptoValue / totalValue) : 0,
-                  ),
+            if (portfolio.lastPriceUpdate != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                l10n
+                    .get(L10nKeys.ledgerDashboardLastUpdate)
+                    .replaceAll(
+                      '{time}',
+                      MoneyFormatting.formatRelativeTime(
+                        portfolio.lastPriceUpdate!,
+                        (key) => l10n.get(key),
+                      ),
+                    ),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildPortfolioMetric(
-                    theme,
-                    l10n,
-                    L10nKeys.ledgerDashboardFiat,
-                    fiatValue,
-                    Icons.account_balance,
-                    totalValue > 0 ? (fiatValue / totalValue) : 0,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPortfolioMetric(
+  Widget _buildBreakdown(ThemeData theme, LocalizationService l10n) {
+    final portfolio = _portfolio!;
+
+    return Card(
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.get(L10nKeys.ledgerDashboardTopHoldings),
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildMetricRow(
+              theme,
+              l10n,
+              Icons.currency_bitcoin,
+              l10n.get(L10nKeys.ledgerDashboardCrypto),
+              '\$${MoneyFormatting.formatCurrency(portfolio.cryptoValue)}',
+            ),
+            const Divider(height: 24),
+            _buildMetricRow(
+              theme,
+              l10n,
+              Icons.account_balance,
+              l10n.get(L10nKeys.ledgerDashboardFiat),
+              '\$${MoneyFormatting.formatCurrency(portfolio.fiatValue)}',
+            ),
+            if (portfolio.otherValue > 0) ...[
+              const Divider(height: 24),
+              _buildMetricRow(
+                theme,
+                l10n,
+                Icons.category,
+                'Other',
+                '\$${MoneyFormatting.formatCurrency(portfolio.otherValue)}',
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMetricRow(
     ThemeData theme,
     LocalizationService l10n,
-    String labelKey,
-    double value,
     IconData icon,
-    double percentage,
+    String label,
+    String value,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: theme.colorScheme.primary),
-              const SizedBox(width: 4),
-              Text(l10n.get(labelKey), style: theme.textTheme.bodySmall),
-            ],
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: theme.colorScheme.primary),
+        const SizedBox(width: 12),
+        Text(label, style: theme.textTheme.bodyLarge),
+        const Spacer(),
+        Text(
+          value,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(height: 4),
-          Text(
-            '\$${MoneyFormatting.formatCurrency(value)}',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            MoneyFormatting.formatPercentage(percentage),
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -442,37 +443,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          l10n.get(L10nKeys.ledgerDashboardTopHoldings),
-          style: theme.textTheme.titleMedium,
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            l10n.get(L10nKeys.ledgerDashboardTopHoldings),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
-        const SizedBox(height: 12),
-        ..._topHoldings!.map((balance) {
+        ..._topHoldings.map((valuated) {
+          final balance = valuated.balance;
           return Card(
+            elevation: 0,
             margin: const EdgeInsets.only(bottom: 8),
             child: ListTile(
               leading: CircleAvatar(
                 backgroundColor: theme.colorScheme.primaryContainer,
                 child: Text(
                   balance.asset.symbol.substring(0, 1).toUpperCase(),
-                  style: TextStyle(color: theme.colorScheme.onPrimaryContainer),
+                  style: TextStyle(
+                    color: theme.colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-              title: Text(balance.asset.symbol),
-              subtitle: Text(
-                MoneyFormatting.formatBalanceWithAsset(
-                  balance.totalBalance,
-                  balance.asset,
-                ),
+              title: Text(
+                balance.asset.symbol,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-              trailing: balance.usdValue != null
-                  ? Text(
-                      '\$${MoneyFormatting.formatCurrency(balance.usdValue!)}',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
+              subtitle: Text(balance.asset.name),
+              trailing: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    MoneyFormatting.formatBalance(
+                      balance.totalBalance,
+                      balance.asset.decimals,
+                    ),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (valuated.usdValue != null)
+                    Text(
+                      '\$${MoneyFormatting.formatCurrency(valuated.usdValue!)}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.6,
+                        ),
                       ),
-                    )
-                  : null,
+                    ),
+                ],
+              ),
             ),
           );
         }),
@@ -481,67 +505,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildQuickActions(ThemeData theme, LocalizationService l10n) {
-    final actions = [
-      (L10nKeys.ledgerActionAddTransaction, Icons.add, 'transaction_editor'),
-      (L10nKeys.ledgerActionViewAccounts, Icons.account_balance, 'accounts'),
-      (L10nKeys.ledgerActionManageAssets, Icons.widgets, 'assets'),
-      (L10nKeys.ledgerActionBackupData, Icons.backup, 'settings'),
-    ];
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          l10n.get(L10nKeys.ledgerDashboardQuickActions),
-          style: theme.textTheme.titleMedium,
-        ),
-        const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 2.5,
-          ),
-          itemCount: actions.length,
-          itemBuilder: (context, index) {
-            final (labelKey, icon, route) = actions[index];
-            return _buildActionButton(theme, l10n, labelKey, icon, route);
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildActionButton(
-    ThemeData theme,
-    LocalizationService l10n,
-    String labelKey,
-    IconData icon,
-    String route,
-  ) {
-    return ElevatedButton(
-      onPressed: () => widget.navigation.goToRoute(route),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.all(12),
-        elevation: 0,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 20),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              l10n.get(labelKey),
-              style: const TextStyle(fontSize: 12),
-              overflow: TextOverflow.ellipsis,
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            l10n.get(L10nKeys.ledgerDashboardQuickActions),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ],
-      ),
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ActionChip(
+              avatar: const Icon(Icons.add, size: 18),
+              label: Text(l10n.get(L10nKeys.ledgerActionAddTransaction)),
+              onPressed: () =>
+                  widget.navigation.goToRoute('transaction_editor'),
+            ),
+            ActionChip(
+              avatar: const Icon(Icons.account_balance, size: 18),
+              label: Text(l10n.get(L10nKeys.ledgerActionViewAccounts)),
+              onPressed: () => widget.navigation.goToRoute('accounts'),
+            ),
+            ActionChip(
+              avatar: const Icon(Icons.widgets, size: 18),
+              label: Text(l10n.get(L10nKeys.ledgerActionManageAssets)),
+              onPressed: () => widget.navigation.goToRoute('assets'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

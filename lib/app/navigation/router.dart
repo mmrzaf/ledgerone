@@ -36,7 +36,16 @@ class NavigationServiceImpl implements NavigationService {
     if (path == null) {
       throw ArgumentError('Unknown route ID: $routeId');
     }
-    _router.go(path, extra: params);
+
+    String fullPath = path;
+    if (params != null && params.isNotEmpty) {
+      final query = params.entries
+          .map((e) => '${e.key}=${Uri.encodeComponent(e.value.toString())}')
+          .join('&');
+      fullPath = '$path?$query';
+    }
+
+    _router.go(fullPath);
   }
 
   @override
@@ -164,6 +173,7 @@ class RouterFactory {
               priceUpdateService: locator.get<PriceUpdateService>(),
               balanceService: locator.get<BalanceService>(),
               analytics: locator.get<AnalyticsService>(),
+              valuationService: locator.get<BalanceValuationService>(),
             );
           },
         ),
@@ -175,6 +185,7 @@ class RouterFactory {
               navigation: navigationService,
               balanceService: locator.get<BalanceService>(),
               analytics: locator.get<AnalyticsService>(),
+              valuationService: locator.get<BalanceValuationService>(),
             );
           },
         ),
@@ -185,25 +196,28 @@ class RouterFactory {
             navigation: navigationService,
             summaryService: locator.get<MoneySummaryService>(),
             analytics: locator.get<AnalyticsService>(),
+            valuationService: locator.get<BalanceValuationService>(),
           ),
         ),
         GoRoute(
           path: '/transaction',
           name: 'transaction_editor',
-          builder: (context, state) => TransactionEditorScreen(
-            navigation: navigationService,
-            transactionService: locator.get<TransactionService>(),
-            assetRepo: locator.get<AssetRepository>(),
-            accountRepo: locator.get<AccountRepository>(),
-            categoryRepo: locator.get<CategoryRepository>(),
-            analytics: locator.get<AnalyticsService>(),
-          ),
+          builder: (context, state) {
+            final transactionId = state.uri.queryParameters['id'];
+            return TransactionEditorScreen(
+              navigation: navigationService,
+              transactionService: locator.get<TransactionService>(),
+              assetRepo: locator.get<AssetRepository>(),
+              accountRepo: locator.get<AccountRepository>(),
+              categoryRepo: locator.get<CategoryRepository>(),
+              analytics: locator.get<AnalyticsService>(),
+              transactionId: transactionId,
+            );
+          },
         ),
-
         GoRoute(
           path: '/assets',
           builder: (context, state) {
-            final locator = ServiceLocator();
             return AssetsScreen(
               navigation: navigationService,
               assetRepo: locator.get<AssetRepository>(),
@@ -214,7 +228,6 @@ class RouterFactory {
         GoRoute(
           path: '/accounts',
           builder: (context, state) {
-            final locator = ServiceLocator();
             return AccountsScreen(
               navigation: navigationService,
               accountRepo: locator.get<AccountRepository>(),

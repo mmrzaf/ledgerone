@@ -11,33 +11,38 @@ import '../domain/models.dart';
 import '../domain/services.dart';
 
 class PriceUpdateServiceImpl implements PriceUpdateService {
-  final HttpClient httpClient;
-  final AssetRepository assetRepo;
-  final PriceRepository priceRepo;
-  final LedgerDatabase db;
-  final AnalyticsService analytics;
-  final PerformanceTracker performance;
+  final HttpClient _httpClient;
+  final AssetRepository _assetRepo;
+  final PriceRepository _priceRepo;
+  final LedgerDatabase _db;
+  final AnalyticsService _analytics;
+  final PerformanceTracker _performance;
 
-  static const int maxConcurrentRequests = 3;
+  static const int _maxConcurrentRequests = 3;
 
   PriceUpdateServiceImpl({
-    required this.httpClient,
-    required this.assetRepo,
-    required this.priceRepo,
-    required this.db,
-    required this.analytics,
-    required this.performance,
-  });
+    required HttpClient httpClient,
+    required AssetRepository assetRepo,
+    required PriceRepository priceRepo,
+    required LedgerDatabase db,
+    required AnalyticsService analytics,
+    required PerformanceTracker performance,
+  }) : _httpClient = httpClient,
+       _assetRepo = assetRepo,
+       _priceRepo = priceRepo,
+       _db = db,
+       _analytics = analytics,
+       _performance = performance;
 
   @override
   Future<BulkPriceUpdateResult> updateAllPrices() async {
     final startedAt = DateTime.now();
-    performance.start('price_update_all');
+    _performance.start('price_update_all');
 
-    await analytics.logEvent('price_update_started');
+    await _analytics.logEvent('price_update_started');
 
     try {
-      final assets = await assetRepo.getAll();
+      final assets = await _assetRepo.getAll();
       final assetsWithConfig = assets
           .where(
             (a) =>
@@ -70,8 +75,8 @@ class PriceUpdateServiceImpl implements PriceUpdateService {
         completedAt: completedAt,
       );
 
-      final metric = performance.stop('price_update_all');
-      await analytics.logEvent(
+      final metric = _performance.stop('price_update_all');
+      await _analytics.logEvent(
         'price_update_finished',
         parameters: {
           'success_count': successCount,
@@ -82,10 +87,10 @@ class PriceUpdateServiceImpl implements PriceUpdateService {
 
       return bulkResult;
     } catch (e) {
-      performance.stop('price_update_all');
+      _performance.stop('price_update_all');
       final completedAt = DateTime.now();
 
-      await analytics.logEvent(
+      await _analytics.logEvent(
         'price_update_failed',
         parameters: {'error': e.toString()},
       );
@@ -108,11 +113,13 @@ class PriceUpdateServiceImpl implements PriceUpdateService {
     final inFlight = <Future<PriceUpdateResult>>[];
 
     while (queue.isNotEmpty || inFlight.isNotEmpty) {
-      while (inFlight.length < maxConcurrentRequests && queue.isNotEmpty) {
+      // Start new requests up to the limit
+      while (inFlight.length < _maxConcurrentRequests && queue.isNotEmpty) {
         final asset = queue.removeAt(0);
         inFlight.add(updatePrice(asset));
       }
 
+      // Wait for any to complete
       if (inFlight.isNotEmpty) {
         final completed = await Future.any(
           inFlight.map((f) => f.then((r) => MapEntry(f, r))),
@@ -148,7 +155,7 @@ class PriceUpdateServiceImpl implements PriceUpdateService {
       final price = await _fetchPriceFromSource(config);
 
       final snapshot = PriceSnapshot(
-        id: db.generateId(),
+        id: _db.generateId(),
         assetId: asset.id,
         currencyCode: 'USD',
         price: price,
@@ -156,9 +163,9 @@ class PriceUpdateServiceImpl implements PriceUpdateService {
         source: config.url,
       );
 
-      await priceRepo.insert(snapshot);
+      await _priceRepo.insert(snapshot);
 
-      await analytics.logEvent(
+      await _analytics.logEvent(
         'price_update_success',
         parameters: {'asset_id': asset.id, 'price': price},
       );
@@ -202,14 +209,14 @@ class PriceUpdateServiceImpl implements PriceUpdateService {
       dynamic response;
 
       if (config.method.toUpperCase() == 'GET') {
-        response = await httpClient.get(
+        response = await _httpClient.get(
           config.url,
           queryParams: config.queryParams.isEmpty
               ? null
               : config.queryParams.map((k, v) => MapEntry(k, v as dynamic)),
         );
       } else if (config.method.toUpperCase() == 'POST') {
-        response = await httpClient.post(config.url);
+        response = await _httpClient.post(config.url);
       } else {
         throw AppError(
           category: ErrorCategory.badRequest,

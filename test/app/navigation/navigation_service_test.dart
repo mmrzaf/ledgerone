@@ -37,6 +37,9 @@ void main() {
         FakePortfolioValuationService(),
       );
       serviceLocator.register<PriceUpdateService>(FakePriceUpdateService());
+      serviceLocator.register<BalanceValuationService>(
+        FakeBalanceValuationService(),
+      );
     });
 
     testWidgets('creates router with onboarding as initial route', (

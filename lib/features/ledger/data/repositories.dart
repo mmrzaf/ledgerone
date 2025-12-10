@@ -4,6 +4,10 @@ import 'repositories_interfaces.dart';
 
 export 'repositories_interfaces.dart';
 
+// =============================================================================
+// Asset Repository
+// =============================================================================
+
 class AssetRepositoryImpl implements AssetRepository {
   final LedgerDatabase _db;
 
@@ -35,17 +39,15 @@ class AssetRepositoryImpl implements AssetRepository {
   @override
   Future<Map<String, Asset>> getAllAsMap() async {
     final assets = await getAll();
-    return {for (var asset in assets) asset.id: asset};
+    return {for (final asset in assets) asset.id: asset};
   }
 
   @override
   Future<void> insert(Asset asset) async {
     final db = await _db.database;
-
     final assetToInsert = asset.id.isEmpty
         ? asset.copyWith(id: _db.generateId())
         : asset;
-
     await db.insert('assets', assetToInsert.toJson());
   }
 
@@ -66,6 +68,10 @@ class AssetRepositoryImpl implements AssetRepository {
     await db.delete('assets', where: 'id = ?', whereArgs: [id]);
   }
 }
+
+// =============================================================================
+// Account Repository
+// =============================================================================
 
 class AccountRepositoryImpl implements AccountRepository {
   final LedgerDatabase _db;
@@ -96,14 +102,17 @@ class AccountRepositoryImpl implements AccountRepository {
   }
 
   @override
+  Future<Map<String, Account>> getAllAsMap() async {
+    final accounts = await getAll();
+    return {for (final account in accounts) account.id: account};
+  }
+
+  @override
   Future<void> insert(Account account) async {
     final db = await _db.database;
-
-    // Generate ID if not provided
     final accountToInsert = account.id.isEmpty
         ? account.copyWith(id: _db.generateId())
         : account;
-
     await db.insert('accounts', accountToInsert.toJson());
   }
 
@@ -123,13 +132,11 @@ class AccountRepositoryImpl implements AccountRepository {
     final db = await _db.database;
     await db.delete('accounts', where: 'id = ?', whereArgs: [id]);
   }
-
-  @override
-  Future<Map<String, Account>> getAllAsMap() async {
-    final accounts = await getAll();
-    return {for (final account in accounts) account.id: account};
-  }
 }
+
+// =============================================================================
+// Category Repository
+// =============================================================================
 
 class CategoryRepositoryImpl implements CategoryRepository {
   final LedgerDatabase _db;
@@ -162,7 +169,10 @@ class CategoryRepositoryImpl implements CategoryRepository {
   @override
   Future<void> insert(Category category) async {
     final db = await _db.database;
-    await db.insert('categories', category.toJson());
+    final categoryToInsert = category.id.isEmpty
+        ? category.copyWith(id: _db.generateId())
+        : category;
+    await db.insert('categories', categoryToInsert.toJson());
   }
 
   @override
@@ -183,10 +193,18 @@ class CategoryRepositoryImpl implements CategoryRepository {
   }
 }
 
+// =============================================================================
+// Transaction Repository
+// =============================================================================
+
 class TransactionRepositoryImpl implements TransactionRepository {
   final LedgerDatabase _db;
 
   TransactionRepositoryImpl(this._db);
+
+  // ---------------------------------------------------------------------------
+  // Transaction CRUD
+  // ---------------------------------------------------------------------------
 
   @override
   Future<List<Transaction>> getAll({
@@ -217,6 +235,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
       orderBy: 'timestamp DESC',
       limit: limit,
     );
+
     return maps.map((map) => Transaction.fromJson(map)).toList();
   }
 
@@ -239,6 +258,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
     List<TransactionLeg> legs,
   ) async {
     final db = await _db.database;
+
     await db.transaction((txn) async {
       await txn.insert('transactions', transaction.toJson());
       for (final leg in legs) {
@@ -253,13 +273,9 @@ class TransactionRepositoryImpl implements TransactionRepository {
     List<TransactionLeg> legs,
   ) async {
     final db = await _db.database;
-    await db.transaction((txn) async {
-      // final oldLegs = await txn.query(
-      //   'transaction_legs',
-      //   where: 'transaction_id = ?',
-      //   whereArgs: [transaction.id],
-      // );
 
+    await db.transaction((txn) async {
+      // Update transaction
       await txn.update(
         'transactions',
         transaction.toJson(),
@@ -267,6 +283,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
         whereArgs: [transaction.id],
       );
 
+      // Delete old legs and insert new ones
       await txn.delete(
         'transaction_legs',
         where: 'transaction_id = ?',
@@ -276,34 +293,29 @@ class TransactionRepositoryImpl implements TransactionRepository {
       for (final leg in legs) {
         await txn.insert('transaction_legs', leg.toJson());
       }
-
-      // final oldLegsNegated = oldLegs.map((l) {
-      //   final copy = Map<String, dynamic>.from(l);
-      //   copy['amount'] = -(copy['amount'] as num).toDouble();
-      //   return copy;
-      // }).toList();
     });
   }
 
   @override
   Future<void> delete(String id) async {
     final db = await _db.database;
+
     await db.transaction((txn) async {
-      // final legs = await txn.query(
-      //   'transaction_legs',
-      //   where: 'transaction_id = ?',
-      //   whereArgs: [id],
-      // );
+      // Delete legs first (foreign key constraint)
+      await txn.delete(
+        'transaction_legs',
+        where: 'transaction_id = ?',
+        whereArgs: [id],
+      );
 
+      // Delete transaction
       await txn.delete('transactions', where: 'id = ?', whereArgs: [id]);
-
-      // final legsNegated = legs.map((l) {
-      //   final copy = Map<String, dynamic>.from(l);
-      //   copy['amount'] = -(copy['amount'] as num).toDouble();
-      //   return copy;
-      // }).toList();
     });
   }
+
+  // ---------------------------------------------------------------------------
+  // Leg Queries
+  // ---------------------------------------------------------------------------
 
   @override
   Future<List<TransactionLeg>> getLegsForTransaction(
@@ -324,7 +336,70 @@ class TransactionRepositoryImpl implements TransactionRepository {
     final maps = await db.query('transaction_legs');
     return maps.map((m) => TransactionLeg.fromJson(m)).toList();
   }
+
+  // ---------------------------------------------------------------------------
+  // Balance Aggregations
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<List<Map<String, dynamic>>> getBalancesByAccountAndAsset() async {
+    final db = await _db.database;
+
+    final results = await db.rawQuery('''
+      SELECT
+        account_id,
+        asset_id,
+        SUM(amount) as balance
+      FROM transaction_legs
+      GROUP BY account_id, asset_id
+      HAVING ABS(SUM(amount)) > 0.00000001
+    ''');
+
+    return results;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getBalancesByAsset() async {
+    final db = await _db.database;
+
+    final results = await db.rawQuery('''
+      SELECT
+        asset_id,
+        SUM(amount) as balance
+      FROM transaction_legs
+      GROUP BY asset_id
+      HAVING ABS(SUM(amount)) > 0.00000001
+    ''');
+
+    return results;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getBalancesForAccount(
+    String accountId,
+  ) async {
+    final db = await _db.database;
+
+    final results = await db.rawQuery(
+      '''
+      SELECT
+        asset_id,
+        SUM(amount) as balance
+      FROM transaction_legs
+      WHERE account_id = ?
+      GROUP BY asset_id
+      HAVING ABS(SUM(amount)) > 0.00000001
+    ''',
+      [accountId],
+    );
+
+    return results;
+  }
 }
+
+// =============================================================================
+// Price Repository
+// =============================================================================
 
 class PriceRepositoryImpl implements PriceRepository {
   final LedgerDatabase _db;
@@ -342,7 +417,8 @@ class PriceRepositoryImpl implements PriceRepository {
         FROM price_snapshots
         WHERE currency_code = 'USD'
         GROUP BY asset_id
-      ) latest ON p.asset_id = latest.asset_id AND p.timestamp = latest.max_timestamp
+      ) latest ON p.asset_id = latest.asset_id
+              AND p.timestamp = latest.max_timestamp
     ''');
 
     return maps.map((map) => PriceSnapshot.fromJson(map)).toList();

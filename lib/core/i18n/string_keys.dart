@@ -29,6 +29,7 @@ class L10nKeys {
   static const String errorParseError = 'error.parse_error';
   static const String errorUnknown = 'error.unknown';
   static const String errorInlineTitle = 'error.inline_title';
+
   // Accessibility labels
   static const String a11yNavigationBack = 'a11y.navigation.back';
   static const String a11yNavigationMenu = 'a11y.navigation.menu';
@@ -49,6 +50,22 @@ class L10nKeys {
 
   static const String ledgerAppTitle = 'ledger.app_title';
 
+  // LedgerOne – Errors
+  static const String ledgerErrorInvalidAmount = 'ledger.error.invalid_amount';
+  static const String ledgerErrorInsufficientFunds =
+      'ledger.error.insufficient_funds';
+  static const String ledgerErrorSameAccountTransfer =
+      'ledger.error.same_account_transfer';
+  static const String ledgerErrorSameAssetTrade =
+      'ledger.error.same_asset_trade';
+  static const String ledgerErrorMissingCategory =
+      'ledger.error.missing_category';
+  static const String ledgerErrorInvalidFee = 'ledger.error.invalid_fee';
+  static const String ledgerErrorAssetNotFound = 'ledger.error.asset_not_found';
+  static const String ledgerErrorAccountNotFound =
+      'ledger.error.account_not_found';
+  static const String ledgerErrorTransactionNotFound =
+      'ledger.error.transaction_not_found';
   static const String ledgerErrorStalePrice = 'ledger.error.stale_price';
 
   // LedgerOne – Onboarding

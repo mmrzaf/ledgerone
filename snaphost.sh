@@ -66,16 +66,16 @@ echo "Creating snapshot at: $OUT"
 ########################################
 # 2) Git metadata (if this is a git repo)
 ########################################
-if command -v git &>/dev/null && git rev-parse --is-inside-work-tree &>/dev/null; then
-  section "Git metadata"
-  {
-    echo "Branch:  $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'N/A')"
-    echo "Commit:  $(git rev-parse HEAD 2>/dev/null || echo 'N/A')"
-    echo
-    echo "Status (short):"
-    git status --short || true
-  } >> "$OUT"
-fi
+#if command -v git &>/dev/null && git rev-parse --is-inside-work-tree &>/dev/null; then
+#  section "Git metadata"
+#  {
+#    echo "Branch:  $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo 'N/A')"
+#    echo "Commit:  $(git rev-parse HEAD 2>/dev/null || echo 'N/A')"
+#    echo
+#    echo "Status (short):"
+#    git status --short || true
+#  } >> "$OUT"
+#fi
 
 ########################################
 # 3) Project tree(s)
@@ -97,23 +97,23 @@ section "Key project files"
 
 dump_file_if_exists "pubspec.yaml"
 #dump_file_if_exists "pubspec.lock"
-dump_file_if_exists "analysis_options.yaml"
+#dump_file_if_exists "analysis_options.yaml"
 dump_file_if_exists "README.md"
-dump_file_if_exists "CHANGELOG.md"
-dump_file_if_exists "LICENSE"
-dump_file_if_exists "BLUEPRINT.md"
+#dump_file_if_exists "CHANGELOG.md"
+#dump_file_if_exists "LICENSE"
+#dump_file_if_exists "BLUEPRINT.md"
 
 ########################################
 # 5) lib/ sources
 ########################################
-section "lib/ source files (*.dart, *.md)"
+section "lib/ source files (*.dart)"
 dump_dir_sources "lib"
 
 ########################################
 # 6) test/ sources
 ########################################
-section "test/ source files (*.dart, *.md)"
-dump_dir_sources "test"
+#section "test/ source files (*.dart, *.md)"
+#dump_dir_sources "test"
 
 echo "Snapshot written to: $OUT"
 
