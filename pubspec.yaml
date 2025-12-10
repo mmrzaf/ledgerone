@@ -3,7 +3,7 @@ description: "Tracks all assets you own, Knows Where the live, Lets you manually
 
 publish_to: "none"
 
-version: 0.9.3
+version: 0.9.4
 
 environment:
   sdk: ^3.9.2
@@ -16,7 +16,6 @@ dependencies:
 
   cupertino_icons: ^1.0.8
   go_router: ^17.0.0
-  shared_preferences: ^2.5.3
   connectivity_plus: ^7.0.0
   http: ^1.6.0
 
@@ -25,6 +24,7 @@ dependencies:
   uuid: ^4.2.0
   sqlite3_flutter_libs: ^0.5.41
   sqflite_common_ffi: ^2.3.6
+  shared_preferences: ^2.5.4
 
 dev_dependencies:
   flutter_launcher_icons: ^0.14.4
