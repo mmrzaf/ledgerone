@@ -12,7 +12,7 @@ const Map<String, String> translationsEn = {
   // Onboarding
   'onboarding.title': 'Welcome',
   'onboarding.subtitle':
-      'A production-ready Flutter starter with navigation, guards, and clean architecture.',
+      'Take control of your money and crypto with a private, offline-first tracker.',
   'onboarding.get_started': 'Get started',
   'onboarding.skip': 'Skip',
 
@@ -51,12 +51,23 @@ const Map<String, String> translationsEn = {
   'ledger.app_title': 'LedgerOne',
 
   // LedgerOne – Errors
+  'ledger.error.invalid_amount': 'Amount must be a valid non-zero number.',
+  'ledger.error.insufficient_funds': 'Insufficient funds for this transaction.',
+  'ledger.error.same_account_transfer':
+      'You can’t transfer to the same account.',
+  'ledger.error.same_asset_trade': 'You can’t trade an asset against itself.',
+  'ledger.error.missing_category':
+      'Category is required for expense transactions.',
+  'ledger.error.invalid_fee': 'Invalid fee configuration.',
+  'ledger.error.asset_not_found': 'Asset not found.',
+  'ledger.error.account_not_found': 'Account not found.',
+  'ledger.error.transaction_not_found': 'Transaction not found.',
   'ledger.error.stale_price':
       'Price data is out of date. Update prices and try again.',
 
   'ledger.onboarding.welcome_title': 'Welcome to LedgerOne',
   'ledger.onboarding.welcome_subtitle':
-      'Your private, offline-first tracker for finance and crypto.',
+      'Your private, offline-first tracker for money and crypto.',
   'ledger.onboarding.feature1_title': 'Track everything',
   'ledger.onboarding.feature1_desc':
       'Manage crypto and cash in one place. See every asset across all your accounts.',
@@ -226,7 +237,7 @@ const Map<String, String> translationsDe = {
   // Onboarding
   'onboarding.title': 'Willkommen',
   'onboarding.subtitle':
-      'Eine produktionsreife Flutter-Vorlage mit Navigation, Guards und sauberer Architektur.',
+      'Behalte dein Geld und deine Krypto-Assets mit einem privaten, Offline-Tracker im Blick.',
   'onboarding.get_started': 'Loslegen',
   'onboarding.skip': 'Überspringen',
 
@@ -234,9 +245,10 @@ const Map<String, String> translationsDe = {
   'error.network_offline':
       'Keine Internetverbindung. Bitte prüfe deine Netzwerkverbindung.',
   'error.timeout':
-      'Zeitüberschreitung bei der Anfrage. Bitte versuche es erneut.',
+      'Die Anfrage hat zu lange gedauert. Bitte versuche es erneut.',
   'error.server_error': 'Serverfehler. Bitte versuche es später erneut.',
-  'error.bad_request': 'Ungültige Anfrage. Bitte überprüfe deine Eingaben.',
+  'error.bad_request':
+      'Ungültige Anfrage. Bitte überprüfe deine Eingaben und versuche es erneut.',
   'error.unauthorized':
       'Deine Sitzung ist abgelaufen. Bitte melde dich erneut an.',
   'error.forbidden': 'Du hast keine Berechtigung, diese Aktion auszuführen.',
@@ -270,6 +282,20 @@ const Map<String, String> translationsDe = {
   'ledger.app_title': 'LedgerOne',
 
   // LedgerOne – Errors
+  'ledger.error.invalid_amount':
+      'Bitte gib einen gültigen Betrag ungleich 0 ein.',
+  'ledger.error.insufficient_funds':
+      'Nicht genug Guthaben für diese Transaktion.',
+  'ledger.error.same_account_transfer':
+      'Überweisungen in dasselbe Konto sind nicht möglich.',
+  'ledger.error.same_asset_trade':
+      'Du kannst ein Asset nicht gegen sich selbst tauschen.',
+  'ledger.error.missing_category':
+      'Für Ausgaben ist eine Kategorie erforderlich.',
+  'ledger.error.invalid_fee': 'Ungültige Gebühreneinstellung.',
+  'ledger.error.asset_not_found': 'Asset wurde nicht gefunden.',
+  'ledger.error.account_not_found': 'Konto wurde nicht gefunden.',
+  'ledger.error.transaction_not_found': 'Transaktion wurde nicht gefunden.',
   'ledger.error.stale_price':
       'Preisdaten sind veraltet. Aktualisiere die Kurse und versuche es erneut.',
 
@@ -447,7 +473,7 @@ const Map<String, String> translationsFa = {
   // Onboarding
   'onboarding.title': 'خوش آمدید',
   'onboarding.subtitle':
-      'یک قالب آماده برای محیط واقعی با ناوبری، گاردها و معماری تمیز.',
+      'یک ردیاب خصوصی و آفلاین برای مدیریت پول و دارایی‌های کریپتوی شما.',
   'onboarding.get_started': 'شروع کنید',
   'onboarding.skip': 'رد کردن',
 
@@ -486,8 +512,19 @@ const Map<String, String> translationsFa = {
   'ledger.app_title': 'LedgerOne',
 
   // LedgerOne – Errors
+  'ledger.error.invalid_amount': 'مبلغ باید یک عدد معتبر و غیرصفر باشد.',
+  'ledger.error.insufficient_funds': 'موجودی برای این تراکنش کافی نیست.',
+  'ledger.error.same_account_transfer':
+      'انتقال به همان حساب مبدأ امکان‌پذیر نیست.',
+  'ledger.error.same_asset_trade': 'نمی‌توان یک دارایی را با خودش معامله کرد.',
+  'ledger.error.missing_category':
+      'برای تراکنش‌های هزینه، انتخاب دسته‌بندی الزامی است.',
+  'ledger.error.invalid_fee': 'تنظیمات کارمزد نامعتبر است.',
+  'ledger.error.asset_not_found': 'دارایی پیدا نشد.',
+  'ledger.error.account_not_found': 'حساب پیدا نشد.',
+  'ledger.error.transaction_not_found': 'تراکنش پیدا نشد.',
   'ledger.error.stale_price':
-      'اطلاعات قیمت قدیمی است. قیمت‌ها را به‌روزرسانی کنید و دوباره تلاش کنید.',
+      'اطلاعات قیمت به‌روز نیست. قیمت‌ها را به‌روزرسانی کنید و دوباره تلاش کنید.',
 
   'ledger.onboarding.welcome_title': 'به LedgerOne خوش آمدید',
   'ledger.onboarding.welcome_subtitle':
