@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../app/presentation/error_presenter.dart';
 import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/i18n_contract.dart';
@@ -13,11 +14,13 @@ import 'widgets/ledger_bottom_nav.dart';
 class CryptoScreen extends StatefulWidget {
   final NavigationService navigation;
   final BalanceService balanceService;
+  final BalanceValuationService valuationService;
   final AnalyticsService analytics;
 
   const CryptoScreen({
     required this.navigation,
     required this.balanceService,
+    required this.valuationService,
     required this.analytics,
     super.key,
   });
@@ -28,8 +31,8 @@ class CryptoScreen extends StatefulWidget {
 
 class _CryptoScreenState extends State<CryptoScreen>
     with SingleTickerProviderStateMixin {
-  List<TotalAssetBalance>? _cryptoBalances;
-  Map<String, List<AssetBalance>>? _accountBalances;
+  List<ValuatedAssetBalance> _cryptoBalances = [];
+  Map<String, List<AssetBalance>> _accountBalances = {};
   bool _loading = true;
   AppError? _error;
   late TabController _tabController;
@@ -62,9 +65,13 @@ class _CryptoScreenState extends State<CryptoScreen>
           .where((b) => b.asset.type == AssetType.crypto)
           .toList();
 
+      final valuatedBalances = await widget.valuationService.valuate(
+        cryptoOnly,
+      );
+
       final Map<String, List<AssetBalance>> byAccount = {};
-      for (final balance in cryptoOnly) {
-        for (final accountBalance in balance.accountBalances) {
+      for (final valuated in valuatedBalances) {
+        for (final accountBalance in valuated.balance.accountBalances) {
           if (accountBalance.balance != 0) {
             byAccount.putIfAbsent(accountBalance.accountId, () => []);
             byAccount[accountBalance.accountId]!.add(accountBalance);
@@ -75,7 +82,7 @@ class _CryptoScreenState extends State<CryptoScreen>
       if (!mounted) return;
 
       setState(() {
-        _cryptoBalances = cryptoOnly;
+        _cryptoBalances = valuatedBalances;
         _accountBalances = byAccount;
         _loading = false;
       });
@@ -119,64 +126,95 @@ class _CryptoScreenState extends State<CryptoScreen>
         currentTab: LedgerTab.crypto,
         navigation: widget.navigation,
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () => widget.navigation.goToRoute('transaction_editor'),
-        tooltip: l10n.get(L10nKeys.ledgerActionAddTransaction),
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: Text(l10n.get(L10nKeys.ledgerActionAddTransaction)),
       ),
     );
   }
 
   Widget _buildBody(ThemeData theme, LocalizationService l10n) {
     if (_loading) {
-      return LoadingIndicator(message: l10n.get(L10nKeys.ledgerCommonLoading));
-    }
-
-    if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: ErrorCard(
-            error: _error!,
-            screen: 'crypto',
-            onRetry: _loadData,
-          ),
-        ),
-      );
-    }
-
-    return TabBarView(
-      controller: _tabController,
-      children: [_buildAssetView(theme, l10n), _buildAccountView(theme, l10n)],
-    );
-  }
-
-  Widget _buildAssetView(ThemeData theme, LocalizationService l10n) {
-    if (_cryptoBalances == null || _cryptoBalances!.isEmpty) {
       return Center(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
             Text(
-              l10n.get(L10nKeys.ledgerCryptoNoAssets),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: () =>
-                  widget.navigation.goToRoute('transaction_editor'),
-              icon: const Icon(Icons.add),
-              label: Text(l10n.get(L10nKeys.ledgerActionAddTransaction)),
+              l10n.get(L10nKeys.ledgerCommonLoadingData),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
           ],
         ),
       );
     }
 
+    return Column(
+      children: [
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: ErrorCard(
+              error: _error!,
+              screen: 'crypto',
+              onRetry: _loadData,
+            ),
+          ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildAssetView(theme, l10n),
+              _buildAccountView(theme, l10n),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAssetView(ThemeData theme, LocalizationService l10n) {
+    if (_cryptoBalances.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.currency_bitcoin,
+                size: 64,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.get(L10nKeys.ledgerCryptoNoAssets),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () =>
+                    widget.navigation.goToRoute('transaction_editor'),
+                icon: const Icon(Icons.add),
+                label: Text(l10n.get(L10nKeys.ledgerActionAddTransaction)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     double totalValue = 0;
-    for (final balance in _cryptoBalances!) {
-      if (balance.usdValue != null) {
-        totalValue += balance.usdValue!;
+    for (final valuated in _cryptoBalances) {
+      if (valuated.usdValue != null) {
+        totalValue += valuated.usdValue!;
       }
     }
 
@@ -184,13 +222,22 @@ class _CryptoScreenState extends State<CryptoScreen>
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+            border: Border(
+              bottom: BorderSide(
+                color: theme.colorScheme.outline.withValues(alpha: 0.2),
+              ),
+            ),
+          ),
           child: Column(
             children: [
               Text(
                 l10n.get(L10nKeys.ledgerCryptoTotalValue),
-                style: theme.textTheme.titleMedium,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -200,9 +247,12 @@ class _CryptoScreenState extends State<CryptoScreen>
                   color: theme.colorScheme.primary,
                 ),
               ),
+              const SizedBox(height: 4),
               Text(
-                '${_cryptoBalances!.length} ${l10n.get(L10nKeys.ledgerCryptoAssets)}',
-                style: theme.textTheme.bodySmall,
+                '${_cryptoBalances.length} ${l10n.get(L10nKeys.ledgerCryptoAssets)}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
               ),
             ],
           ),
@@ -212,9 +262,9 @@ class _CryptoScreenState extends State<CryptoScreen>
             onRefresh: _loadData,
             child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _cryptoBalances!.length,
+              itemCount: _cryptoBalances.length,
               itemBuilder: (context, index) {
-                return _buildAssetCard(theme, l10n, _cryptoBalances![index]);
+                return _buildAssetCard(theme, l10n, _cryptoBalances[index]);
               },
             ),
           ),
@@ -224,22 +274,34 @@ class _CryptoScreenState extends State<CryptoScreen>
   }
 
   Widget _buildAccountView(ThemeData theme, LocalizationService l10n) {
-    if (_accountBalances == null || _accountBalances!.isEmpty) {
+    if (_accountBalances.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              l10n.get(L10nKeys.ledgerCryptoNoAccounts),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            ElevatedButton.icon(
-              onPressed: () => widget.navigation.goToRoute('accounts'),
-              icon: const Icon(Icons.add),
-              label: Text(l10n.get(L10nKeys.ledgerCommonAccounts)),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.account_balance_wallet,
+                size: 64,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.3),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                l10n.get(L10nKeys.ledgerCryptoNoAccounts),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () => widget.navigation.goToRoute('accounts'),
+                icon: const Icon(Icons.add),
+                label: Text(l10n.get(L10nKeys.ledgerCommonAccounts)),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -248,10 +310,10 @@ class _CryptoScreenState extends State<CryptoScreen>
       onRefresh: _loadData,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: _accountBalances!.length,
+        itemCount: _accountBalances.length,
         itemBuilder: (context, index) {
-          final accountId = _accountBalances!.keys.elementAt(index);
-          final balances = _accountBalances![accountId]!;
+          final accountId = _accountBalances.keys.elementAt(index);
+          final balances = _accountBalances[accountId]!;
           return _buildAccountCard(theme, l10n, accountId, balances);
         },
       ),
@@ -261,12 +323,15 @@ class _CryptoScreenState extends State<CryptoScreen>
   Widget _buildAssetCard(
     ThemeData theme,
     LocalizationService l10n,
-    TotalAssetBalance balance,
+    ValuatedAssetBalance valuated,
   ) {
+    final balance = valuated.balance;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
       child: InkWell(
-        onTap: () => _showAssetDetail(balance),
+        onTap: () => _showAssetDetail(valuated),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -314,9 +379,9 @@ class _CryptoScreenState extends State<CryptoScreen>
                         ),
                         style: theme.textTheme.titleSmall,
                       ),
-                      if (balance.usdValue != null)
+                      if (valuated.usdValue != null)
                         Text(
-                          '\$${MoneyFormatting.formatCurrency(balance.usdValue!)}',
+                          '\$${MoneyFormatting.formatCurrency(valuated.usdValue!)}',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurface.withValues(
                               alpha: 0.6,
@@ -355,7 +420,7 @@ class _CryptoScreenState extends State<CryptoScreen>
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
-                      '+${balance.accountBalances.length - 3} more accounts',
+                      '+${balance.accountBalances.length - 3} more',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.primary,
                       ),
@@ -379,70 +444,68 @@ class _CryptoScreenState extends State<CryptoScreen>
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => _showAccountDetail(account, balances),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    backgroundColor: theme.colorScheme.secondaryContainer,
-                    radius: 24,
-                    child: Icon(
-                      _iconForAccountType(account.type),
-                      color: theme.colorScheme.onSecondaryContainer,
-                    ),
+      elevation: 0,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: theme.colorScheme.secondaryContainer,
+                  radius: 24,
+                  child: Icon(
+                    _iconForAccountType(account.type),
+                    color: theme.colorScheme.onSecondaryContainer,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          account.name,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        account.name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
-                        Text(
-                          '${balances.length} ${l10n.get(L10nKeys.ledgerCryptoAssets)}',
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
+                      ),
+                      Text(
+                        '${balances.length} ${l10n.get(L10nKeys.ledgerCryptoAssets)}',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ],
                   ),
-                  const Icon(Icons.chevron_right),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: balances.take(5).map((balance) {
-                  return Chip(
-                    label: Text(
-                      '${balance.asset.symbol}: ${MoneyFormatting.formatBalance(balance.balance, balance.asset.decimals)}',
-                      style: theme.textTheme.bodySmall,
-                    ),
-                    padding: EdgeInsets.zero,
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: balances.take(5).map((balance) {
+                return Chip(
+                  label: Text(
+                    '${balance.asset.symbol}: ${MoneyFormatting.formatBalance(balance.balance, balance.asset.decimals)}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  padding: EdgeInsets.zero,
+                );
+              }).toList(),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void _showAssetDetail(TotalAssetBalance balance) {
+  void _showAssetDetail(ValuatedAssetBalance valuated) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final balance = valuated.balance;
 
     showModalBottomSheet<void>(
       context: context,
@@ -464,7 +527,7 @@ class _CryptoScreenState extends State<CryptoScreen>
                       width: 40,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: theme.colorScheme.outline.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
@@ -518,7 +581,7 @@ class _CryptoScreenState extends State<CryptoScreen>
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Total Balance',
+                              l10n.get(L10nKeys.ledgerCommonBalance),
                               style: theme.textTheme.titleMedium,
                             ),
                             Text(
@@ -532,7 +595,7 @@ class _CryptoScreenState extends State<CryptoScreen>
                             ),
                           ],
                         ),
-                        if (balance.usdValue != null) ...[
+                        if (valuated.usdValue != null) ...[
                           const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -542,7 +605,7 @@ class _CryptoScreenState extends State<CryptoScreen>
                                 style: theme.textTheme.bodyMedium,
                               ),
                               Text(
-                                '\$${MoneyFormatting.formatCurrency(balance.usdValue!)}',
+                                '\$${MoneyFormatting.formatCurrency(valuated.usdValue!)}',
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   color: theme.colorScheme.primary,
                                 ),
@@ -590,10 +653,6 @@ class _CryptoScreenState extends State<CryptoScreen>
         );
       },
     );
-  }
-
-  void _showAccountDetail(Account account, List<AssetBalance> balances) {
-    // Implementation similar to asset detail
   }
 
   IconData _iconForAccountType(AccountType type) {
