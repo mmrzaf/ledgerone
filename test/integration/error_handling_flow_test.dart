@@ -96,6 +96,7 @@ void main() {
       locator.register<StorageService>(storage);
       analytics = MockAnalyticsService();
       locator.register<AnalyticsService>(analytics);
+      locator.register<BalanceValuationService>(FakeBalanceValuationService());
     });
 
     tearDown(() {
@@ -114,6 +115,7 @@ void main() {
             navigation: nav,
             balanceService: balanceService,
             analytics: analytics,
+            valuationService: locator.get<BalanceValuationService>(),
           ),
         ),
       );
@@ -147,7 +149,6 @@ void main() {
         TotalAssetBalance(
           asset: asset,
           totalBalance: 1.23,
-          usdValue: 50000,
           accountBalances: [
             AssetBalance(
               assetId: asset.id,

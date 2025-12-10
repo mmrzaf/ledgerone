@@ -216,3 +216,27 @@ class FakePriceUpdateService implements PriceUpdateService {
   @override
   Future<double> testPriceSource(PriceSourceConfig config) async => 0.0;
 }
+
+class FakeBalanceValuationService implements BalanceValuationService {
+  @override
+  Future<List<ValuatedAssetBalance>> valuate(
+    List<TotalAssetBalance> balances,
+  ) async {
+    // Just wrap balances with null valuations; enough for UI tests.
+    return balances
+        .map(
+          (b) => ValuatedAssetBalance(
+            balance: b,
+            usdValue: null,
+            priceSnapshot: null,
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<PriceSnapshot?> getLatestPrice(String assetId) async {
+    // Not needed for current tests; keep it simple.
+    return null;
+  }
+}
