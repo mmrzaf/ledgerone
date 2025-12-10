@@ -1,6 +1,10 @@
 import 'package:flutter/foundation.dart';
 
-/// Asset types
+// ============================================================================
+// Enums
+// ============================================================================
+
+/// Asset types - determines how the asset is displayed and categorized
 enum AssetType {
   crypto,
   fiat,
@@ -9,7 +13,7 @@ enum AssetType {
   String get displayName => name[0].toUpperCase() + name.substring(1);
 }
 
-/// Account types
+/// Account types - where assets are held
 enum AccountType {
   exchange,
   bank,
@@ -20,7 +24,7 @@ enum AccountType {
   String get displayName => name[0].toUpperCase() + name.substring(1);
 }
 
-/// Category kinds
+/// Category kinds - for income/expense classification
 enum CategoryKind {
   expense,
   income,
@@ -30,7 +34,7 @@ enum CategoryKind {
   String get displayName => name[0].toUpperCase() + name.substring(1);
 }
 
-/// Transaction types
+/// Transaction types - the kind of financial event
 enum TransactionType {
   trade,
   transfer,
@@ -41,7 +45,7 @@ enum TransactionType {
   String get displayName => name[0].toUpperCase() + name.substring(1);
 }
 
-/// Leg roles
+/// Leg roles - the purpose of a transaction leg
 enum LegRole {
   main,
   fee,
@@ -52,7 +56,11 @@ enum LegRole {
   String get displayName => name[0].toUpperCase() + name.substring(1);
 }
 
-/// Asset - represents any unit of value tracked
+// ============================================================================
+// Core Entities
+// ============================================================================
+
+/// Asset - represents any unit of value tracked (crypto, fiat, other)
 @immutable
 class Asset {
   final String id;
@@ -60,7 +68,7 @@ class Asset {
   final String name;
   final AssetType type;
   final int decimals;
-  final String? priceSourceConfig; // JSON config for fetching price
+  final String? priceSourceConfig;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -74,6 +82,7 @@ class Asset {
     required this.createdAt,
     required this.updatedAt,
   });
+
   Asset copyWith({
     String? id,
     String? symbol,
@@ -81,6 +90,7 @@ class Asset {
     AssetType? type,
     int? decimals,
     String? priceSourceConfig,
+    DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return Asset(
@@ -90,7 +100,7 @@ class Asset {
       type: type ?? this.type,
       decimals: decimals ?? this.decimals,
       priceSourceConfig: priceSourceConfig ?? this.priceSourceConfig,
-      createdAt: createdAt,
+      createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -116,9 +126,16 @@ class Asset {
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
   );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is Asset && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
-/// Account - represents where assets live
+/// Account - represents a container where assets live
 @immutable
 class Account {
   final String id;
@@ -136,11 +153,13 @@ class Account {
     required this.createdAt,
     required this.updatedAt,
   });
+
   Account copyWith({
     String? id,
     String? name,
     AccountType? type,
     String? notes,
+    DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return Account(
@@ -148,7 +167,7 @@ class Account {
       name: name ?? this.name,
       type: type ?? this.type,
       notes: notes ?? this.notes,
-      createdAt: createdAt,
+      createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -170,6 +189,13 @@ class Account {
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
   );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is Account && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
 /// Category - for income/expense classification
@@ -192,17 +218,19 @@ class Category {
   });
 
   Category copyWith({
+    String? id,
     String? name,
     CategoryKind? kind,
     String? parentId,
+    DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return Category(
-      id: id,
+      id: id ?? this.id,
       name: name ?? this.name,
       kind: kind ?? this.kind,
       parentId: parentId ?? this.parentId,
-      createdAt: createdAt,
+      createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -224,9 +252,16 @@ class Category {
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
   );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is Category && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
-/// Transaction - logical event at a specific time
+/// Transaction - a logical financial event at a specific time
 @immutable
 class Transaction {
   final String id;
@@ -246,17 +281,19 @@ class Transaction {
   });
 
   Transaction copyWith({
+    String? id,
     DateTime? timestamp,
     TransactionType? type,
     String? description,
+    DateTime? createdAt,
     DateTime? updatedAt,
   }) {
     return Transaction(
-      id: id,
+      id: id ?? this.id,
       timestamp: timestamp ?? this.timestamp,
       type: type ?? this.type,
       description: description ?? this.description,
-      createdAt: createdAt,
+      createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -278,9 +315,16 @@ class Transaction {
     createdAt: DateTime.parse(json['created_at'] as String),
     updatedAt: DateTime.parse(json['updated_at'] as String),
   );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is Transaction && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
-/// Transaction Leg - balance delta for single asset in an account
+/// TransactionLeg - balance delta for a single asset in an account
 @immutable
 class TransactionLeg {
   final String id;
@@ -302,6 +346,7 @@ class TransactionLeg {
   });
 
   TransactionLeg copyWith({
+    String? id,
     String? transactionId,
     String? accountId,
     String? assetId,
@@ -310,7 +355,7 @@ class TransactionLeg {
     String? categoryId,
   }) {
     return TransactionLeg(
-      id: id,
+      id: id ?? this.id,
       transactionId: transactionId ?? this.transactionId,
       accountId: accountId ?? this.accountId,
       assetId: assetId ?? this.assetId,
@@ -339,17 +384,24 @@ class TransactionLeg {
     role: LegRole.values.byName(json['role'] as String),
     categoryId: json['category_id'] as String?,
   );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is TransactionLeg && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
-/// Price Snapshot - stored price at specific time
+/// PriceSnapshot - stored price at a specific time
 @immutable
 class PriceSnapshot {
   final String id;
   final String assetId;
-  final String currencyCode; // e.g., "USD"
-  final double price; // Price of 1 unit of asset in currency
+  final String currencyCode;
+  final double price;
   final DateTime timestamp;
-  final String? source; // e.g., "coingecko"
+  final String? source;
 
   const PriceSnapshot({
     required this.id,
@@ -377,9 +429,20 @@ class PriceSnapshot {
     timestamp: DateTime.parse(json['timestamp'] as String),
     source: json['source'] as String?,
   );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || other is PriceSnapshot && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
-/// Balance summary for an asset in an account
+// ============================================================================
+// Computed / View Models
+// ============================================================================
+
+/// Balance for a single asset in a single account
 @immutable
 class AssetBalance {
   final String assetId;
@@ -397,30 +460,44 @@ class AssetBalance {
   });
 }
 
-/// Total balance across all accounts for an asset
+/// Total balance for an asset across all accounts
 @immutable
 class TotalAssetBalance {
   final Asset asset;
   final double totalBalance;
-  final double? usdValue; // null if no price available
   final List<AssetBalance> accountBalances;
 
   const TotalAssetBalance({
     required this.asset,
     required this.totalBalance,
-    this.usdValue,
     required this.accountBalances,
   });
 }
 
-/// Price source configuration
+class ValuatedAssetBalance {
+  final TotalAssetBalance balance;
+  final double? usdValue;
+  final PriceSnapshot? priceSnapshot;
+
+  const ValuatedAssetBalance({
+    required this.balance,
+    this.usdValue,
+    this.priceSnapshot,
+  });
+}
+
+// ============================================================================
+// Configuration Models
+// ============================================================================
+
+/// Price source configuration for fetching asset prices
 @immutable
 class PriceSourceConfig {
-  final String method; // GET, POST
+  final String method;
   final String url;
   final Map<String, String> queryParams;
   final Map<String, String> headers;
-  final String responsePath; // Dot notation: "data.price"
+  final String responsePath;
   final double multiplier;
 
   const PriceSourceConfig({
