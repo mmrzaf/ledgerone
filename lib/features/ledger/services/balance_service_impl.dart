@@ -3,73 +3,63 @@ import '../domain/models.dart';
 import '../domain/services.dart';
 
 class BalanceServiceImpl implements BalanceService {
-  final AssetRepository assetRepo;
-  final AccountRepository accountRepo;
-  final PriceRepository priceRepo;
-  final TransactionRepository transactionRepo;
+  final AssetRepository _assetRepo;
+  final AccountRepository _accountRepo;
+  final TransactionRepository _transactionRepo;
 
   BalanceServiceImpl({
-    required this.assetRepo,
-    required this.accountRepo,
-    required this.priceRepo,
-    required this.transactionRepo,
-  });
+    required AssetRepository assetRepo,
+    required AccountRepository accountRepo,
+    required TransactionRepository transactionRepo,
+  }) : _assetRepo = assetRepo,
+       _accountRepo = accountRepo,
+       _transactionRepo = transactionRepo;
 
   @override
   Future<double> getBalance(String assetId, String accountId) async {
-    final legs = await transactionRepo.getAllLegs();
-    double balance = 0.0;
+    final balances = await _transactionRepo.getBalancesByAccountAndAsset();
 
-    for (final leg in legs) {
-      if (leg.assetId == assetId && leg.accountId == accountId) {
-        balance += leg.amount;
-      }
-    }
+    final match = balances.firstWhere(
+      (b) => b['asset_id'] == assetId && b['account_id'] == accountId,
+      orElse: () => <String, dynamic>{},
+    );
 
-    return balance;
+    return (match['balance'] as num?)?.toDouble() ?? 0.0;
   }
 
   @override
   Future<double> getTotalBalance(String assetId) async {
-    final legs = await transactionRepo.getAllLegs();
-    double balance = 0.0;
+    final balances = await _transactionRepo.getBalancesByAsset();
 
-    for (final leg in legs) {
-      if (leg.assetId == assetId) {
-        balance += leg.amount;
-      }
-    }
+    final match = balances.firstWhere(
+      (b) => b['asset_id'] == assetId,
+      orElse: () => <String, dynamic>{},
+    );
 
-    return balance;
+    return (match['balance'] as num?)?.toDouble() ?? 0.0;
   }
 
   @override
   Future<List<AssetBalance>> getAccountBalances(String accountId) async {
-    final assetMap = await assetRepo.getAllAsMap();
-    final accountMap = await accountRepo.getAllAsMap();
-    final account = accountMap[accountId];
+    final assetMap = await _assetRepo.getAllAsMap();
+    final account = await _accountRepo.getById(accountId);
     if (account == null) return [];
 
-    final legs = await transactionRepo.getAllLegs();
-    final balanceMap = <String, double>{};
-
-    for (final leg in legs) {
-      if (leg.accountId == accountId) {
-        balanceMap[leg.assetId] = (balanceMap[leg.assetId] ?? 0.0) + leg.amount;
-      }
-    }
+    final balances = await _transactionRepo.getBalancesForAccount(accountId);
 
     final result = <AssetBalance>[];
-    for (final entry in balanceMap.entries) {
-      if (entry.value == 0.0) continue;
-      final asset = assetMap[entry.key];
+    for (final row in balances) {
+      final assetId = row['asset_id'] as String;
+      final balance = (row['balance'] as num).toDouble();
+
+      final asset = assetMap[assetId];
       if (asset == null) continue;
 
       result.add(
         AssetBalance(
-          assetId: entry.key,
+          assetId: assetId,
           accountId: accountId,
-          balance: entry.value,
+          balance: balance,
           asset: asset,
           account: account,
         ),
@@ -83,46 +73,42 @@ class BalanceServiceImpl implements BalanceService {
   Future<List<TotalAssetBalance>> getAllBalances({
     bool includeZero = false,
   }) async {
-    final assetMap = await assetRepo.getAllAsMap();
-    final accountMap = await accountRepo.getAllAsMap();
-    final latestPrices = await priceRepo.getLatestPrices();
-    final priceMap = {for (var p in latestPrices) p.assetId: p.price};
+    final assetMap = await _assetRepo.getAllAsMap();
+    final accountMap = await _accountRepo.getAllAsMap();
 
-    final legs = await transactionRepo.getAllLegs();
+    final accountAssetBalances = await _transactionRepo
+        .getBalancesByAccountAndAsset();
 
-    // assetId -> (accountId -> balance)
-    final balanceMap = <String, Map<String, double>>{};
-
-    for (final leg in legs) {
-      final assetBalances = balanceMap.putIfAbsent(
-        leg.assetId,
-        () => <String, double>{},
-      );
-      assetBalances[leg.accountId] =
-          (assetBalances[leg.accountId] ?? 0.0) + leg.amount;
+    final Map<String, List<Map<String, dynamic>>> byAsset = {};
+    for (final row in accountAssetBalances) {
+      final assetId = row['asset_id'] as String;
+      byAsset.putIfAbsent(assetId, () => []);
+      byAsset[assetId]!.add(row);
     }
 
     final result = <TotalAssetBalance>[];
 
-    for (final assetEntry in balanceMap.entries) {
-      final assetId = assetEntry.key;
+    for (final entry in byAsset.entries) {
+      final assetId = entry.key;
       final asset = assetMap[assetId];
       if (asset == null) continue;
 
       double totalBalance = 0.0;
       final accountBalances = <AssetBalance>[];
 
-      for (final accountEntry in assetEntry.value.entries) {
-        final balance = accountEntry.value;
+      for (final row in entry.value) {
+        final accountId = row['account_id'] as String;
+        final balance = (row['balance'] as num).toDouble();
+
         if (!includeZero && balance == 0.0) continue;
 
         totalBalance += balance;
-        final account = accountMap[accountEntry.key];
+        final account = accountMap[accountId];
         if (account != null) {
           accountBalances.add(
             AssetBalance(
               assetId: assetId,
-              accountId: accountEntry.key,
+              accountId: accountId,
               balance: balance,
               asset: asset,
               account: account,
@@ -133,19 +119,17 @@ class BalanceServiceImpl implements BalanceService {
 
       if (!includeZero && totalBalance == 0.0) continue;
 
-      final usdValue = priceMap[assetId] != null
-          ? totalBalance * priceMap[assetId]!
-          : null;
-
       result.add(
         TotalAssetBalance(
           asset: asset,
           totalBalance: totalBalance,
-          usdValue: usdValue,
           accountBalances: accountBalances,
         ),
       );
     }
+
+    // Sort by asset symbol
+    result.sort((a, b) => a.asset.symbol.compareTo(b.asset.symbol));
 
     return result;
   }

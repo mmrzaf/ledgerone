@@ -3,34 +3,37 @@ import '../domain/models.dart';
 import '../domain/services.dart';
 
 class MoneySummaryServiceImpl implements MoneySummaryService {
-  final BalanceService balanceService;
-  final TransactionRepository transactionRepo;
-  final CategoryRepository categoryRepo;
+  final BalanceService _balanceService;
+  final TransactionRepository _transactionRepo;
+  final CategoryRepository _categoryRepo;
 
   MoneySummaryServiceImpl({
-    required this.balanceService,
-    required this.transactionRepo,
-    required this.categoryRepo,
-  });
+    required BalanceService balanceService,
+    required TransactionRepository transactionRepo,
+    required CategoryRepository categoryRepo,
+  }) : _balanceService = balanceService,
+       _transactionRepo = transactionRepo,
+       _categoryRepo = categoryRepo;
 
   @override
   Future<MoneySummary> getSummary(MoneyPeriod period) async {
-    // 1. Calculate date range
+    // Calculate date range
     final (from, to) = _calculateDateRange(period);
 
-    // 2. Get fiat balances
-    final allBalances = await balanceService.getAllBalances();
+    // Get fiat balances only
+    final allBalances = await _balanceService.getAllBalances();
     final fiatBalances = allBalances
         .where((b) => b.asset.type == AssetType.fiat)
         .toList();
 
-    // 3. Get transactions for period
-    final txs = await transactionRepo.getAll(
+    // Get transactions for period
+    final txs = await _transactionRepo.getAll(
       limit: 200,
       after: from,
       before: to,
     );
 
+    // Filter to income/expense only
     final incomeExpenseTxs =
         txs
             .where(
@@ -43,17 +46,17 @@ class MoneySummaryServiceImpl implements MoneySummaryService {
 
     final recentTxs = incomeExpenseTxs.take(20).toList();
 
-    // 4. Get categories and build map
-    final categories = await categoryRepo.getAll();
+    // Build category lookup
+    final categories = await _categoryRepo.getAll();
     final categoryMap = {for (final c in categories) c.id: c};
 
-    // 5. Compute totals
+    // Compute totals
     final categoryTotals = <String, double>{};
     double totalIncome = 0.0;
     double totalExpenses = 0.0;
 
     for (final tx in incomeExpenseTxs) {
-      final legs = await transactionRepo.getLegsForTransaction(tx.id);
+      final legs = await _transactionRepo.getLegsForTransaction(tx.id);
 
       for (final leg in legs) {
         // Category aggregation
@@ -71,7 +74,7 @@ class MoneySummaryServiceImpl implements MoneySummaryService {
           if (tx.type == TransactionType.income) {
             totalIncome += leg.amount;
           } else if (tx.type == TransactionType.expense) {
-            totalExpenses += leg.amount < 0 ? -leg.amount : leg.amount;
+            totalExpenses += leg.amount.abs();
           }
         }
       }

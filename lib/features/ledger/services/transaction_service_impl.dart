@@ -1,51 +1,38 @@
 import 'dart:math' as math;
 
 import '../../../core/contracts/analytics_contract.dart';
-import '../../../core/errors/app_error.dart';
 import '../../../core/observability/performance_tracker.dart';
 import '../data/database.dart';
 import '../data/repositories_interfaces.dart';
+import '../domain/errors.dart';
 import '../domain/models.dart';
 import '../domain/services.dart';
 
-enum DomainErrorCategory {
-  invalidAmount,
-  sameAccountTransfer,
-  sameAssetTrade,
-  missingCategory,
-  invalidFee,
-}
-
-extension on DomainErrorCategory {
-  ErrorCategory get toErrorCategory {
-    switch (this) {
-      case DomainErrorCategory.invalidAmount:
-        return ErrorCategory.badRequest;
-      case DomainErrorCategory.sameAccountTransfer:
-      case DomainErrorCategory.sameAssetTrade:
-      case DomainErrorCategory.missingCategory:
-      case DomainErrorCategory.invalidFee:
-        return ErrorCategory.badRequest;
-    }
-  }
-}
-
 class TransactionServiceImpl implements TransactionService {
-  final LedgerDatabase db;
-  final TransactionRepository transactionRepo;
-  final AssetRepository assetRepo;
-  final AccountRepository accountRepo;
-  final AnalyticsService analytics;
-  final PerformanceTracker performance;
+  final LedgerDatabase _db;
+  final TransactionRepository _transactionRepo;
+  final AssetRepository _assetRepo;
+  final AccountRepository _accountRepo;
+  final AnalyticsService _analytics;
+  final PerformanceTracker _performance;
 
   TransactionServiceImpl({
-    required this.db,
-    required this.transactionRepo,
-    required this.assetRepo,
-    required this.accountRepo,
-    required this.analytics,
-    required this.performance,
-  });
+    required LedgerDatabase db,
+    required TransactionRepository transactionRepo,
+    required AssetRepository assetRepo,
+    required AccountRepository accountRepo,
+    required AnalyticsService analytics,
+    required PerformanceTracker performance,
+  }) : _db = db,
+       _transactionRepo = transactionRepo,
+       _assetRepo = assetRepo,
+       _accountRepo = accountRepo,
+       _analytics = analytics,
+       _performance = performance;
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
 
   double _roundAmount(double value, int decimals) {
     final multiplier = math.pow(10, decimals).toDouble();
@@ -54,12 +41,38 @@ class TransactionServiceImpl implements TransactionService {
 
   void _validateAmount(double amount) {
     if (amount.isNaN || amount.isInfinite || amount == 0.0) {
-      throw AppError(
-        category: DomainErrorCategory.invalidAmount.toErrorCategory,
-        message: 'Amount must be a valid non-zero number',
+      throw DomainError.create(
+        DomainErrorCategory.invalidAmount,
+        'Amount must be a valid non-zero number',
       );
     }
   }
+
+  Future<Asset> _getAssetOrThrow(String assetId) async {
+    final asset = await _assetRepo.getById(assetId);
+    if (asset == null) {
+      throw DomainError.create(
+        DomainErrorCategory.assetNotFound,
+        'Asset not found: $assetId',
+      );
+    }
+    return asset;
+  }
+
+  Future<Account> _getAccountOrThrow(String accountId) async {
+    final account = await _accountRepo.getById(accountId);
+    if (account == null) {
+      throw DomainError.create(
+        DomainErrorCategory.accountNotFound,
+        'Account not found: $accountId',
+      );
+    }
+    return account;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Create Operations
+  // ---------------------------------------------------------------------------
 
   @override
   Future<Transaction> createIncome({
@@ -70,41 +83,29 @@ class TransactionServiceImpl implements TransactionService {
     required String description,
     required DateTime timestamp,
   }) async {
-    performance.start('transaction_create_income');
+    _performance.start('transaction_create_income');
 
     try {
       _validateAmount(amount);
 
-      final asset = await assetRepo.getById(assetId);
-      if (asset == null) {
-        throw const AppError(
-          category: ErrorCategory.notFound,
-          message: 'Asset not found',
-        );
-      }
-
-      final account = await accountRepo.getById(accountId);
-      if (account == null) {
-        throw const AppError(
-          category: ErrorCategory.notFound,
-          message: 'Account not found',
-        );
-      }
+      final asset = await _getAssetOrThrow(assetId);
+      await _getAccountOrThrow(accountId);
 
       final roundedAmount = _roundAmount(amount, asset.decimals);
+      final now = DateTime.now();
 
       final transaction = Transaction(
-        id: db.generateId(),
+        id: _db.generateId(),
         timestamp: timestamp,
         type: TransactionType.income,
         description: description,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        createdAt: now,
+        updatedAt: now,
       );
 
       final legs = [
         TransactionLeg(
-          id: db.generateId(),
+          id: _db.generateId(),
           transactionId: transaction.id,
           accountId: accountId,
           assetId: assetId,
@@ -114,9 +115,9 @@ class TransactionServiceImpl implements TransactionService {
         ),
       ];
 
-      await transactionRepo.insert(transaction, legs);
+      await _transactionRepo.insert(transaction, legs);
 
-      await analytics.logEvent(
+      await _analytics.logEvent(
         'transaction_created',
         parameters: {
           'type': 'income',
@@ -125,18 +126,11 @@ class TransactionServiceImpl implements TransactionService {
         },
       );
 
-      final metric = performance.stop('transaction_create_income');
-      if (metric != null) {
-        await analytics.logEvent(
-          'transaction_saved',
-          parameters: {'type': 'income', 'duration_ms': metric.durationMs},
-        );
-      }
-
+      _performance.stop('transaction_create_income');
       return transaction;
     } catch (e) {
-      performance.stop('transaction_create_income');
-      await analytics.logEvent(
+      _performance.stop('transaction_create_income');
+      await _analytics.logEvent(
         'transaction_failed',
         parameters: {'type': 'income', 'error': e.toString()},
       );
@@ -153,45 +147,41 @@ class TransactionServiceImpl implements TransactionService {
     required String description,
     required DateTime timestamp,
   }) async {
-    performance.start('transaction_create_expense');
+    _performance.start('transaction_create_expense');
 
     try {
       _validateAmount(amount);
 
-      final asset = await assetRepo.getById(assetId);
-      if (asset == null) {
-        throw const AppError(
-          category: ErrorCategory.notFound,
-          message: 'Asset not found',
-        );
-      }
+      final asset = await _getAssetOrThrow(assetId);
+      await _getAccountOrThrow(accountId);
 
       final roundedAmount = _roundAmount(amount, asset.decimals);
+      final now = DateTime.now();
 
       final transaction = Transaction(
-        id: db.generateId(),
+        id: _db.generateId(),
         timestamp: timestamp,
         type: TransactionType.expense,
         description: description,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        createdAt: now,
+        updatedAt: now,
       );
 
       final legs = [
         TransactionLeg(
-          id: db.generateId(),
+          id: _db.generateId(),
           transactionId: transaction.id,
           accountId: accountId,
           assetId: assetId,
-          amount: -roundedAmount,
+          amount: -roundedAmount, // Negative for expense
           role: LegRole.main,
           categoryId: categoryId,
         ),
       ];
 
-      await transactionRepo.insert(transaction, legs);
+      await _transactionRepo.insert(transaction, legs);
 
-      await analytics.logEvent(
+      await _analytics.logEvent(
         'transaction_created',
         parameters: {
           'type': 'expense',
@@ -200,18 +190,11 @@ class TransactionServiceImpl implements TransactionService {
         },
       );
 
-      final metric = performance.stop('transaction_create_expense');
-      if (metric != null) {
-        await analytics.logEvent(
-          'transaction_saved',
-          parameters: {'type': 'expense', 'duration_ms': metric.durationMs},
-        );
-      }
-
+      _performance.stop('transaction_create_expense');
       return transaction;
     } catch (e) {
-      performance.stop('transaction_create_expense');
-      await analytics.logEvent(
+      _performance.stop('transaction_create_expense');
+      await _analytics.logEvent(
         'transaction_failed',
         parameters: {'type': 'expense', 'error': e.toString()},
       );
@@ -228,59 +211,56 @@ class TransactionServiceImpl implements TransactionService {
     required String description,
     required DateTime timestamp,
   }) async {
-    performance.start('transaction_create_transfer');
+    _performance.start('transaction_create_transfer');
 
     try {
       _validateAmount(amount);
 
       if (fromAccountId == toAccountId) {
-        throw AppError(
-          category: DomainErrorCategory.sameAccountTransfer.toErrorCategory,
-          message: 'Cannot transfer to the same account',
+        throw DomainError.create(
+          DomainErrorCategory.sameAccountTransfer,
+          'Cannot transfer to the same account',
         );
       }
 
-      final asset = await assetRepo.getById(assetId);
-      if (asset == null) {
-        throw const AppError(
-          category: ErrorCategory.notFound,
-          message: 'Asset not found',
-        );
-      }
+      final asset = await _getAssetOrThrow(assetId);
+      await _getAccountOrThrow(fromAccountId);
+      await _getAccountOrThrow(toAccountId);
 
       final roundedAmount = _roundAmount(amount, asset.decimals);
+      final now = DateTime.now();
 
       final transaction = Transaction(
-        id: db.generateId(),
+        id: _db.generateId(),
         timestamp: timestamp,
         type: TransactionType.transfer,
         description: description,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        createdAt: now,
+        updatedAt: now,
       );
 
       final legs = [
         TransactionLeg(
-          id: db.generateId(),
+          id: _db.generateId(),
           transactionId: transaction.id,
           accountId: fromAccountId,
           assetId: assetId,
-          amount: -roundedAmount,
+          amount: -roundedAmount, // Negative for source
           role: LegRole.main,
         ),
         TransactionLeg(
-          id: db.generateId(),
+          id: _db.generateId(),
           transactionId: transaction.id,
           accountId: toAccountId,
           assetId: assetId,
-          amount: roundedAmount,
+          amount: roundedAmount, // Positive for destination
           role: LegRole.main,
         ),
       ];
 
-      await transactionRepo.insert(transaction, legs);
+      await _transactionRepo.insert(transaction, legs);
 
-      await analytics.logEvent(
+      await _analytics.logEvent(
         'transaction_created',
         parameters: {
           'type': 'transfer',
@@ -289,11 +269,11 @@ class TransactionServiceImpl implements TransactionService {
         },
       );
 
-      performance.stop('transaction_create_transfer');
+      _performance.stop('transaction_create_transfer');
       return transaction;
     } catch (e) {
-      performance.stop('transaction_create_transfer');
-      await analytics.logEvent(
+      _performance.stop('transaction_create_transfer');
+      await _analytics.logEvent(
         'transaction_failed',
         parameters: {'type': 'transfer', 'error': e.toString()},
       );
@@ -313,83 +293,78 @@ class TransactionServiceImpl implements TransactionService {
     required String description,
     required DateTime timestamp,
   }) async {
-    performance.start('transaction_create_trade');
+    _performance.start('transaction_create_trade');
 
     try {
       _validateAmount(fromAmount);
       _validateAmount(toAmount);
 
       if (fromAssetId == toAssetId) {
-        throw AppError(
-          category: DomainErrorCategory.sameAssetTrade.toErrorCategory,
-          message: 'Cannot trade the same asset',
+        throw DomainError.create(
+          DomainErrorCategory.sameAssetTrade,
+          'Cannot trade the same asset',
         );
       }
 
-      if (feeAmount != null) {
+      if (feeAmount != null && feeAmount != 0.0) {
         _validateAmount(feeAmount);
       }
 
-      final fromAsset = await assetRepo.getById(fromAssetId);
-      final toAsset = await assetRepo.getById(toAssetId);
-      if (fromAsset == null || toAsset == null) {
-        throw const AppError(
-          category: ErrorCategory.notFound,
-          message: 'Asset not found',
-        );
-      }
+      final fromAsset = await _getAssetOrThrow(fromAssetId);
+      final toAsset = await _getAssetOrThrow(toAssetId);
+      await _getAccountOrThrow(accountId);
 
       final roundedFromAmount = _roundAmount(fromAmount, fromAsset.decimals);
       final roundedToAmount = _roundAmount(toAmount, toAsset.decimals);
+      final now = DateTime.now();
 
       final transaction = Transaction(
-        id: db.generateId(),
+        id: _db.generateId(),
         timestamp: timestamp,
         type: TransactionType.trade,
         description: description,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
+        createdAt: now,
+        updatedAt: now,
       );
 
       final legs = <TransactionLeg>[
         TransactionLeg(
-          id: db.generateId(),
+          id: _db.generateId(),
           transactionId: transaction.id,
           accountId: accountId,
           assetId: fromAssetId,
-          amount: -roundedFromAmount,
+          amount: -roundedFromAmount, // Negative for what you give
           role: LegRole.main,
         ),
         TransactionLeg(
-          id: db.generateId(),
+          id: _db.generateId(),
           transactionId: transaction.id,
           accountId: accountId,
           assetId: toAssetId,
-          amount: roundedToAmount,
+          amount: roundedToAmount, // Positive for what you receive
           role: LegRole.main,
         ),
       ];
 
-      if (feeAssetId != null && feeAmount != null) {
-        final feeAsset = await assetRepo.getById(feeAssetId);
-        if (feeAsset != null) {
-          final roundedFeeAmount = _roundAmount(feeAmount, feeAsset.decimals);
-          legs.add(
-            TransactionLeg(
-              id: db.generateId(),
-              transactionId: transaction.id,
-              accountId: accountId,
-              assetId: feeAssetId,
-              amount: -roundedFeeAmount,
-              role: LegRole.fee,
-            ),
-          );
-        }
+      // Add fee leg if present
+      if (feeAssetId != null && feeAmount != null && feeAmount != 0.0) {
+        final feeAsset = await _getAssetOrThrow(feeAssetId);
+        final roundedFeeAmount = _roundAmount(feeAmount, feeAsset.decimals);
+        legs.add(
+          TransactionLeg(
+            id: _db.generateId(),
+            transactionId: transaction.id,
+            accountId: accountId,
+            assetId: feeAssetId,
+            amount: -roundedFeeAmount, // Negative for fee
+            role: LegRole.fee,
+          ),
+        );
       }
 
-      await transactionRepo.insert(transaction, legs);
+      await _transactionRepo.insert(transaction, legs);
 
-      await analytics.logEvent(
+      await _analytics.logEvent(
         'transaction_created',
         parameters: {
           'type': 'trade',
@@ -398,11 +373,11 @@ class TransactionServiceImpl implements TransactionService {
         },
       );
 
-      performance.stop('transaction_create_trade');
+      _performance.stop('transaction_create_trade');
       return transaction;
     } catch (e) {
-      performance.stop('transaction_create_trade');
-      await analytics.logEvent(
+      _performance.stop('transaction_create_trade');
+      await _analytics.logEvent(
         'transaction_failed',
         parameters: {'type': 'trade', 'error': e.toString()},
       );
@@ -418,39 +393,69 @@ class TransactionServiceImpl implements TransactionService {
     required String description,
     required DateTime timestamp,
   }) async {
-    final asset = await assetRepo.getById(assetId);
-    if (asset == null) {
-      throw const AppError(
-        category: ErrorCategory.notFound,
-        message: 'Asset not found',
+    _performance.start('transaction_create_adjustment');
+
+    try {
+      // Amount can be positive or negative for adjustments
+      if (amount.isNaN || amount.isInfinite || amount == 0.0) {
+        throw DomainError.create(
+          DomainErrorCategory.invalidAmount,
+          'Amount must be a valid non-zero number',
+        );
+      }
+
+      final asset = await _getAssetOrThrow(assetId);
+      await _getAccountOrThrow(accountId);
+
+      final roundedAmount = _roundAmount(amount, asset.decimals);
+      final now = DateTime.now();
+
+      final transaction = Transaction(
+        id: _db.generateId(),
+        timestamp: timestamp,
+        type: TransactionType.adjustment,
+        description: description,
+        createdAt: now,
+        updatedAt: now,
       );
+
+      final legs = [
+        TransactionLeg(
+          id: _db.generateId(),
+          transactionId: transaction.id,
+          accountId: accountId,
+          assetId: assetId,
+          amount: roundedAmount, // Can be positive or negative
+          role: LegRole.main,
+        ),
+      ];
+
+      await _transactionRepo.insert(transaction, legs);
+
+      await _analytics.logEvent(
+        'transaction_created',
+        parameters: {
+          'type': 'adjustment',
+          'asset_id': assetId,
+          'amount': roundedAmount,
+        },
+      );
+
+      _performance.stop('transaction_create_adjustment');
+      return transaction;
+    } catch (e) {
+      _performance.stop('transaction_create_adjustment');
+      await _analytics.logEvent(
+        'transaction_failed',
+        parameters: {'type': 'adjustment', 'error': e.toString()},
+      );
+      rethrow;
     }
-
-    final roundedAmount = _roundAmount(amount, asset.decimals);
-
-    final transaction = Transaction(
-      id: db.generateId(),
-      timestamp: timestamp,
-      type: TransactionType.adjustment,
-      description: description,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
-
-    final legs = [
-      TransactionLeg(
-        id: db.generateId(),
-        transactionId: transaction.id,
-        accountId: accountId,
-        assetId: assetId,
-        amount: roundedAmount,
-        role: LegRole.main,
-      ),
-    ];
-
-    await transactionRepo.insert(transaction, legs);
-    return transaction;
   }
+
+  // ---------------------------------------------------------------------------
+  // Update Operation
+  // ---------------------------------------------------------------------------
 
   @override
   Future<Transaction> updateTransaction({
@@ -458,13 +463,303 @@ class TransactionServiceImpl implements TransactionService {
     required TransactionType type,
     required Map<String, dynamic> params,
   }) async {
-    throw UnimplementedError('Update not yet implemented');
+    _performance.start('transaction_update');
+
+    try {
+      final existingTx = await _transactionRepo.getById(transactionId);
+      if (existingTx == null) {
+        throw DomainError.create(
+          DomainErrorCategory.transactionNotFound,
+          'Transaction not found: $transactionId',
+        );
+      }
+
+      final description = params['description'] as String;
+      final timestamp = params['timestamp'] as DateTime;
+      final now = DateTime.now();
+
+      final updatedTx = existingTx.copyWith(
+        timestamp: timestamp,
+        type: type,
+        description: description,
+        updatedAt: now,
+      );
+
+      final newLegs = await _buildLegsForType(transactionId, type, params);
+      _validateLegs(type, newLegs, params);
+
+      await _transactionRepo.update(updatedTx, newLegs);
+
+      await _analytics.logEvent(
+        'transaction_updated',
+        parameters: {'type': type.name, 'transaction_id': transactionId},
+      );
+
+      _performance.stop('transaction_update');
+      return updatedTx;
+    } catch (e) {
+      _performance.stop('transaction_update');
+      await _analytics.logEvent(
+        'transaction_failed',
+        parameters: {'type': type.name, 'error': e.toString()},
+      );
+      rethrow;
+    }
   }
+
+  Future<List<TransactionLeg>> _buildLegsForType(
+    String transactionId,
+    TransactionType type,
+    Map<String, dynamic> params,
+  ) async {
+    switch (type) {
+      case TransactionType.income:
+        return _buildIncomeLegs(transactionId, params);
+      case TransactionType.expense:
+        return _buildExpenseLegs(transactionId, params);
+      case TransactionType.transfer:
+        return _buildTransferLegs(transactionId, params);
+      case TransactionType.trade:
+        return _buildTradeLegs(transactionId, params);
+      case TransactionType.adjustment:
+        return _buildAdjustmentLegs(transactionId, params);
+    }
+  }
+
+  Future<List<TransactionLeg>> _buildIncomeLegs(
+    String transactionId,
+    Map<String, dynamic> params,
+  ) async {
+    final accountId = params['accountId'] as String;
+    final assetId = params['assetId'] as String;
+    final amount = params['amount'] as double;
+    final categoryId = params['categoryId'] as String?;
+
+    _validateAmount(amount);
+    final asset = await _getAssetOrThrow(assetId);
+    final roundedAmount = _roundAmount(amount, asset.decimals);
+
+    return [
+      TransactionLeg(
+        id: _db.generateId(),
+        transactionId: transactionId,
+        accountId: accountId,
+        assetId: assetId,
+        amount: roundedAmount,
+        role: LegRole.main,
+        categoryId: categoryId,
+      ),
+    ];
+  }
+
+  Future<List<TransactionLeg>> _buildExpenseLegs(
+    String transactionId,
+    Map<String, dynamic> params,
+  ) async {
+    final accountId = params['accountId'] as String;
+    final assetId = params['assetId'] as String;
+    final amount = params['amount'] as double;
+    final categoryId = params['categoryId'] as String?;
+
+    if (categoryId == null) {
+      throw DomainError.create(
+        DomainErrorCategory.missingCategory,
+        'Category is required for expense transactions',
+      );
+    }
+
+    _validateAmount(amount);
+    final asset = await _getAssetOrThrow(assetId);
+    final roundedAmount = _roundAmount(amount, asset.decimals);
+
+    return [
+      TransactionLeg(
+        id: _db.generateId(),
+        transactionId: transactionId,
+        accountId: accountId,
+        assetId: assetId,
+        amount: -roundedAmount,
+        role: LegRole.main,
+        categoryId: categoryId,
+      ),
+    ];
+  }
+
+  Future<List<TransactionLeg>> _buildTransferLegs(
+    String transactionId,
+    Map<String, dynamic> params,
+  ) async {
+    final fromAccountId = params['fromAccountId'] as String;
+    final toAccountId = params['toAccountId'] as String;
+    final assetId = params['assetId'] as String;
+    final amount = params['amount'] as double;
+
+    if (fromAccountId == toAccountId) {
+      throw DomainError.create(
+        DomainErrorCategory.sameAccountTransfer,
+        'Cannot transfer to the same account',
+      );
+    }
+
+    _validateAmount(amount);
+    final asset = await _getAssetOrThrow(assetId);
+    final roundedAmount = _roundAmount(amount, asset.decimals);
+
+    return [
+      TransactionLeg(
+        id: _db.generateId(),
+        transactionId: transactionId,
+        accountId: fromAccountId,
+        assetId: assetId,
+        amount: -roundedAmount,
+        role: LegRole.main,
+      ),
+      TransactionLeg(
+        id: _db.generateId(),
+        transactionId: transactionId,
+        accountId: toAccountId,
+        assetId: assetId,
+        amount: roundedAmount,
+        role: LegRole.main,
+      ),
+    ];
+  }
+
+  Future<List<TransactionLeg>> _buildTradeLegs(
+    String transactionId,
+    Map<String, dynamic> params,
+  ) async {
+    final accountId = params['accountId'] as String;
+    final fromAssetId = params['fromAssetId'] as String;
+    final fromAmount = params['fromAmount'] as double;
+    final toAssetId = params['toAssetId'] as String;
+    final toAmount = params['toAmount'] as double;
+    final feeAssetId = params['feeAssetId'] as String?;
+    final feeAmount = params['feeAmount'] as double?;
+
+    if (fromAssetId == toAssetId) {
+      throw DomainError.create(
+        DomainErrorCategory.sameAssetTrade,
+        'Cannot trade the same asset',
+      );
+    }
+
+    _validateAmount(fromAmount);
+    _validateAmount(toAmount);
+
+    final fromAsset = await _getAssetOrThrow(fromAssetId);
+    final toAsset = await _getAssetOrThrow(toAssetId);
+
+    final legs = <TransactionLeg>[
+      TransactionLeg(
+        id: _db.generateId(),
+        transactionId: transactionId,
+        accountId: accountId,
+        assetId: fromAssetId,
+        amount: -_roundAmount(fromAmount, fromAsset.decimals),
+        role: LegRole.main,
+      ),
+      TransactionLeg(
+        id: _db.generateId(),
+        transactionId: transactionId,
+        accountId: accountId,
+        assetId: toAssetId,
+        amount: _roundAmount(toAmount, toAsset.decimals),
+        role: LegRole.main,
+      ),
+    ];
+
+    if (feeAssetId != null && feeAmount != null && feeAmount != 0.0) {
+      _validateAmount(feeAmount);
+      final feeAsset = await _getAssetOrThrow(feeAssetId);
+      legs.add(
+        TransactionLeg(
+          id: _db.generateId(),
+          transactionId: transactionId,
+          accountId: accountId,
+          assetId: feeAssetId,
+          amount: -_roundAmount(feeAmount, feeAsset.decimals),
+          role: LegRole.fee,
+        ),
+      );
+    }
+
+    return legs;
+  }
+
+  Future<List<TransactionLeg>> _buildAdjustmentLegs(
+    String transactionId,
+    Map<String, dynamic> params,
+  ) async {
+    final accountId = params['accountId'] as String;
+    final assetId = params['assetId'] as String;
+    final amount = params['amount'] as double;
+
+    final asset = await _getAssetOrThrow(assetId);
+    final roundedAmount = _roundAmount(amount, asset.decimals);
+
+    return [
+      TransactionLeg(
+        id: _db.generateId(),
+        transactionId: transactionId,
+        accountId: accountId,
+        assetId: assetId,
+        amount: roundedAmount,
+        role: LegRole.main,
+      ),
+    ];
+  }
+
+  void _validateLegs(
+    TransactionType type,
+    List<TransactionLeg> legs,
+    Map<String, dynamic> params,
+  ) {
+    if (legs.isEmpty) {
+      throw DomainError.create(
+        DomainErrorCategory.invalidAmount,
+        'Transaction must have at least one leg',
+      );
+    }
+
+    switch (type) {
+      case TransactionType.expense:
+        if (params['categoryId'] == null) {
+          throw DomainError.create(
+            DomainErrorCategory.missingCategory,
+            'Category is required for expenses',
+          );
+        }
+        break;
+      case TransactionType.transfer:
+        if (legs.length != 2) {
+          throw DomainError.create(
+            DomainErrorCategory.invalidAmount,
+            'Transfer must have exactly 2 legs',
+          );
+        }
+        break;
+      case TransactionType.trade:
+        if (legs.length < 2) {
+          throw DomainError.create(
+            DomainErrorCategory.invalidAmount,
+            'Trade must have at least 2 legs',
+          );
+        }
+        break;
+      default:
+        break;
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Delete & Read Operations
+  // ---------------------------------------------------------------------------
 
   @override
   Future<void> deleteTransaction(String transactionId) async {
-    await transactionRepo.delete(transactionId);
-    await analytics.logEvent(
+    await _transactionRepo.delete(transactionId);
+    await _analytics.logEvent(
       'transaction_deleted',
       parameters: {'transaction_id': transactionId},
     );
@@ -472,13 +767,13 @@ class TransactionServiceImpl implements TransactionService {
 
   @override
   Future<Transaction?> getTransaction(String transactionId) async {
-    return await transactionRepo.getById(transactionId);
+    return await _transactionRepo.getById(transactionId);
   }
 
   @override
   Future<List<TransactionLeg>> getLegsForTransaction(
     String transactionId,
   ) async {
-    return await transactionRepo.getLegsForTransaction(transactionId);
+    return await _transactionRepo.getLegsForTransaction(transactionId);
   }
 }
