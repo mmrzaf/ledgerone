@@ -187,6 +187,8 @@ class LedgerDatabase extends SqliteDatabaseBase {
         'decimals': 8,
         'price_source_config':
             '{ "method": "GET", "url": "https://api.coingecko.com/api/v3/simple/price", "query_params": { "ids": "bitcoin", "vs_currencies": "usd" }, "headers": {}, "response_path": "bitcoin.usd", "multiplier": 1.0 }',
+        'created_at': now,
+        'updated_at': now,
       },
       {
         'id': 'asset_eth',
@@ -196,6 +198,8 @@ class LedgerDatabase extends SqliteDatabaseBase {
         'decimals': 8,
         'price_source_config':
             '{ "method": "GET", "url": "https://api.coingecko.com/api/v3/simple/price", "query_params": { "ids": "ethereum", "vs_currencies": "usd" }, "headers": {}, "response_path": "ethereum.usd", "multiplier": 1.0 }',
+        'created_at': now,
+        'updated_at': now,
       },
     ];
 
