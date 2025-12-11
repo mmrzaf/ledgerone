@@ -5,6 +5,7 @@ import 'package:ledgerone/app/services/dev/dev_http_client.dart';
 import 'package:ledgerone/app/services/http_client_impl.dart';
 import 'package:ledgerone/app/services/lifecycle_service_impl.dart';
 import 'package:ledgerone/app/services/localization_service_impl.dart';
+import 'package:ledgerone/app/services/logging_service_impl.dart';
 import 'package:ledgerone/app/services/network_service_impl.dart';
 import 'package:ledgerone/app/services/theme_service_impl.dart';
 import 'package:ledgerone/core/config/environment.dart';
@@ -12,6 +13,7 @@ import 'package:ledgerone/core/contracts/cache_contract.dart';
 import 'package:ledgerone/core/contracts/config_provider.dart';
 import 'package:ledgerone/core/contracts/i18n_contract.dart';
 import 'package:ledgerone/core/contracts/lifecycle_contract.dart';
+import 'package:ledgerone/core/contracts/logging_contract.dart';
 import 'package:ledgerone/core/contracts/network_contract.dart';
 import 'package:ledgerone/core/contracts/theme_contract.dart';
 import 'package:ledgerone/core/network/http_client_contract.dart';
@@ -115,6 +117,10 @@ Future<DISetupResult> setupDependencies(
 
   locator.register<AnalyticsService>(analyticsImpl);
   locator.register<CrashService>(crashImpl);
+
+  final loggingService = LoggingServiceImpl(storage: storage);
+  await loggingService.initialize();
+  locator.register<LoggingService>(loggingService);
 
   PerformanceTracker().start(PerformanceMetrics.configLoad);
 
