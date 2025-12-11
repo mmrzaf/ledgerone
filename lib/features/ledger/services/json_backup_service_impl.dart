@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:ledgerone/core/observability/app_logger.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../../core/contracts/analytics_contract.dart';
@@ -64,7 +64,7 @@ class JsonBackupService implements BackupService {
     final json = jsonEncode(payload);
 
     // Fire-and-forget analytics
-    _analytics?.logEvent(
+    await _analytics?.logEvent(
       'backup_export_completed',
       parameters: {
         'version': _schemaVersion,
@@ -77,13 +77,14 @@ class JsonBackupService implements BackupService {
       },
     );
 
-    debugPrint(
+    AppLogger.info(
       'Backup: exported ${assets.length} assets, '
       '${accounts.length} accounts, '
       '${categories.length} categories, '
       '${transactions.length} transactions, '
       '${legs.length} legs, '
       '${priceSnapshots.length} price snapshots',
+      tag: 'Backup',
     );
 
     return json;
@@ -199,7 +200,7 @@ class JsonBackupService implements BackupService {
       }
     });
 
-    _analytics?.logEvent(
+    await _analytics?.logEvent(
       'backup_restore_completed',
       parameters: {
         'version': _schemaVersion,
@@ -213,11 +214,12 @@ class JsonBackupService implements BackupService {
       },
     );
 
-    debugPrint(
+    AppLogger.info(
       'Backup: restore completed '
       '(${assets.length} assets, ${accounts.length} accounts, '
       '${categories.length} categories, ${transactions.length} transactions, '
       '${legs.length} legs, ${priceSnapshots.length} price snapshots)',
+      tag: 'Backup',
     );
   }
 }

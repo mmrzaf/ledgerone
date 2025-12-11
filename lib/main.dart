@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:ledgerone/core/contracts/analytics_contract.dart';
 import 'package:ledgerone/core/contracts/i18n_contract.dart';
 import 'package:ledgerone/core/contracts/theme_contract.dart';
+import 'package:ledgerone/core/observability/app_logger.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'app/app.dart';
@@ -36,8 +37,8 @@ void main() async {
   final initialRoute = launchState.determineInitialRoute();
   PerformanceTracker().mark('launch_state_complete');
 
-  debugPrint('Launch state: $launchState');
-  debugPrint('Initial route: $initialRoute');
+  AppLogger.info('Launch state: $launchState', tag: 'Launch');
+  AppLogger.info('Initial route: $initialRoute', tag: 'Initial');
 
   // Phase 3: Create router with determined initial route
   PerformanceTracker().mark('router_start');

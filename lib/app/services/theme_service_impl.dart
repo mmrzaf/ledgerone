@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:ledgerone/core/observability/app_logger.dart';
 
 import '../../app/theme/default_themes.dart';
 import '../../core/contracts/storage_contract.dart';
@@ -10,16 +11,16 @@ class ThemeServiceImpl extends ChangeNotifier implements ThemeService {
 
   static const String _storageKey = 'selected_theme';
 
-  AppTheme _currentTheme = DefaultLightTheme.theme;
+  AppTheme _currentTheme = AuroraLightTheme.theme;
 
   static final List<AppTheme> _availableThemesList = List.unmodifiable([
-    DefaultLightTheme.theme, // name: light
-    DefaultDarkTheme.theme, // name: dark
-    MidnightAmoledTheme.theme, // name: amoled_dark
-    HighContrastLightTheme.theme, // name: high_contrast_light
-    HighContrastDarkTheme.theme, // name: high_contrast_dark
-    SepiaTheme.theme, // name: sepia
-    BlueBrandTheme.theme, // name: blue
+    AuroraLightTheme.theme, // name: aurora_light
+    EmberDarkTheme.theme, // name: ember_dark
+    VoidAmoledTheme.theme, // name: void_amoled
+    NimbusHighContrastLightTheme.theme, // name: nimbus_high_contrast_light
+    DuskHighContrastDarkTheme.theme, // name: dusk_high_contrast_dark
+    ParchmentSepiaTheme.theme, // name: parchment_sepia
+    MarinaBlueTheme.theme, // name: marina_blue
   ]);
 
   ThemeServiceImpl({required StorageService storage}) : _storage = storage;
@@ -36,15 +37,24 @@ class ThemeServiceImpl extends ChangeNotifier implements ThemeService {
 
         if (theme != null) {
           _currentTheme = theme;
-          debugPrint('Theme: Restored theme "${_currentTheme.name}"');
+          AppLogger.info(
+            'Theme: Restored theme "${_currentTheme.name}"',
+            tag: 'Theme',
+          );
         }
       }
     } catch (e) {
-      debugPrint('Theme: Failed to restore theme, using default. Error: $e');
-      _currentTheme = DefaultLightTheme.theme;
+      AppLogger.error(
+        'Theme: Failed to restore theme, using default. Error: $e',
+        tag: 'Theme',
+      );
+      _currentTheme = AuroraLightTheme.theme;
     }
 
-    debugPrint('Theme: Initialized with "${_currentTheme.name}"');
+    AppLogger.info(
+      'Theme: Initialized with "${_currentTheme.name}"',
+      tag: 'Theme',
+    );
     notifyListeners();
   }
 
@@ -61,18 +71,21 @@ class ThemeServiceImpl extends ChangeNotifier implements ThemeService {
     try {
       await _storage.setString(_storageKey, theme.name);
     } catch (e) {
-      debugPrint('Theme: Failed to persist theme "${theme.name}": $e');
+      AppLogger.error(
+        'Theme: Failed to persist theme "${theme.name}": $e',
+        tag: 'Theme',
+      );
     }
 
-    debugPrint('Theme: Switched to "${theme.name}"');
+    AppLogger.debug('Theme: Switched to "${theme.name}"', tag: 'Theme');
     notifyListeners();
   }
 
   @override
   Future<void> toggleBrightness() async {
     final newTheme = _currentTheme.isDark
-        ? DefaultLightTheme.theme
-        : DefaultDarkTheme.theme;
+        ? AuroraLightTheme.theme
+        : EmberDarkTheme.theme;
 
     await setTheme(newTheme);
   }

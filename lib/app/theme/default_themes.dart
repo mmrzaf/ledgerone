@@ -2,57 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../core/contracts/theme_contract.dart';
 
-/// Default light theme
+/// Shared typography so layout doesn’t shift between themes.
 @immutable
-class DefaultLightTheme {
-  const DefaultLightTheme._();
+class LedgerTypography {
+  const LedgerTypography._();
 
-  static const AppColorScheme colorScheme = AppColorScheme(
-    // Primary brand
-    primary: Color(0xFF2563EB), // Blue-600
-    primaryContainer: Color(0xFFDCEAFB),
-    onPrimary: Color(0xFFFFFFFF),
-
-    // Secondary / accent
-    secondary: Color(0xFF7C3AED), // Violet-600
-    secondaryContainer: Color(0xFFEDE9FE),
-    onSecondary: Color(0xFFFFFFFF),
-
-    // Surfaces
-    surface: Color(0xFFFFFFFF),
-    surfaceVariant: Color(0xFFF9FAFB),
-    onSurface: Color(0xFF111827),
-    onSurfaceVariant: Color(0xFF6B7280),
-
-    // Background
-    background: Color(0xFFFAFAFA),
-    onBackground: Color(0xFF111827),
-
-    // Error
-    error: Color(0xFFDC2626), // Red-600
-    errorContainer: Color(0xFFFEE2E2),
-    onError: Color(0xFFFFFFFF),
-
-    // Success
-    success: Color(0xFF16A34A), // Green-600
-    successContainer: Color(0xFFDCFCE7),
-    onSuccess: Color(0xFFFFFFFF),
-
-    // Warning
-    warning: Color(0xFFEA580C), // Orange-600
-    warningContainer: Color(0xFFFFEDD5),
-    onWarning: Color(0xFFFFFFFF),
-
-    // Borders / outline
-    outline: Color(0xFFD1D5DB),
-    outlineVariant: Color(0xFFE5E7EB),
-
-    // Overlays
-    shadow: Color(0x1A000000),
-    scrim: Color(0x99000000),
-  );
-
-  static const AppTypography typography = AppTypography(
+  static const AppTypography base = AppTypography(
     // Display
     displayLarge: TextStyle(
       fontSize: 57,
@@ -147,54 +102,105 @@ class DefaultLightTheme {
       height: 1.45,
     ),
   );
+}
+
+/// Bright, cool, “air + glass” light theme.
+@immutable
+class AuroraLightTheme {
+  const AuroraLightTheme._();
+
+  static const AppColorScheme colorScheme = AppColorScheme(
+    // Primary brand (cool blue)
+    primary: Color(0xFF2563EB), // blue-600
+    primaryContainer: Color(0xFFDBEAFE),
+    onPrimary: Color(0xFFFFFFFF),
+
+    // Secondary / accent (emerald)
+    secondary: Color(0xFF10B981), // emerald-500
+    secondaryContainer: Color(0xFFD1FAE5),
+    onSecondary: Color(0xFF022C22),
+
+    // Surfaces
+    surface: Color(0xFFFFFFFF),
+    surfaceVariant: Color(0xFFF3F4FF), // very light cool tint
+    onSurface: Color(0xFF0F172A),
+    onSurfaceVariant: Color(0xFF64748B),
+
+    // Background
+    background: Color(0xFFF4F6FB),
+    onBackground: Color(0xFF020617),
+
+    // Error
+    error: Color(0xFFDC2626),
+    errorContainer: Color(0xFFFEE2E2),
+    onError: Color(0xFFFFFFFF),
+
+    // Success
+    success: Color(0xFF16A34A),
+    successContainer: Color(0xFFDCFCE7),
+    onSuccess: Color(0xFF052E16),
+
+    // Warning
+    warning: Color(0xFFEA580C),
+    warningContainer: Color(0xFFFFEDD5),
+    onWarning: Color(0xFF431407),
+
+    // Borders / outline
+    outline: Color(0xFFD1D5DB),
+    outlineVariant: Color(0xFFE5E7EB),
+
+    // Overlays
+    shadow: Color(0x1A000000),
+    scrim: Color(0x99000000),
+  );
 
   static const AppTheme theme = AppTheme(
-    name: 'light',
+    name: 'aurora_light',
     brightness: Brightness.light,
     colors: colorScheme,
-    typography: typography,
+    typography: LedgerTypography.base,
   );
 }
 
-/// Default dark theme
+/// Neutral “finance dashboard at night” dark theme.
 @immutable
-class DefaultDarkTheme {
-  const DefaultDarkTheme._();
+class EmberDarkTheme {
+  const EmberDarkTheme._();
 
   static const AppColorScheme colorScheme = AppColorScheme(
-    // Primary brand
-    primary: Color(0xFF60A5FA), // Blue-400
-    primaryContainer: Color(0xFF1E3A8A),
+    // Warm primary
+    primary: Color(0xFFF97316), // orange-400
+    primaryContainer: Color(0xFF7C2D12),
     onPrimary: Color(0xFF000000),
 
-    // Secondary / accent
-    secondary: Color(0xFFA78BFA), // Violet-400
-    secondaryContainer: Color(0xFF5B21B6),
-    onSecondary: Color(0xFF000000),
+    // Secondary (rose accent)
+    secondary: Color(0xFFE11D48),
+    secondaryContainer: Color(0xFF831843),
+    onSecondary: Color(0xFFFFFFFF),
 
-    // Surfaces
-    surface: Color(0xFF1F2937),
-    surfaceVariant: Color(0xFF374151),
+    // Surfaces (charcoal)
+    surface: Color(0xFF111827),
+    surfaceVariant: Color(0xFF1F2937),
     onSurface: Color(0xFFE5E7EB),
     onSurfaceVariant: Color(0xFF9CA3AF),
 
     // Background
-    background: Color(0xFF111827),
+    background: Color(0xFF020617),
     onBackground: Color(0xFFE5E7EB),
 
     // Error
-    error: Color(0xFFF87171), // Red-400
+    error: Color(0xFFF97373),
     errorContainer: Color(0xFF7F1D1D),
     onError: Color(0xFF000000),
 
     // Success
-    success: Color(0xFF4ADE80), // Green-400
+    success: Color(0xFF4ADE80),
     successContainer: Color(0xFF14532D),
     onSuccess: Color(0xFF000000),
 
     // Warning
-    warning: Color(0xFFFB923C), // Orange-400
-    warningContainer: Color(0xFF7C2D12),
+    warning: Color(0xFFFBBF24),
+    warningContainer: Color(0xFF78350F),
     onWarning: Color(0xFF000000),
 
     // Borders / outline
@@ -202,34 +208,31 @@ class DefaultDarkTheme {
     outlineVariant: Color(0xFF374151),
 
     // Overlays
-    shadow: Color(0x66000000),
-    scrim: Color(0xCC000000),
+    shadow: Color(0xCC000000),
+    scrim: Color(0xE6000000),
   );
 
-  /// Dark uses the same type scale as light to avoid layout shifts.
-  static const AppTypography typography = DefaultLightTheme.typography;
-
   static const AppTheme theme = AppTheme(
-    name: 'dark',
+    name: 'ember_dark',
     brightness: Brightness.dark,
     colors: colorScheme,
-    typography: typography,
+    typography: LedgerTypography.base,
   );
 }
 
-/// AMOLED pure-black dark theme
+/// OLED-friendly, pure black with neon accents.
 @immutable
-class MidnightAmoledTheme {
-  const MidnightAmoledTheme._();
+class VoidAmoledTheme {
+  const VoidAmoledTheme._();
 
   static const AppColorScheme colorScheme = AppColorScheme(
-    primary: Color(0xFF60A5FA),
-    primaryContainer: Color(0xFF0B1120),
-    onPrimary: Color(0xFF020617),
+    primary: Color(0xFF22D3EE), // cyan
+    primaryContainer: Color(0xFF0F172A),
+    onPrimary: Color(0xFF000000),
 
-    secondary: Color(0xFF38BDF8),
-    secondaryContainer: Color(0xFF082F49),
-    onSecondary: Color(0xFF020617),
+    secondary: Color(0xFFA855F7), // violet
+    secondaryContainer: Color(0xFF1E1B4B),
+    onSecondary: Color(0xFF000000),
 
     surface: Color(0xFF000000), // pure black
     surfaceVariant: Color(0xFF020617),
@@ -239,7 +242,7 @@ class MidnightAmoledTheme {
     background: Color(0xFF000000),
     onBackground: Color(0xFFE5E7EB),
 
-    error: Color(0xFFF87171),
+    error: Color(0xFFF97373),
     errorContainer: Color(0xFF7F1D1D),
     onError: Color(0xFF000000),
 
@@ -247,36 +250,36 @@ class MidnightAmoledTheme {
     successContainer: Color(0xFF14532D),
     onSuccess: Color(0xFF000000),
 
-    warning: Color(0xFFFB923C),
-    warningContainer: Color(0xFF7C2D12),
+    warning: Color(0xFFFBBF24),
+    warningContainer: Color(0xFF854D0E),
     onWarning: Color(0xFF000000),
 
     outline: Color(0xFF4B5563),
-    outlineVariant: Color(0xFF111827),
+    outlineVariant: Color(0xFF1F2937),
 
     shadow: Color(0xCC000000),
     scrim: Color(0xE6000000),
   );
 
   static const AppTheme theme = AppTheme(
-    name: 'amoled_dark',
+    name: 'void_amoled',
     brightness: Brightness.dark,
     colors: colorScheme,
-    typography: DefaultDarkTheme.typography,
+    typography: LedgerTypography.base,
   );
 }
 
-/// High contrast light theme (accessibility-focused)
+/// Ultra high-contrast light theme (accessibility-first).
 @immutable
-class HighContrastLightTheme {
-  const HighContrastLightTheme._();
+class NimbusHighContrastLightTheme {
+  const NimbusHighContrastLightTheme._();
 
   static const AppColorScheme colorScheme = AppColorScheme(
-    primary: Color(0xFF0000CC), // strong blue
+    primary: Color(0xFF0033CC), // deep blue
     primaryContainer: Color(0xFFFFFFFF),
     onPrimary: Color(0xFFFFFFFF),
 
-    secondary: Color(0xFFFFA800), // strong amber
+    secondary: Color(0xFFFF8C00), // strong amber
     secondaryContainer: Color(0xFFFFFFFF),
     onSecondary: Color(0xFF000000),
 
@@ -307,27 +310,25 @@ class HighContrastLightTheme {
     scrim: Color(0x99000000),
   );
 
-  static const AppTypography typography = DefaultLightTheme.typography;
-
   static const AppTheme theme = AppTheme(
-    name: 'high_contrast_light',
+    name: 'nimbus_high_contrast_light',
     brightness: Brightness.light,
     colors: colorScheme,
-    typography: typography,
+    typography: LedgerTypography.base,
   );
 }
 
-/// High contrast dark theme (accessibility-focused)
+/// Ultra high-contrast dark theme (accessibility-first).
 @immutable
-class HighContrastDarkTheme {
-  const HighContrastDarkTheme._();
+class DuskHighContrastDarkTheme {
+  const DuskHighContrastDarkTheme._();
 
   static const AppColorScheme colorScheme = AppColorScheme(
-    primary: Color(0xFF93C5FD),
+    primary: Color(0xFF93C5FD), // light blue
     primaryContainer: Color(0xFF1D4ED8),
     onPrimary: Color(0xFF000000),
 
-    secondary: Color(0xFFFBBF24),
+    secondary: Color(0xFFFDE68A), // strong yellow
     secondaryContainer: Color(0xFF92400E),
     onSecondary: Color(0xFF000000),
 
@@ -358,28 +359,26 @@ class HighContrastDarkTheme {
     scrim: Color(0xE6000000),
   );
 
-  static const AppTypography typography = DefaultDarkTheme.typography;
-
   static const AppTheme theme = AppTheme(
-    name: 'high_contrast_dark',
+    name: 'dusk_high_contrast_dark',
     brightness: Brightness.dark,
     colors: colorScheme,
-    typography: typography,
+    typography: LedgerTypography.base,
   );
 }
 
-/// Warm sepia reading theme
+/// Warm sepia reading / “paper ledger” theme.
 @immutable
-class SepiaTheme {
-  const SepiaTheme._();
+class ParchmentSepiaTheme {
+  const ParchmentSepiaTheme._();
 
   static const AppColorScheme colorScheme = AppColorScheme(
-    primary: Color(0xFF92400E),
-    primaryContainer: Color(0xFFFBBF77),
-    onPrimary: Color(0xFFFFFBEB),
+    primary: Color(0xFF8B5A2B),
+    primaryContainer: Color(0xFFF6D9A8),
+    onPrimary: Color(0xFF3F2A1C),
 
-    secondary: Color(0xFFB45309),
-    secondaryContainer: Color(0xFFFCD9A8),
+    secondary: Color(0xFFB5651D),
+    secondaryContainer: Color(0xFFFDE6B8),
     onSecondary: Color(0xFF3F2A1C),
 
     surface: Color(0xFFF5E9D4),
@@ -396,7 +395,7 @@ class SepiaTheme {
 
     success: Color(0xFF15803D),
     successContainer: Color(0xFFDCFCE7),
-    onSuccess: Color(0xFF1F2933),
+    onSuccess: Color(0xFF10291A),
 
     warning: Color(0xFFB45309),
     warningContainer: Color(0xFFFDE68A),
@@ -409,38 +408,35 @@ class SepiaTheme {
     scrim: Color(0x55000000),
   );
 
-  static const AppTypography typography = DefaultLightTheme.typography;
-
   static const AppTheme theme = AppTheme(
-    name: 'sepia',
+    name: 'parchment_sepia',
     brightness: Brightness.light,
     colors: colorScheme,
-    typography: typography,
+    typography: LedgerTypography.base,
   );
 }
 
+/// Blue-heavy light theme with more saturated brand color.
 @immutable
-class BlueBrandTheme {
-  const BlueBrandTheme._();
+class MarinaBlueTheme {
+  const MarinaBlueTheme._();
 
   static const AppColorScheme colorScheme = AppColorScheme(
-    // Stronger blue brand
-    primary: Color(0xFF1D4ED8),
+    primary: Color(0xFF1D4ED8), // strong blue
     primaryContainer: Color(0xFFDBEAFE),
     onPrimary: Color(0xFFFFFFFF),
 
-    secondary: Color(0xFF0EA5E9),
+    secondary: Color(0xFF0EA5E9), // cyan accent
     secondaryContainer: Color(0xFFE0F2FE),
     onSecondary: Color(0xFF0B1120),
 
-    // Copied from DefaultLightTheme (not referenced!)
     surface: Color(0xFFFFFFFF),
-    surfaceVariant: Color(0xFFF9FAFB),
-    onSurface: Color(0xFF111827),
-    onSurfaceVariant: Color(0xFF6B7280),
+    surfaceVariant: Color(0xFFE5F0FF),
+    onSurface: Color(0xFF020617),
+    onSurfaceVariant: Color(0xFF475569),
 
-    background: Color(0xFFFAFAFA),
-    onBackground: Color(0xFF111827),
+    background: Color(0xFFF1F5FF),
+    onBackground: Color(0xFF020617),
 
     error: Color(0xFFDC2626),
     errorContainer: Color(0xFFFEE2E2),
@@ -448,23 +444,23 @@ class BlueBrandTheme {
 
     success: Color(0xFF16A34A),
     successContainer: Color(0xFFDCFCE7),
-    onSuccess: Color(0xFFFFFFFF),
+    onSuccess: Color(0xFF052E16),
 
-    warning: Color(0xFFEA580C),
-    warningContainer: Color(0xFFFFEDD5),
-    onWarning: Color(0xFFFFFFFF),
+    warning: Color(0xFFF97316),
+    warningContainer: Color(0xFFFFE7D5),
+    onWarning: Color(0xFF431407),
 
-    outline: Color(0xFFD1D5DB),
-    outlineVariant: Color(0xFFE5E7EB),
+    outline: Color(0xFFCBD5F5),
+    outlineVariant: Color(0xFFE5EDFF),
 
     shadow: Color(0x1A000000),
     scrim: Color(0x99000000),
   );
 
   static const AppTheme theme = AppTheme(
-    name: 'blue',
+    name: 'marina_blue',
     brightness: Brightness.light,
     colors: colorScheme,
-    typography: DefaultLightTheme.typography,
+    typography: LedgerTypography.base,
   );
 }

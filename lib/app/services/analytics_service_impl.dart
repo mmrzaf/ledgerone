@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:ledgerone/core/observability/app_logger.dart';
 
 import '../../core/contracts/analytics_contract.dart';
 import '../../core/contracts/storage_contract.dart';
@@ -22,14 +22,20 @@ class AnalyticsServiceImpl implements AnalyticsService {
   /// Initialize and load consent status
   Future<void> initialize() async {
     _consentGranted = await _storage.getBool(_consentKey);
-    debugPrint('Analytics: Initialized. Consent: $_consentGranted');
+    AppLogger.info(
+      'Analytics: Initialized. Consent: $_consentGranted',
+      tag: 'Analytics',
+    );
   }
 
   /// Set analytics consent
   Future<void> setConsent(bool granted) async {
     _consentGranted = granted;
     await _storage.setBool(_consentKey, granted);
-    debugPrint('Analytics: Consent ${granted ? 'granted' : 'revoked'}');
+    AppLogger.debug(
+      'Analytics: Consent ${granted ? 'granted' : 'revoked'}',
+      tag: 'Analytics',
+    );
 
     if (!granted) {
       // Clear user ID when consent revoked
@@ -44,27 +50,36 @@ class AnalyticsServiceImpl implements AnalyticsService {
   Future<void> logEvent(String name, {Map<String, dynamic>? parameters}) async {
     // Check consent
     if (!hasConsent) {
-      debugPrint('Analytics: Event blocked (no consent): $name');
+      AppLogger.warning(
+        'Analytics: Event blocked (no consent): $name',
+        tag: 'Analytics',
+      );
       return;
     }
 
     // Validate against allow-list
     if (!AnalyticsAllowlist.isAllowed(name)) {
-      debugPrint('Analytics: Event rejected (not allowed): $name');
+      AppLogger.debug(
+        'Analytics: Event rejected (not allowed): $name',
+        tag: 'Analytics',
+      );
       // assert(false, 'Event "$name" is not in the allow-list');
       return;
     }
 
     // Validate parameters
     if (!AnalyticsAllowlist.validate(name, parameters)) {
-      debugPrint('Analytics: Event rejected (invalid params): $name');
+      AppLogger.error(
+        'Analytics: Event rejected (invalid params): $name',
+        tag: 'Analytics',
+      );
       // assert(false, 'Event "$name" has invalid parameters: $parameters');
       return;
     }
 
     // Sanitize parameters (remove any PII that might have slipped in)
     final sanitized = _sanitizeParameters(parameters);
-    debugPrint('Analytics: $name $sanitized');
+    AppLogger.debug('Analytics: $name $sanitized', tag: 'Analytics');
 
     // Forward to vendor if available
     await _vendor?.logEvent(name, parameters: sanitized);
@@ -73,14 +88,20 @@ class AnalyticsServiceImpl implements AnalyticsService {
   @override
   Future<void> setUserId(String? id) async {
     if (!hasConsent) {
-      debugPrint('Analytics: setUserId blocked (no consent)');
+      AppLogger.warning(
+        'Analytics: setUserId blocked (no consent)',
+        tag: 'Analytics',
+      );
       return;
     }
 
     // Hash user ID for privacy
     _userId = id != null ? _hashUserId(id) : null;
 
-    debugPrint('Analytics: User ID set (hashed): $_userId');
+    AppLogger.debug(
+      'Analytics: User ID set (hashed): $_userId',
+      tag: 'Analytics',
+    );
     await _vendor?.setUserId(_userId);
   }
 
@@ -93,7 +114,7 @@ class AnalyticsServiceImpl implements AnalyticsService {
       return;
     }
 
-    debugPrint('Analytics: Screen view: $screenName');
+    AppLogger.debug('Analytics: Screen view: $screenName', tag: 'Analytics');
     await _vendor?.logScreenView(screenName);
   }
 
@@ -109,7 +130,10 @@ class AnalyticsServiceImpl implements AnalyticsService {
 
       // Block known PII fields
       if (piiKeys.any((pii) => key.contains(pii))) {
-        debugPrint('Analytics: Blocked PII parameter: ${entry.key}');
+        AppLogger.warning(
+          'Analytics: Blocked PII parameter: ${entry.key}',
+          tag: 'Analytics',
+        );
         continue;
       }
 

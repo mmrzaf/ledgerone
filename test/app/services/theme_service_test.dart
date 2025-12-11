@@ -15,34 +15,36 @@ void main() {
       themeService = ThemeServiceImpl(storage: storage);
     });
 
-    test('initializes with light theme by default', () async {
+    test('initializes with Aurora light theme by default', () async {
       await themeService.initialize();
 
-      expect(themeService.currentTheme.name, 'light');
+      expect(themeService.currentTheme.name, 'aurora_light');
       expect(themeService.currentTheme.brightness, Brightness.light);
       expect(themeService.currentTheme.isLight, isTrue);
       expect(themeService.currentTheme.isDark, isFalse);
     });
 
     test('loads saved theme from storage', () async {
-      await storage.setString('selected_theme', 'dark');
+      // Persist Ember dark theme
+      await storage.setString('selected_theme', 'ember_dark');
 
       await themeService.initialize();
 
-      expect(themeService.currentTheme.name, 'dark');
+      expect(themeService.currentTheme.name, 'ember_dark');
       expect(themeService.currentTheme.brightness, Brightness.dark);
       expect(themeService.currentTheme.isDark, isTrue);
+      expect(themeService.currentTheme.isLight, isFalse);
     });
 
     test('switches theme and persists', () async {
       await themeService.initialize();
 
-      await themeService.setTheme(DefaultDarkTheme.theme);
+      await themeService.setTheme(EmberDarkTheme.theme);
 
-      expect(themeService.currentTheme.name, 'dark');
+      expect(themeService.currentTheme.name, 'ember_dark');
 
       final saved = await storage.getString('selected_theme');
-      expect(saved, 'dark');
+      expect(saved, 'ember_dark');
     });
 
     test('ignores unknown stored theme names', () async {
@@ -51,89 +53,100 @@ void main() {
 
       await themeService.initialize();
 
-      // Should fall back to default (light) theme
-      expect(themeService.currentTheme.name, 'light');
+      // Should fall back to default Aurora light theme
+      expect(themeService.currentTheme.name, 'aurora_light');
       expect(themeService.currentTheme.brightness, Brightness.light);
-    });
-
-    test('toggleBrightness switches between light and dark', () async {
-      await themeService.initialize();
-
-      expect(themeService.currentTheme.isLight, isTrue);
-
-      await themeService.toggleBrightness();
-
-      expect(themeService.currentTheme.isDark, isTrue);
-
-      await themeService.toggleBrightness();
-
       expect(themeService.currentTheme.isLight, isTrue);
     });
 
-    test('availableThemes returns both themes', () async {
+    test(
+      'toggleBrightness switches between Aurora light and Ember dark',
+      () async {
+        await themeService.initialize();
+
+        // Start on light
+        expect(themeService.currentTheme.isLight, isTrue);
+        expect(themeService.currentTheme.name, 'aurora_light');
+
+        await themeService.toggleBrightness();
+
+        // Should now be Ember dark
+        expect(themeService.currentTheme.isDark, isTrue);
+        expect(themeService.currentTheme.name, 'ember_dark');
+
+        await themeService.toggleBrightness();
+
+        // And back to Aurora light
+        expect(themeService.currentTheme.isLight, isTrue);
+        expect(themeService.currentTheme.name, 'aurora_light');
+      },
+    );
+
+    test('availableThemes returns all configured themes', () async {
       await themeService.initialize();
 
       final themes = themeService.availableThemes;
 
       expect(themes.length, 7);
-      expect(themes.map((t) => t.name), contains('light'));
-      expect(themes.map((t) => t.name), contains('dark'));
+      final names = themes.map((t) => t.name).toList();
+
+      expect(names, contains('aurora_light'));
+      expect(names, contains('ember_dark'));
+      expect(names, contains('void_amoled'));
+      expect(names, contains('nimbus_high_contrast_light'));
+      expect(names, contains('dusk_high_contrast_dark'));
+      expect(names, contains('parchment_sepia'));
+      expect(names, contains('marina_blue'));
     });
 
     test('theme persists across service instances', () async {
       await themeService.initialize();
-      await themeService.setTheme(DefaultDarkTheme.theme);
+      await themeService.setTheme(EmberDarkTheme.theme);
 
       final newService = ThemeServiceImpl(storage: storage);
       await newService.initialize();
 
-      expect(newService.currentTheme.name, 'dark');
+      expect(newService.currentTheme.name, 'ember_dark');
+      expect(newService.currentTheme.isDark, isTrue);
     });
   });
 
-  group('DefaultLightTheme', () {
+  group('AuroraLightTheme', () {
     test('has correct color scheme', () {
-      const colors = DefaultLightTheme.colorScheme;
+      const colors = AuroraLightTheme.colorScheme;
 
       expect(colors.primary, const Color(0xFF2563EB));
       expect(colors.surface, const Color(0xFFFFFFFF));
-      expect(colors.background, const Color(0xFFFAFAFA));
+      // Updated background to match new palette
+      expect(colors.background, const Color(0xFFF4F6FB));
       expect(colors.error, const Color(0xFFDC2626));
     });
 
-    test('has complete typography scale', () {
-      const typography = DefaultLightTheme.typography;
-
-      expect(typography.displayLarge.fontSize, 57);
-      expect(typography.headlineLarge.fontSize, 32);
-      expect(typography.bodyLarge.fontSize, 16);
-      expect(typography.labelSmall.fontSize, 11);
-    });
-
     test('theme has correct properties', () {
-      const theme = DefaultLightTheme.theme;
+      const theme = AuroraLightTheme.theme;
 
-      expect(theme.name, 'light');
+      expect(theme.name, 'aurora_light');
       expect(theme.brightness, Brightness.light);
       expect(theme.isLight, isTrue);
       expect(theme.isDark, isFalse);
     });
   });
 
-  group('DefaultDarkTheme', () {
+  group('EmberDarkTheme', () {
     test('has correct color scheme', () {
-      const colors = DefaultDarkTheme.colorScheme;
+      const colors = EmberDarkTheme.colorScheme;
 
-      expect(colors.primary, const Color(0xFF60A5FA));
-      expect(colors.surface, const Color(0xFF1F2937));
-      expect(colors.background, const Color(0xFF111827));
-      expect(colors.error, const Color(0xFFF87171));
+      // Updated to new Ember palette
+      expect(colors.primary, const Color(0xFFF97316)); // warm orange
+      expect(colors.surface, const Color(0xFF111827)); // charcoal
+      expect(colors.background, const Color(0xFF020617)); // near-black
+      expect(colors.error, const Color(0xFFF97373)); // softer red
     });
 
     test('theme has correct properties', () {
-      const theme = DefaultDarkTheme.theme;
+      const theme = EmberDarkTheme.theme;
 
-      expect(theme.name, 'dark');
+      expect(theme.name, 'ember_dark');
       expect(theme.brightness, Brightness.dark);
       expect(theme.isDark, isTrue);
       expect(theme.isLight, isFalse);

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:ledgerone/core/observability/app_logger.dart';
+
 import '../../../app/di.dart';
 import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/backup_contract.dart';
@@ -45,7 +47,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         setState(() => _loading = false);
       }
     } catch (e) {
-      debugPrint('Error initializing services: $e');
+      AppLogger.info('Error initializing services: $e', tag: 'Error');
     }
   }
 
@@ -65,19 +67,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await widget.analytics.logEvent(
         'settings_language_changed',
         parameters: {'language': languageCode},
-      );
-    }
-  }
-
-  Future<void> _toggleTheme() async {
-    await _themeService.toggleBrightness();
-
-    if (mounted) {
-      setState(() {});
-
-      await widget.analytics.logEvent(
-        'settings_theme_toggled',
-        parameters: {'theme': _themeService.currentTheme.name},
       );
     }
   }
@@ -244,7 +233,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       json = await _backupService.exportToJson();
     } catch (e) {
-      debugPrint('Backup export failed: $e');
+      AppLogger.error('Backup export failed: $e', tag: 'Backup');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -382,7 +371,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         const SnackBar(content: Text('Backup restored successfully.')),
       );
     } catch (e) {
-      debugPrint('Backup restore failed: $e');
+      AppLogger.error('Backup restore failed: $e', tag: 'Backup');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

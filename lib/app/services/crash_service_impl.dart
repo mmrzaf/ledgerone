@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:ledgerone/core/observability/app_logger.dart';
 
 import '../../core/contracts/crash_contract.dart';
 import '../../core/contracts/storage_contract.dart';
@@ -44,14 +44,20 @@ class CrashServiceImpl implements CrashService {
   /// Initialize and load consent
   Future<void> initialize() async {
     _consentGranted = await _storage.getBool(_consentKey);
-    debugPrint('Crash: Initialized. Consent: $_consentGranted');
+    AppLogger.info(
+      'Crash: Initialized. Consent: $_consentGranted',
+      tag: 'Crash',
+    );
   }
 
   /// Set crash reporting consent
   Future<void> setConsent(bool granted) async {
     _consentGranted = granted;
     await _storage.setBool(_consentKey, granted);
-    debugPrint('Crash: Consent ${granted ? 'granted' : 'revoked'}');
+    AppLogger.debug(
+      'Crash: Consent ${granted ? 'granted' : 'revoked'}',
+      tag: 'Crash',
+    );
 
     if (!granted) {
       // Clear breadcrumbs when consent revoked
@@ -69,7 +75,7 @@ class CrashServiceImpl implements CrashService {
     dynamic reason,
   }) async {
     // if (!hasConsent) {
-    //   debugPrint('Crash: Error recording blocked (no consent)');
+    //   AppLogger.error('Crash: Error recording blocked (no consent)', tag: 'Crash');
     //   return;
     // }
 
@@ -77,7 +83,10 @@ class CrashServiceImpl implements CrashService {
     final sanitizedException = _sanitizeException(exception);
     final sanitizedStack = _sanitizeStackTrace(stack);
 
-    debugPrint('Crash: Recording error: ${sanitizedException.toString()}');
+    AppLogger.error(
+      'Crash: Recording error: ${sanitizedException.toString()}',
+      tag: 'Crash',
+    );
 
     // Attach breadcrumbs to error context
     final context = {

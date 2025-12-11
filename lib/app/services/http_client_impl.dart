@@ -2,8 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:ledgerone/core/observability/app_logger.dart';
 
 import '../../core/config/environment.dart';
 import '../../core/errors/app_error.dart';
@@ -96,28 +96,28 @@ class HttpClientImpl implements HttpClient {
       // Re-throw AppErrors as-is
       rethrow;
     } on SocketException catch (e) {
-      debugPrint('HTTP: Network error: $e');
+      AppLogger.error('HTTP: Network error: $e', tag: 'HTTP');
       throw AppError(
         category: ErrorCategory.networkOffline,
         message: 'No internet connection',
         originalError: e,
       );
     } on TimeoutException catch (e) {
-      debugPrint('HTTP: Timeout: $e');
+      AppLogger.error('HTTP: Timeout: $e', tag: 'HTTP');
       throw AppError(
         category: ErrorCategory.timeout,
         message: 'Request timed out',
         originalError: e,
       );
     } on FormatException catch (e) {
-      debugPrint('HTTP: Response parse error: $e');
+      AppLogger.error('HTTP: Response parse error: $e', tag: 'HTTP');
       throw AppError(
         category: ErrorCategory.parseError,
         message: 'Failed to parse server response',
         originalError: e,
       );
     } catch (e, stack) {
-      debugPrint('HTTP: Unknown error: $e');
+      AppLogger.error('HTTP: Unknown error: $e', tag: 'HTTP');
       throw AppError(
         category: ErrorCategory.unknown,
         message: 'Unexpected error while calling API',

@@ -18,6 +18,7 @@ import 'package:ledgerone/core/contracts/network_contract.dart';
 import 'package:ledgerone/core/contracts/theme_contract.dart';
 import 'package:ledgerone/core/network/http_client_contract.dart';
 import 'package:ledgerone/core/observability/analytics_allowlist.dart';
+import 'package:ledgerone/core/observability/app_logger.dart';
 import 'package:ledgerone/core/observability/performance_tracker.dart';
 import 'package:ledgerone/features/ledger/di.dart';
 
@@ -121,6 +122,8 @@ Future<DISetupResult> setupDependencies(
   final loggingService = LoggingServiceImpl(storage: storage);
   await loggingService.initialize();
   locator.register<LoggingService>(loggingService);
+
+  AppLogger.attach(loggingService);
 
   PerformanceTracker().start(PerformanceMetrics.configLoad);
 
