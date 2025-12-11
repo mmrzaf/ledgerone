@@ -37,7 +37,7 @@ void main() {
     test('switches theme and persists', () async {
       await themeService.initialize();
 
-      await themeService.setTheme('dark');
+      await themeService.setTheme(DefaultDarkTheme.theme);
 
       expect(themeService.currentTheme.name, 'dark');
 
@@ -45,13 +45,15 @@ void main() {
       expect(saved, 'dark');
     });
 
-    test('ignores unknown theme names', () async {
+    test('ignores unknown stored theme names', () async {
+      // Store an invalid theme name
+      await storage.setString('selected_theme', 'nonexistent');
+
       await themeService.initialize();
-      final before = themeService.currentTheme.name;
 
-      await themeService.setTheme('nonexistent');
-
-      expect(themeService.currentTheme.name, before);
+      // Should fall back to default (light) theme
+      expect(themeService.currentTheme.name, 'light');
+      expect(themeService.currentTheme.brightness, Brightness.light);
     });
 
     test('toggleBrightness switches between light and dark', () async {
@@ -73,14 +75,14 @@ void main() {
 
       final themes = themeService.availableThemes;
 
-      expect(themes.length, 2);
+      expect(themes.length, 7);
       expect(themes.map((t) => t.name), contains('light'));
       expect(themes.map((t) => t.name), contains('dark'));
     });
 
     test('theme persists across service instances', () async {
       await themeService.initialize();
-      await themeService.setTheme('dark');
+      await themeService.setTheme(DefaultDarkTheme.theme);
 
       final newService = ThemeServiceImpl(storage: storage);
       await newService.initialize();
