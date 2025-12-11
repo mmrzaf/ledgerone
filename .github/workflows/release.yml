@@ -21,14 +21,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Extract version from tag
+      - name: Extract version from ref
         id: tag
         run: |
-          TAG="${GITHUB_REF#refs/tags/}"
+          REF="${GITHUB_REF}"
+          if [[ "$REF" == refs/tags/* ]]; then
+            TAG="${REF#refs/tags/}"
+          else
+            # For non-tag runs (e.g. manual on dev), mark as dev build
+            TAG="dev-${GITHUB_REF_NAME}"
+          fi
           echo "version=${TAG}" >> "$GITHUB_OUTPUT"
 
       - name: Print release info
-        run: echo "Releasing $APP_NAME version ${{ steps.tag.outputs.version }}"
+        run: echo "Releasing $APP_NAME version ${{ steps.tag.outputs.version }} from $GITHUB_REF"
 
   build-android:
     name: Android – APK & AAB
@@ -37,6 +43,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Restore Android keystore
+        run: |
+          mkdir -p android
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/ledgerone-release.keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+
+      - name: Create key.properties
+        run: |
+          cat > android/key.properties <<EOF
+storeFile=../ledgerone-release.keystore
+storePassword=${ANDROID_KEYSTORE_PASSWORD}
+keyAlias=${ANDROID_KEY_ALIAS}
+keyPassword=${ANDROID_KEY_PASSWORD}
+EOF
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -229,6 +255,9 @@ jobs:
 
   create-github-release:
     name: GitHub Release – attach artifacts
+    # Only create a GitHub Release when this run is for a TAG.
+    # Manual runs on dev (or any branch) will SKIP this job.
+    if: startsWith(github.ref, 'refs/tags/')
     needs:
       - prepare
       - build-android
@@ -293,11 +322,20 @@ jobs:
             fi
           fi
 
-          # iOS IPA (if it exists)
+          # iOS – IPA preferred, fallback to Runner.app.zip
           if [ -d ios ]; then
             IPA="$(find ios -maxdepth 5 -type f -name '*.ipa' | head -n 1 || true)"
             if [ -n "$IPA" ]; then
+              echo "Found iOS IPA: $IPA"
               cp "$IPA" "dist/${APP}-${V}-ios.ipa"
+            else
+              APPDIR="$(find ios -maxdepth 5 -type d -name 'Runner.app' | head -n 1 || true)"
+              if [ -n "$APPDIR" ]; then
+                echo "No IPA found, zipping Runner.app instead: $APPDIR"
+                zip -r "dist/${APP}-${V}-ios-Runner.app.zip" "$APPDIR"
+              else
+                echo "No IPA or Runner.app found in ios artifact."
+              fi
             fi
           fi
 
@@ -320,7 +358,7 @@ jobs:
             - Linux x64 bundle
             - Windows x64 bundle
             - macOS x64 app bundle
-            - iOS IPA
+            - iOS (IPA or Runner.app zip)
 
           files: release-artifacts/dist/*
         env:
