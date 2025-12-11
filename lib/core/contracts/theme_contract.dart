@@ -176,20 +176,21 @@ class AppTheme {
   bool get isLight => brightness == Brightness.light;
 }
 
-/// Service for managing themes
-abstract interface class ThemeService {
-  /// Current theme
+/// Service for managing the active app theme.
+/// Notifies listeners when [currentTheme] changes.
+abstract interface class ThemeService implements Listenable {
+  /// Currently active theme.
   AppTheme get currentTheme;
 
-  /// Available themes
+  /// All themes that can be selected from Settings.
   List<AppTheme> get availableThemes;
 
-  /// Set theme by name
-  Future<void> setTheme(String themeName);
+  /// Persist and switch to a theme by name.
+  Future<void> setTheme(AppTheme theme);
 
-  /// Toggle between light and dark
+  /// Convenience toggle between the default light/dark themes.
   Future<void> toggleBrightness();
 
-  /// Initialize service
+  /// Load the last used theme from storage.
   Future<void> initialize();
 }
