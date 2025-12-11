@@ -3,7 +3,7 @@ name: Release – LedgerOne (all platforms)
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - '*.*.*'
   workflow_dispatch:
     inputs:
       version:
