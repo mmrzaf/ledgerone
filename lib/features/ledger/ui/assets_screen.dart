@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:ledgerone/features/ledger/domain/price_config_validator.dart';
 import '../../../core/contracts/analytics_contract.dart';
 import '../../../core/contracts/i18n_contract.dart';
 import '../../../core/contracts/navigation_contract.dart';
@@ -168,9 +169,15 @@ class _AssetsScreenState extends State<AssetsScreen> {
     final name = nameController.text.trim();
     final symbol = symbolController.text.trim();
     final decimals = int.tryParse(decimalsController.text.trim()) ?? 8;
-    final priceConfig = priceConfigController.text.trim().isEmpty
-        ? null
-        : priceConfigController.text.trim();
+    final priceConfigText = priceConfigController.text.trim();
+
+    if (priceConfigText.isNotEmpty) {
+      PriceConfigValidator.validate(
+        priceConfigText.isEmpty ? null : priceConfigText,
+      );
+    }
+
+    final priceConfig = priceConfigText.isEmpty ? null : priceConfigText;
 
     if (name.isEmpty || symbol.isEmpty) return;
 
