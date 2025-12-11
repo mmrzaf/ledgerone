@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import 'package:ledgerone/core/observability/app_logger.dart';
 import '../../core/contracts/lifecycle_contract.dart' as core;
 
 class AppLifecycleServiceImpl extends WidgetsBindingObserver
@@ -25,7 +26,7 @@ class AppLifecycleServiceImpl extends WidgetsBindingObserver
   @override
   void initialize() {
     WidgetsBinding.instance.addObserver(this);
-    debugPrint('Lifecycle: Monitoring initialized');
+    AppLogger.info('Lifecycle: Monitoring initialized', tag: 'Lifecycle');
   }
 
   @override
@@ -54,7 +55,10 @@ class AppLifecycleServiceImpl extends WidgetsBindingObserver
       _currentState = newState;
       _stateController.add(_currentState);
 
-      debugPrint('Lifecycle: State changed to ${_currentState.name}');
+      AppLogger.debug(
+        'Lifecycle: State changed to ${_currentState.name}',
+        tag: 'Lifecycle',
+      );
 
       if (_currentState == core.AppLifecycleState.resumed) {
         _lastResumeTime = DateTime.now();
@@ -71,7 +75,10 @@ class AppLifecycleServiceImpl extends WidgetsBindingObserver
       try {
         callback();
       } catch (e) {
-        debugPrint('Lifecycle: Error in resume callback: $e');
+        AppLogger.error(
+          'Lifecycle: Error in resume callback: $e',
+          tag: 'Lifecycle',
+        );
       }
     }
   }
@@ -81,7 +88,10 @@ class AppLifecycleServiceImpl extends WidgetsBindingObserver
       try {
         callback();
       } catch (e) {
-        debugPrint('Lifecycle: Error in pause callback: $e');
+        AppLogger.error(
+          'Lifecycle: Error in pause callback: $e',
+          tag: 'Lifecycle',
+        );
       }
     }
   }

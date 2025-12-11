@@ -1,14 +1,16 @@
 import 'package:flutter/widgets.dart';
+import 'package:ledgerone/core/observability/app_logger.dart';
 
 import '../../core/contracts/i18n_contract.dart';
 import '../../core/contracts/storage_contract.dart';
 import '../../core/i18n/translations.dart';
 
 /// Implementation of LocalizationService
-class LocalizationServiceImpl implements LocalizationService {
+class LocalizationServiceImpl extends ChangeNotifier
+    implements LocalizationService {
   final StorageService _storage;
 
-  // Singleton instance for easy access
+  // Singleton instance for easy access (used by .tr extension)
   static late LocalizationServiceImpl instance;
 
   static const String _storageKey = 'selected_locale';
@@ -53,13 +55,18 @@ class LocalizationServiceImpl implements LocalizationService {
         _currentLocale = _supportedLocalesList.firstWhere(
           (locale) => locale.languageCode == languageCode,
         );
-        debugPrint(
+        AppLogger.info(
           'Localization: Restored locale ${_currentLocale.localeCode}',
+          tag: 'Localization',
         );
       }
     }
 
-    debugPrint('Localization: Initialized with ${_currentLocale.localeCode}');
+    AppLogger.info(
+      'Localization: Initialized with ${_currentLocale.localeCode}',
+      tag: 'Localization',
+    );
+    notifyListeners();
   }
 
   @override
@@ -71,7 +78,10 @@ class LocalizationServiceImpl implements LocalizationService {
   @override
   Future<void> setLocale(String languageCode, {String? countryCode}) async {
     if (!isSupported(languageCode, countryCode: countryCode)) {
-      debugPrint('Localization: Unsupported locale $languageCode');
+      AppLogger.warning(
+        'Localization: Unsupported locale $languageCode',
+        tag: 'Localization',
+      );
       return;
     }
 
@@ -82,7 +92,11 @@ class LocalizationServiceImpl implements LocalizationService {
     // Save to storage
     await _storage.setString(_storageKey, _currentLocale.localeCode);
 
-    debugPrint('Localization: Switched to ${_currentLocale.localeCode}');
+    AppLogger.debug(
+      'Localization: Switched to ${_currentLocale.localeCode}',
+      tag: 'Localization',
+    );
+    notifyListeners();
   }
 
   @override
@@ -91,14 +105,20 @@ class LocalizationServiceImpl implements LocalizationService {
     final translations = allTranslations[localeCode];
 
     if (translations == null) {
-      debugPrint('Localization: No translations for $localeCode');
+      AppLogger.warning(
+        'Localization: No translations for $localeCode',
+        tag: 'Localization',
+      );
       return key;
     }
 
     String? raw = translations[key];
 
     if (raw == null) {
-      debugPrint('Localization: Missing key "$key" for $localeCode');
+      AppLogger.warning(
+        'Localization: Missing key "$key" for $localeCode',
+        tag: 'Localization',
+      );
       raw = allTranslations['en']?[key] ?? key;
     }
 

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart';
+import 'package:ledgerone/core/observability/app_logger.dart';
 
 import '../../core/contracts/network_contract.dart';
 
@@ -31,14 +31,20 @@ class NetworkServiceImpl implements NetworkService {
       _updateStatus(_mapConnectivity(results));
     });
 
-    debugPrint('Network: Monitoring initialized (connectivity_plus)');
+    AppLogger.info(
+      'Network: Monitoring initialized (connectivity_plus)',
+      tag: 'Network',
+    );
   }
 
   void _updateStatus(NetworkStatus newStatus) {
     if (newStatus == _currentStatus) return;
     _currentStatus = newStatus;
     _statusController.add(_currentStatus);
-    debugPrint('Network: Status changed to ${_currentStatus.name}');
+    AppLogger.debug(
+      'Network: Status changed to ${_currentStatus.name}',
+      tag: 'Network',
+    );
   }
 
   /// Map the list of active connectivity types to a single NetworkStatus.
@@ -97,7 +103,7 @@ class SimulatedNetworkService implements NetworkService {
   @override
   Future<void> initialize() async {
     // Don't emit here anymore – subscribers may not be attached yet.
-    debugPrint('Network: Simulated service initialized');
+    AppLogger.info('Network: Simulated service initialized', tag: 'Network');
   }
 
   NetworkStatus get currentStatus => _currentStatus;
@@ -107,7 +113,10 @@ class SimulatedNetworkService implements NetworkService {
     if (_currentStatus != status) {
       _currentStatus = status;
       _statusController.add(_currentStatus);
-      debugPrint('Network: Simulated status set to ${_currentStatus.name}');
+      AppLogger.debug(
+        'Network: Simulated status set to ${_currentStatus.name}',
+        tag: 'Network',
+      );
     }
   }
 

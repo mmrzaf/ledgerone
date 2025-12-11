@@ -499,6 +499,7 @@ class PriceSourceConfig {
   final Map<String, String> headers;
   final String responsePath;
   final double multiplier;
+  final bool invert;
 
   const PriceSourceConfig({
     required this.method,
@@ -507,6 +508,7 @@ class PriceSourceConfig {
     this.headers = const {},
     required this.responsePath,
     this.multiplier = 1.0,
+    this.invert = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -516,6 +518,7 @@ class PriceSourceConfig {
     'headers': headers,
     'response_path': responsePath,
     'multiplier': multiplier,
+    'invert': invert,
   };
 
   factory PriceSourceConfig.fromJson(Map<String, dynamic> json) =>
@@ -528,5 +531,6 @@ class PriceSourceConfig {
         headers: Map<String, String>.from((json['headers'] as Map?) ?? {}),
         responsePath: json['response_path'] as String,
         multiplier: (json['multiplier'] as num?)?.toDouble() ?? 1.0,
+        invert: json['invert'] as bool? ?? false,
       );
 }

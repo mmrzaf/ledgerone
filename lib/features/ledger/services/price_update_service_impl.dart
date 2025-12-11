@@ -225,7 +225,7 @@ class PriceUpdateServiceImpl implements PriceUpdateService {
       }
 
       final price = _extractPriceFromResponse(response, config.responsePath);
-      return price * config.multiplier;
+      return _applyTransform(price: price, config: config);
     } on AppError {
       rethrow;
     } catch (e) {
@@ -279,5 +279,25 @@ class PriceUpdateServiceImpl implements PriceUpdateService {
       category: ErrorCategory.parseError,
       message: 'Value at path "$path" is not a number: $current',
     );
+  }
+
+  double _applyTransform({
+    required double price,
+    required PriceSourceConfig config,
+  }) {
+    var effective = price;
+
+    if (config.invert) {
+      if (effective == 0) {
+        throw AppError(
+          category: ErrorCategory.badRequest,
+          message: 'Cannot invert zero price for $config',
+        );
+      }
+      effective = 1 / effective;
+    }
+
+    effective *= config.multiplier;
+    return effective;
   }
 }

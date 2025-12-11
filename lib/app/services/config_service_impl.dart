@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:ledgerone/core/observability/app_logger.dart';
 
 import '../../core/contracts/config_contract.dart';
 import '../../core/contracts/config_provider.dart';
@@ -35,10 +35,13 @@ class ConfigServiceImpl implements ConfigService {
         final Map<String, dynamic> cached =
             json.decode(cachedJson) as Map<String, dynamic>;
         _flags.addAll(cached);
-        debugPrint('Config: Loaded ${cached.length} flags from cache');
+        AppLogger.info(
+          'Config: Loaded ${cached.length} flags from cache',
+          tag: 'Config',
+        );
       }
     } catch (e) {
-      debugPrint('Config: Failed to load cache: $e');
+      AppLogger.error('Config: Failed to load cache: $e', tag: 'Config');
     }
 
     // 3. Refresh from remote (async, with retry)
@@ -50,8 +53,9 @@ class ConfigServiceImpl implements ConfigService {
       operation: () => _remoteProvider.fetchConfig(),
       category: ErrorCategory.timeout,
       onRetry: (attempt, error) {
-        debugPrint(
+        AppLogger.error(
           'Config: Retry attempt $attempt after error: ${error.category}',
+          tag: 'Config',
         );
       },
     );
@@ -62,15 +66,20 @@ class ConfigServiceImpl implements ConfigService {
 
       try {
         await _storage.setString(_storageKey, json.encode(_flags));
-        debugPrint(
+        AppLogger.debug(
           'Config: Remote refresh complete. Keys updated: ${remoteFlags.length}',
+          tag: 'Config',
         );
       } catch (e) {
-        debugPrint('Config: Failed to cache remote config: $e');
+        AppLogger.error(
+          'Config: Failed to cache remote config: $e',
+          tag: 'Config',
+        );
       }
     } else if (result.isFailure) {
-      debugPrint(
+      AppLogger.error(
         'Config: Remote refresh failed after ${result.attemptsMade} attempts: ${result.error?.category}',
+        tag: 'Config',
       );
       // Continue with cached/default config
     }

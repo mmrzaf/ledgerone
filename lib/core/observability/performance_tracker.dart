@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'app_logger.dart';
 
 /// Performance mark for tracking
 class PerformanceMark {
@@ -42,7 +42,8 @@ class PerformanceTracker {
   /// Start tracking a performance metric
   void start(String name, {Map<String, dynamic>? metadata}) {
     _starts[name] = DateTime.now();
-    debugPrint('Performance: Started tracking "$name"');
+    AppLogger.debug('Started tracking "$name"', tag: 'Performance');
+    AppLogger.info('Performance: Started tracking "$name"', tag: 'Performance');
 
     if (metadata != null) {
       _marks['${name}_start'] = PerformanceMark(
@@ -57,7 +58,10 @@ class PerformanceTracker {
   PerformanceMetric? stop(String name, {Map<String, dynamic>? metadata}) {
     final startTime = _starts[name];
     if (startTime == null) {
-      debugPrint('Performance: Warning - no start time for "$name"');
+      AppLogger.warning(
+        'Performance: Warning - no start time for "$name"',
+        tag: 'Performance',
+      );
       return null;
     }
 
@@ -73,7 +77,10 @@ class PerformanceTracker {
     _metrics.add(metric);
     _starts.remove(name);
 
-    debugPrint('Performance: $name completed in ${duration.inMilliseconds}ms');
+    AppLogger.info(
+      'Performance: $name completed in ${duration.inMilliseconds}ms',
+      tag: 'Performance',
+    );
 
     return metric;
   }
@@ -85,7 +92,7 @@ class PerformanceTracker {
       timestamp: DateTime.now(),
       metadata: metadata,
     );
-    debugPrint('Performance: Mark "$name"');
+    AppLogger.debug('Performance: Mark "$name"', tag: 'Performance');
   }
 
   /// Measure duration between two marks
@@ -94,7 +101,10 @@ class PerformanceTracker {
     final end = _marks[endMark];
 
     if (start == null || end == null) {
-      debugPrint('Performance: Warning - missing marks for measure "$name"');
+      AppLogger.warning(
+        'Performance: Warning - missing marks for measure "$name"',
+        tag: 'Performance',
+      );
       return null;
     }
 
@@ -106,7 +116,10 @@ class PerformanceTracker {
     );
 
     _metrics.add(metric);
-    debugPrint('Performance: Measured $name: ${duration.inMilliseconds}ms');
+    AppLogger.debug(
+      'Performance: Measured $name: ${duration.inMilliseconds}ms',
+      tag: 'Performance',
+    );
 
     return metric;
   }

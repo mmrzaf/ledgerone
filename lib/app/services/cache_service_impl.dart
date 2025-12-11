@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
+import 'package:ledgerone/core/observability/app_logger.dart';
 
 import '../../core/contracts/cache_contract.dart';
 import '../../core/contracts/storage_contract.dart';
@@ -36,9 +36,12 @@ class CacheServiceImpl implements CacheService {
       await _storage.setString('$_cachePrefix$key', json.encode(cacheEntry));
       await _addKeyToIndex(key);
 
-      debugPrint('Cache: Stored $key (TTL: ${cachedData.ttl.inMinutes}m)');
+      AppLogger.info(
+        'Cache: Stored $key (TTL: ${cachedData.ttl.inMinutes}m)',
+        tag: 'Cache',
+      );
     } catch (e) {
-      debugPrint('Cache: Failed to persist $key: $e');
+      AppLogger.error('Cache: Failed to persist $key: $e', tag: 'Cache');
     }
   }
 
@@ -66,12 +69,13 @@ class CacheServiceImpl implements CacheService {
 
       _memoryCache[key] = cachedData;
 
-      debugPrint(
+      AppLogger.info(
         'Cache: Retrieved $key (age: ${cachedData.age.inMinutes}m, valid: ${cachedData.isValid})',
+        tag: 'Cache',
       );
       return cachedData;
     } catch (e) {
-      debugPrint('Cache: Failed to retrieve $key: $e');
+      AppLogger.error('Cache: Failed to retrieve $key: $e', tag: 'Cache');
       return null;
     }
   }
@@ -87,7 +91,7 @@ class CacheServiceImpl implements CacheService {
     _memoryCache.remove(key);
     await _storage.remove('$_cachePrefix$key');
     await _removeKeyFromIndex(key);
-    debugPrint('Cache: Cleared $key');
+    AppLogger.info('Cache: Cleared $key', tag: 'Cache');
   }
 
   @override
@@ -104,9 +108,15 @@ class CacheServiceImpl implements CacheService {
       }
       await _storage.remove(_cacheIndexKey);
 
-      debugPrint('Cache: Cleared all cache (memory + persistent)');
+      AppLogger.info(
+        'Cache: Cleared all cache (memory + persistent)',
+        tag: 'Cache',
+      );
     } catch (e) {
-      debugPrint('Cache: Failed to clear all persistent cache: $e');
+      AppLogger.error(
+        'Cache: Failed to clear all persistent cache: $e',
+        tag: 'Cache',
+      );
     }
   }
 
@@ -122,7 +132,7 @@ class CacheServiceImpl implements CacheService {
         await _storage.setString(_cacheIndexKey, json.encode(keys));
       }
     } catch (e) {
-      debugPrint('Cache: Failed to update cache index: $e');
+      AppLogger.error('Cache: Failed to update cache index: $e', tag: 'Cache');
     }
   }
 
@@ -142,7 +152,7 @@ class CacheServiceImpl implements CacheService {
         }
       }
     } catch (e) {
-      debugPrint('Cache: Failed to update cache index: $e');
+      AppLogger.error('Cache: Failed to update cache index: $e', tag: 'Cache');
     }
   }
 

@@ -24,7 +24,7 @@ class LocaleInfo {
 }
 
 /// Service for managing localization
-abstract interface class LocalizationService {
+abstract interface class LocalizationService implements Listenable {
   /// Current locale
   LocaleInfo get currentLocale;
 

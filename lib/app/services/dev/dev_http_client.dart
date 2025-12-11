@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:ledgerone/core/observability/app_logger.dart';
 
 import '../../../core/network/http_client_contract.dart';
 
@@ -20,33 +20,33 @@ class DevHttpClient implements HttpClient {
 
   @override
   Future<dynamic> get(String path, {Map<String, dynamic>? queryParams}) async {
-    debugPrint('[DEV HTTP] GET $path params=$queryParams');
+    AppLogger.debug('GET $path params=$queryParams', tag: 'HTTP');
     final result = await _withDelay(_inner.get(path, queryParams: queryParams));
-    debugPrint('[DEV HTTP] GET $path → $result');
+    AppLogger.debug('GET $path → $result', tag: 'HTTP');
     return result;
   }
 
   @override
   Future<dynamic> post(String path, {dynamic body}) async {
-    debugPrint('[DEV HTTP] POST $path body=$body');
+    AppLogger.debug('POST $path body=$body', tag: 'HTTP');
     final result = await _withDelay(_inner.post(path, body: body));
-    debugPrint('[DEV HTTP] POST $path → $result');
+    AppLogger.debug('POST $path → $result', tag: 'HTTP');
     return result;
   }
 
   @override
   Future<dynamic> put(String path, {dynamic body}) async {
-    debugPrint('[DEV HTTP] PUT $path body=$body');
+    AppLogger.debug('PUT $path body=$body', tag: 'HTTP');
     final result = await _withDelay(_inner.put(path, body: body));
-    debugPrint('[DEV HTTP] PUT $path → $result');
+    AppLogger.debug('PUT $path → $result', tag: 'HTTP');
     return result;
   }
 
   @override
   Future<dynamic> delete(String path) async {
-    debugPrint('[DEV HTTP] DELETE $path');
+    AppLogger.debug('DELETE $path', tag: 'HTTP');
     final result = await _withDelay(_inner.delete(path));
-    debugPrint('[DEV HTTP] DELETE $path → $result');
+    AppLogger.debug('DELETE $path → $result', tag: 'HTTP');
     return result;
   }
 

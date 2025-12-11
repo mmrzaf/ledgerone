@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:ledgerone/core/observability/app_logger.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
@@ -54,8 +55,9 @@ abstract class SqliteDatabaseBase implements DatabaseService {
   ) async {
     // Default: drop and recreate (not production-ready)
     // Override in subclass for proper migrations
-    debugPrint(
+    AppLogger.debug(
       'Database upgrade: v$oldVersion -> v$newVersion (recreating schema)',
+      tag: 'Database',
     );
     await createSchema(db, newVersion);
   }
@@ -71,7 +73,7 @@ abstract class SqliteDatabaseBase implements DatabaseService {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, databaseName);
 
-    debugPrint('Opening database at: $path');
+    AppLogger.debug('Opening database at: $path', tag: 'Opening');
 
     return await openDatabase(
       path,
@@ -89,7 +91,7 @@ abstract class SqliteDatabaseBase implements DatabaseService {
     await db.close();
     _database = null;
 
-    debugPrint('Database closed: $databaseName');
+    AppLogger.debug('Database closed: $databaseName', tag: 'Database');
   }
 
   @override

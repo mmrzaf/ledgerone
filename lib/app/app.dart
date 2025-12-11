@@ -24,6 +24,61 @@ class App extends StatefulWidget {
 }
 
 class _AppState extends State<App> {
+  ThemeService? _themeService;
+  Listenable? _localizationListenable;
+
+  @override
+  void initState() {
+    super.initState();
+    _attachListeners();
+  }
+
+  @override
+  void didUpdateWidget(covariant App oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.themeService != widget.themeService ||
+        oldWidget.localization != widget.localization) {
+      _detachListeners();
+      _attachListeners();
+    }
+  }
+
+  void _attachListeners() {
+    // ThemeService is a Listenable by contract now
+    _themeService = widget.themeService;
+    _themeService?.addListener(_onConfigChanged);
+
+    // LocalizationServiceImpl extends ChangeNotifier, but the contract
+    // doesn't expose that, so we just check for Listenable.
+    final loc = widget.localization;
+    _localizationListenable = loc;
+    _localizationListenable!.addListener(_onConfigChanged);
+  }
+
+  void _detachListeners() {
+    _themeService?.removeListener(_onConfigChanged);
+    _themeService = null;
+
+    if (_localizationListenable != null) {
+      _localizationListenable!.removeListener(_onConfigChanged);
+      _localizationListenable = null;
+    }
+  }
+
+  void _onConfigChanged() {
+    if (!mounted) return;
+    setState(() {
+      // Rebuild MaterialApp with new theme/locale/direction.
+    });
+  }
+
+  @override
+  void dispose() {
+    _detachListeners();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = widget.themeService.currentTheme;
@@ -47,16 +102,12 @@ class _AppState extends State<App> {
         GlobalCupertinoLocalizations.delegate,
       ],
 
-      // Router configuration
       routerConfig: widget.router,
-
       debugShowCheckedModeBanner: false,
 
-      // Accessibility configuration
       builder: (context, child) {
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(
-            // Clamp text scaling for better readability
             textScaler: TextScaler.linear(
               MediaQuery.of(context).textScaler.scale(1.0).clamp(1.0, 2.0),
             ),
