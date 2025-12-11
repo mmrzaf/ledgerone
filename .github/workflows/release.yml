@@ -405,76 +405,6 @@ jobs:
           retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
           if-no-files-found: error
 
-  build-ios:
-    name: iOS – app / IPA
-    runs-on: macos-latest
-    needs: prepare
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter on macOS
-        uses: subosito/flutter-action@v2
-        with:
-          channel: ${{ env.FLUTTER_CHANNEL }}
-          cache: true
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-      - name: Build iOS
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ -n "${{ secrets.APPLE_CERT }}" ]] && [[ -n "${{ secrets.APPLE_PROVISION }}" ]]; then
-            echo "Apple signing secrets found – building signed IPA"
-            flutter build ipa \
-              --export-method ad-hoc \
-              --no-tree-shake-icons
-
-            # Verify IPA
-            IPA_COUNT=$(find build/ios/ipa -name "*.ipa" 2>/dev/null | wc -l)
-            if [[ $IPA_COUNT -eq 0 ]]; then
-              echo "::error::IPA build failed - no IPA file found"
-              exit 1
-            fi
-            echo "Signed IPA built successfully"
-          else
-            echo "No Apple signing secrets – building unsigned iOS app"
-            flutter build ios --no-codesign --release
-
-            # Verify app
-            if [[ ! -d "build/ios/iphoneos/Runner.app" ]]; then
-              echo "::error::iOS build failed - Runner.app not found"
-              exit 1
-            fi
-            echo "Unsigned iOS app built successfully"
-          fi
-
-      - name: Generate checksums
-        run: |
-          if [[ -d build/ios/ipa ]]; then
-            cd build/ios/ipa
-            find . -name "*.ipa" -exec shasum -a 256 {} \; > checksums.txt
-          elif [[ -d build/ios/iphoneos/Runner.app ]]; then
-            cd build/ios/iphoneos
-            find Runner.app -type f -exec shasum -a 256 {} \; > checksums.txt
-          fi
-
-      - name: Upload iOS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios
-          path: |
-            build/ios/ipa/*.ipa
-            build/ios/ipa/checksums.txt
-            build/ios/iphoneos/Runner.app
-            build/ios/iphoneos/checksums.txt
-          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
-          if-no-files-found: warn
-
   create-github-release:
     name: GitHub Release
     if: needs.prepare.outputs.is_release == 'true'
@@ -485,7 +415,6 @@ jobs:
       - build-linux
       - build-windows
       - build-macos
-      - build-ios
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -565,21 +494,6 @@ jobs:
             fi
           fi
 
-          # Handle iOS artifacts
-          if [[ -d ios ]]; then
-            IPA=$(find ios -name '*.ipa' -type f | head -n 1)
-            if [[ -n "$IPA" ]]; then
-              cp "$IPA" "dist/${APP}-${V}-ios.ipa"
-              echo "Copied iOS IPA"
-            else
-              APPDIR=$(find ios -name 'Runner.app' -type d | head -n 1)
-              if [[ -n "$APPDIR" ]]; then
-                echo "Creating iOS app zip..."
-                zip -r "dist/${APP}-${V}-ios-Runner.app.zip" "$APPDIR"
-                echo "Created iOS Runner.app zip"
-              fi
-            fi
-          fi
 
           # Generate master checksums file
           cd dist
@@ -605,10 +519,6 @@ jobs:
           **Android:**
           - `*-android.apk` - Install directly on device
           - `*-android.aab` - For Play Store deployment
-
-          **iOS:**
-          - `*-ios.ipa` - Signed IPA (if available)
-          - `*-ios-Runner.app.zip` - Unsigned app bundle
 
           **Desktop:**
           - `*-windows-x64.zip` - Windows 10/11
