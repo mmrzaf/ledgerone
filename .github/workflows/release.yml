@@ -37,7 +37,7 @@ jobs:
         id: tag
         run: |
           set -euo pipefail
-          
+
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
             VERSION="${{ github.event.inputs.version }}"
             IS_RELEASE="false"
@@ -53,7 +53,7 @@ jobs:
             VERSION="dev-${GITHUB_REF_NAME//\//-}"
             IS_RELEASE="false"
           fi
-          
+
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
           echo "is_release=${IS_RELEASE}" >> "$GITHUB_OUTPUT"
           echo "::notice::Version: ${VERSION}, Release: ${IS_RELEASE}"
@@ -78,17 +78,17 @@ jobs:
       - name: Validate required secrets
         run: |
           set -euo pipefail
-          
+
           if [[ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]]; then
             echo "::error::ANDROID_KEYSTORE_BASE64 secret is not set"
             exit 1
           fi
-          
+
           if [[ -z "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" ]]; then
             echo "::error::ANDROID_KEYSTORE_PASSWORD secret is not set"
             exit 1
           fi
-          
+
           echo "All required secrets are present"
 
       - name: Setup Flutter
@@ -107,13 +107,13 @@ jobs:
           set -euo pipefail
           mkdir -p android
           echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/ledgerone-release.keystore
-          
+
           # Verify keystore file was created and has content
           if [[ ! -s android/ledgerone-release.keystore ]]; then
             echo "::error::Keystore file is empty or not created"
             exit 1
           fi
-          
+
           echo "Keystore restored successfully"
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -121,20 +121,20 @@ jobs:
       - name: Create key.properties
         run: |
           set -euo pipefail
-          
+
           cat > android/key.properties << EOF
           storeFile=../ledgerone-release.keystore
           storePassword=${ANDROID_KEYSTORE_PASSWORD}
           keyAlias=${ANDROID_KEY_ALIAS}
           keyPassword=${ANDROID_KEY_PASSWORD}
           EOF
-          
+
           # Verify file was created
           if [[ ! -f android/key.properties ]]; then
             echo "::error::Failed to create key.properties"
             exit 1
           fi
-          
+
           echo "key.properties created (content hidden for security)"
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -152,32 +152,32 @@ jobs:
         run: |
           set -euo pipefail
           flutter build apk --release
-          
+
           # Verify APK was created
           if [[ ! -f build/app/outputs/flutter-apk/app-release.apk ]]; then
             echo "::error::APK build failed - file not found"
             exit 1
           fi
-          
+
           # Check APK size is reasonable (> 5MB)
           APK_SIZE=$(stat -c%s build/app/outputs/flutter-apk/app-release.apk)
           if [[ $APK_SIZE -lt 5000000 ]]; then
             echo "::warning::APK size is suspiciously small: $APK_SIZE bytes"
           fi
-          
+
           echo "APK built successfully ($(numfmt --to=iec-i --suffix=B $APK_SIZE))"
 
       - name: Build Android App Bundle (AAB, release)
         run: |
           set -euo pipefail
           flutter build appbundle --release
-          
+
           # Verify AAB was created
           if [[ ! -f build/app/outputs/bundle/release/app-release.aab ]]; then
             echo "::error::AAB build failed - file not found"
             exit 1
           fi
-          
+
           AAB_SIZE=$(stat -c%s build/app/outputs/bundle/release/app-release.aab)
           echo "AAB built successfully ($(numfmt --to=iec-i --suffix=B $AAB_SIZE))"
 
@@ -229,14 +229,14 @@ jobs:
       - name: Build web (release)
         run: |
           set -euo pipefail
-          flutter build web --release --web-renderer canvaskit
-          
+          flutter build web --release
+
           # Verify build output
           if [[ ! -f build/web/index.html ]]; then
             echo "::error::Web build failed - index.html not found"
             exit 1
           fi
-          
+
           echo "Web build completed successfully"
 
       - name: Generate build manifest
@@ -285,14 +285,14 @@ jobs:
         run: |
           set -euo pipefail
           flutter build linux --release
-          
+
           # Verify executable
           BINARY="build/linux/x64/release/bundle/${{ env.APP_NAME }}"
           if [[ ! -f "$BINARY" ]] && [[ ! -f "build/linux/x64/release/bundle/ledgerone" ]]; then
             echo "::error::Linux binary not found"
             exit 1
           fi
-          
+
           echo "Linux build completed successfully"
 
       - name: Generate checksums
@@ -330,7 +330,7 @@ jobs:
         shell: pwsh
         run: |
           flutter build windows --release
-          
+
           # Verify executable
           $exe = "build\windows\x64\runner\Release\$env:APP_NAME.exe"
           if (-not (Test-Path $exe)) {
@@ -340,7 +340,7 @@ jobs:
               exit 1
             }
           }
-          
+
           Write-Host "Windows build completed successfully"
 
       - name: Generate checksums
@@ -382,14 +382,14 @@ jobs:
         run: |
           set -euo pipefail
           flutter build macos --release
-          
+
           # Verify app bundle
           if [[ ! -d "build/macos/Build/Products/Release/$APP_NAME.app" ]] && \
              [[ ! -d "build/macos/Build/Products/Release/LedgerOne.app" ]]; then
             echo "::error::macOS app bundle not found"
             exit 1
           fi
-          
+
           echo "macOS build completed successfully"
 
       - name: Generate checksums
@@ -433,7 +433,7 @@ jobs:
             flutter build ipa \
               --export-method ad-hoc \
               --no-tree-shake-icons
-            
+
             # Verify IPA
             IPA_COUNT=$(find build/ios/ipa -name "*.ipa" 2>/dev/null | wc -l)
             if [[ $IPA_COUNT -eq 0 ]]; then
@@ -444,7 +444,7 @@ jobs:
           else
             echo "No Apple signing secrets – building unsigned iOS app"
             flutter build ios --no-codesign --release
-            
+
             # Verify app
             if [[ ! -d "build/ios/iphoneos/Runner.app" ]]; then
               echo "::error::iOS build failed - Runner.app not found"
@@ -500,7 +500,7 @@ jobs:
         run: |
           echo "Downloaded artifacts:"
           find release-artifacts -type f -ls
-          
+
           # Verify checksums exist
           CHECKSUM_COUNT=$(find release-artifacts -name "*.sha256" -o -name "checksums.txt" | wc -l)
           echo "Found $CHECKSUM_COUNT checksum files"
@@ -547,7 +547,7 @@ jobs:
           if [[ -d android ]]; then
             APK=$(find android -name 'app-release.apk' -type f | head -n 1)
             AAB=$(find android -name 'app-release.aab' -type f | head -n 1)
-            
+
             if [[ -n "$APK" ]]; then
               cp "$APK" "dist/${APP}-${V}-android.apk"
               if [[ -f "${APK}.sha256" ]]; then
@@ -555,7 +555,7 @@ jobs:
               fi
               echo "Copied Android APK"
             fi
-            
+
             if [[ -n "$AAB" ]]; then
               cp "$AAB" "dist/${APP}-${V}-android.aab"
               if [[ -f "${AAB}.sha256" ]]; then
@@ -598,40 +598,40 @@ jobs:
         run: |
           cat > release_notes.md << 'EOF'
           ## ${{ env.APP_NAME }} ${{ needs.prepare.outputs.version }}
-          
-          
+
+
           Cross-platform offline-first personal finance & crypto tracking application.
-          
+
           **Android:**
           - `*-android.apk` - Install directly on device
           - `*-android.aab` - For Play Store deployment
-          
+
           **iOS:**
           - `*-ios.ipa` - Signed IPA (if available)
           - `*-ios-Runner.app.zip` - Unsigned app bundle
-          
+
           **Desktop:**
           - `*-windows-x64.zip` - Windows 10/11
           - `*-macos-x64.zip` - macOS (Intel)
           - `*-linux-x64.zip` - Linux (x64)
-          
+
           **Web:**
           - `*-web.zip` - Static web bundle
-          
+
           ### Security
-          
+
           All artifacts include SHA256 checksums. Verify downloads using the `SHA256SUMS` file:
           ```bash
           sha256sum -c SHA256SUMS
           ```
-          
+
           ### Build Information
           - Built from: `${{ github.ref }}`
           - Commit: `${{ github.sha }}`
           - Build date: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
           - Flutter channel: ${{ env.FLUTTER_CHANNEL }}
           EOF
-          
+
           echo "Release notes generated"
 
       - name: Create GitHub Release
