@@ -222,7 +222,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ListTile(
       leading: const Icon(Icons.info_outline),
       title: Text(l10n.get(L10nKeys.ledgerSettingsVersion)),
-      subtitle: const Text('0.9.10'),
+      subtitle: const Text('0.9.11'),
     );
   }
 
