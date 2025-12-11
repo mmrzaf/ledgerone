@@ -3,7 +3,7 @@ description: "Tracks all assets you own, Knows Where the live, Lets you manually
 
 publish_to: "none"
 
-version: 0.9.5
+version: 0.9.6
 
 environment:
   sdk: ^3.9.2
