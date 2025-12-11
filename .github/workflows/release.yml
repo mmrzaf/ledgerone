@@ -54,11 +54,11 @@ jobs:
       - name: Create key.properties
         run: |
           cat > android/key.properties <<EOF
-storeFile=../ledgerone-release.keystore
-storePassword=${ANDROID_KEYSTORE_PASSWORD}
-keyAlias=${ANDROID_KEY_ALIAS}
-keyPassword=${ANDROID_KEY_PASSWORD}
-EOF
+          storeFile=../ledgerone-release.keystore
+          storePassword=${ANDROID_KEYSTORE_PASSWORD}
+          keyAlias=${ANDROID_KEY_ALIAS}
+          keyPassword=${ANDROID_KEY_PASSWORD}
+          EOF
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
