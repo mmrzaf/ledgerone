@@ -2,6 +2,7 @@ import 'package:ledgerone/features/ledger/services/balance_valuation_service_imp
 
 import '../../app/di.dart';
 import '../../core/contracts/analytics_contract.dart';
+import '../../core/contracts/backup_contract.dart';
 import '../../core/data/database_contract.dart';
 import '../../core/network/http_client_contract.dart';
 import '../../core/observability/performance_tracker.dart';
@@ -9,6 +10,7 @@ import 'data/database.dart';
 import 'data/repositories.dart';
 import 'domain/services.dart';
 import 'services/balance_service_impl.dart';
+import 'services/json_backup_service_impl.dart';
 import 'services/money_summary_service_impl.dart';
 import 'services/portfolio_valuation_service_impl.dart';
 import 'services/price_update_service_impl.dart';
@@ -127,5 +129,12 @@ class LedgerModule {
       performance: performance,
     );
     locator.register<PriceUpdateService>(priceUpdateService);
+
+    // Backup Service – JSON backup/restore of the whole ledger DB
+    final backupService = JsonBackupService(
+      db: locator.get<LedgerDatabase>(),
+      analytics: analytics,
+    );
+    locator.register<BackupService>(backupService);
   }
 }
