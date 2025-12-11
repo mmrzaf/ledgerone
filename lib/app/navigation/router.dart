@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import 'package:ledgerone/app/di.dart';
 import 'package:ledgerone/core/contracts/analytics_contract.dart';
 import 'package:ledgerone/core/contracts/i18n_contract.dart';
+import 'package:ledgerone/core/contracts/logging_contract.dart';
 import 'package:ledgerone/features/ledger/data/repositories_interfaces.dart';
 import 'package:ledgerone/features/ledger/domain/services.dart';
 import 'package:ledgerone/features/ledger/ui/accounts_screen.dart';
@@ -9,8 +10,9 @@ import 'package:ledgerone/features/ledger/ui/assets_screen.dart';
 import 'package:ledgerone/features/ledger/ui/crypto_screen.dart';
 import 'package:ledgerone/features/ledger/ui/dashboard_screen.dart';
 import 'package:ledgerone/features/ledger/ui/money_screen.dart';
-import 'package:ledgerone/features/ledger/ui/settings_screen.dart';
 import 'package:ledgerone/features/ledger/ui/transaction_editor_screen.dart';
+import 'package:ledgerone/features/settings/ui/logs_screen.dart';
+import 'package:ledgerone/features/settings/ui/settings_screen.dart';
 
 import '../../core/contracts/guard_contract.dart';
 import '../../core/contracts/navigation_contract.dart';
@@ -110,6 +112,7 @@ class RouterFactory {
       'assets': '/assets',
       'accounts': '/accounts',
       'settings': '/settings',
+      'logs': '/logs',
     };
     final sortedGuards = List<NavigationGuard>.from(guards)
       ..sort((a, b) => a.priority.compareTo(b.priority));
@@ -242,6 +245,15 @@ class RouterFactory {
             return SettingsScreen(
               navigation: navigationService,
               analytics: locator.get<AnalyticsService>(),
+            );
+          },
+        ),
+        GoRoute(
+          path: '/logs',
+          builder: (context, state) {
+            return LogsScreen(
+              navigation: navigationService,
+              loggingService: locator.get<LoggingService>(),
             );
           },
         ),
